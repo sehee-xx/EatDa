@@ -1,51 +1,74 @@
+// App.tsx
+
 import React, { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
 import { NavigationContainer } from "@react-navigation/native";
 import AuthNavigator from "./src/navigation/AuthNavigator";
+import SplashScreenVideo from "./src/screens/SplashScreen";
 
-// SplashScreen이 자동으로 숨겨지지 않도록 설정
+// prevent auto‑hide at cold start
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-
-  // 1) useFonts로 커스텀 폰트 등록
-  const [fontsLoaded] = useFonts({
+  const [showVideo, setShowVideo] = useState(true);
+  const [fontsLoaded, fontError] = useFonts({
     AlfaSlabOne: require("./assets/fonts/AlfaSlabOneRegular.ttf"),
   });
 
+  // 1️⃣ When fonts are loaded (or error), mark app ready
   useEffect(() => {
-    async function prepare() {
-      try {
-        // 폰트가 로딩될 때까지 대기
-        if (fontsLoaded) {
-          setAppIsReady(true);
-        }
-      } catch (e) {
-        console.warn(e);
-      }
+    if (fontsLoaded || fontError) {
+      setAppIsReady(true);
     }
+    const timer = setTimeout(() => setAppIsReady(true), 5000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
 
-    prepare();
-  }, [fontsLoaded]);
-
-  const onLayoutRootView = useCallback(async () => {
+  // 2️⃣ As soon as appIsReady, hide the splash
+  useEffect(() => {
     if (appIsReady) {
-      // SplashScreen 숨기기
-      await SplashScreen.hideAsync();
+      SplashScreen.hideAsync();
     }
   }, [appIsReady]);
 
-  // 2) 아직 앱이 준비되지 않았다면 null 반환 (SplashScreen이 계속 보임)
   if (!appIsReady) {
-    return null;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "blue",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: "white",
+            fontSize: 18,
+            textAlign: "center",
+            padding: 20,
+          }}
+        >
+          Loading Fonts...{"\n"}
+          Loaded: {fontsLoaded ? "YES" : "NO"}
+          {"\n"}
+          Error: {fontError ? "YES" : "NO"}
+        </Text>
+      </View>
+    );
   }
 
-  // 3) 폰트 로딩이 완료되면 네비게이터 렌더링
+  // 3️⃣ Now we’re ready and splash is hidden—show the video
+  if (showVideo) {
+    return <SplashScreenVideo onFinish={() => setShowVideo(false)} />;
+  }
+
+  // 4️⃣ Video done, show your app
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <View style={{ flex: 1 }}>
       <NavigationContainer>
         <AuthNavigator />
       </NavigationContainer>
