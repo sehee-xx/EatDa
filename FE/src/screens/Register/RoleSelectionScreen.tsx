@@ -66,7 +66,7 @@ export default function RoleSelectionScreen({ onSelectRole, onBack }: Props) {
           style={[
             styles.content,
             {
-              paddingVertical: height * 0.04,
+              paddingVertical: height * 0.02,
             },
           ]}
         >
@@ -325,11 +325,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 15,
   },
   headerContainer: {
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
   },
   mainTitle: {
     color: "#1e293b",
