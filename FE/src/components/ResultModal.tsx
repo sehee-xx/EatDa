@@ -1,3 +1,4 @@
+// src/components/ResultModal.tsx
 import React from "react";
 import {
   Modal,
@@ -14,6 +15,7 @@ import { COLORS, textStyles } from "../constants/theme";
 type ResultModalProps = {
   visible: boolean;
   type: "success" | "failure";
+  title?: string; // 커스텀 제목을 위한 선택적 prop
   message: string;
   onClose: () => void;
 };
@@ -21,20 +23,22 @@ type ResultModalProps = {
 export default function ResultModal({
   visible,
   type,
+  title,
   message,
   onClose,
 }: ResultModalProps) {
   const { width, height } = useWindowDimensions();
   const modalWidth = width * 0.8;
 
-  const title = type === "success" ? "회원가입 성공" : "회원가입 실패";
+  // title이 제공되지 않으면 기본값 사용
+  const modalTitle = title || (type === "success" ? "성공" : "실패");
 
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.backdrop}>
         <View style={[styles.container, { width: modalWidth }]}>
           <Text style={[styles.title, { fontSize: width * 0.05 }]}>
-            {title}
+            {modalTitle}
           </Text>
           <Text style={[styles.subtitle, { fontSize: width * 0.035 }]}>
             {message}
