@@ -193,7 +193,7 @@ export default function RoleSelectionScreen({ onSelectRole, onBack }: Props) {
               </View>
               {/* 배지를 카드 밖으로 완전히 분리 */}
               <View style={[styles.badge, styles.eaterBadge]}>
-                <Text style={styles.badgeText}>FOODIE</Text>
+                <Text style={styles.badgeText}>EATER</Text>
               </View>
             </TouchableOpacity>
 
@@ -294,7 +294,7 @@ export default function RoleSelectionScreen({ onSelectRole, onBack }: Props) {
               </View>
               {/* 배지를 카드 밖으로 완전히 분리 */}
               <View style={[styles.badge, styles.makerBadge]}>
-                <Text style={styles.badgeText}>BUSINESS</Text>
+                <Text style={styles.badgeText}>MAKER</Text>
               </View>
             </TouchableOpacity>
           </View>
