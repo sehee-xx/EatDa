@@ -2,11 +2,14 @@ package com.global.exception;
 
 import com.global.constants.ErrorCode;
 import com.global.dto.response.BaseResponse;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,9 +26,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(GlobalException.class)
     public ResponseEntity<BaseResponse<Void>> handleGlobalException(final GlobalException e) {
-        return ResponseEntity
-                .status(e.getErrorCode().getStatus())
-                .body(BaseResponse.error(e.getErrorCode(), e.getDetails()));
+        return buildErrorResponse(e.getErrorCode(), e.getDetails());
     }
 
     /**
@@ -33,13 +34,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleValidationException(final MethodArgumentNotValidException e) {
-        Map<String, String> details = new HashMap<>();
-        e.getBindingResult().getFieldErrors().forEach(error ->
-                details.put(error.getField(), error.getDefaultMessage()));
-
-        return ResponseEntity
-                .status(ErrorCode.VALIDATION_ERROR.getStatus())
-                .body(BaseResponse.error(ErrorCode.VALIDATION_ERROR, details));
+        var details = extractFieldErrors(e);
+        return buildErrorResponse(ErrorCode.VALIDATION_ERROR, details);
     }
 
     /**
@@ -47,13 +43,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<BaseResponse<Void>> handleConstraintViolationException(final ConstraintViolationException e) {
-        Map<String, String> details = new HashMap<>();
-        e.getConstraintViolations().forEach(violation ->
-                details.put(violation.getPropertyPath().toString(), violation.getMessage()));
-
-        return ResponseEntity
-                .status(ErrorCode.VALIDATION_ERROR.getStatus())
-                .body(BaseResponse.error(ErrorCode.VALIDATION_ERROR, details));
+        var details = extractConstraintViolations(e);
+        return buildErrorResponse(ErrorCode.VALIDATION_ERROR, details);
     }
 
     /**
@@ -61,9 +52,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<BaseResponse<Void>> handleInvalidFormat(final HttpMessageNotReadableException e) {
-        return ResponseEntity
-                .status(ErrorCode.INVALID_FORMAT.getStatus())
-                .body(BaseResponse.error(ErrorCode.INVALID_FORMAT));
+        return buildErrorResponse(ErrorCode.INVALID_FORMAT);
     }
 
     /**
@@ -71,9 +60,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodNotAllowed(final HttpRequestMethodNotSupportedException e) {
-        return ResponseEntity
-                .status(ErrorCode.METHOD_NOT_ALLOWED.getStatus())
-                .body(BaseResponse.error(ErrorCode.METHOD_NOT_ALLOWED));
+        return buildErrorResponse(ErrorCode.METHOD_NOT_ALLOWED);
     }
 
     /**
@@ -81,8 +68,57 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleUncaughtException(final Exception e) {
+        return buildErrorResponse(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 에러 응답 공통 생성 로직 - details 포함
+     */
+    private ResponseEntity<BaseResponse<Void>> buildErrorResponse(final ErrorCode code, final Object details) {
         return ResponseEntity
-                .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-                .body(BaseResponse.error(ErrorCode.INTERNAL_SERVER_ERROR));
+                .status(code.getStatus())
+                .body(BaseResponse.error(code, details));
+    }
+
+    /**
+     * 에러 응답 공통 생성 로직 - details 없음
+     */
+    private ResponseEntity<BaseResponse<Void>> buildErrorResponse(final ErrorCode code) {
+        return buildErrorResponse(code, null);
+    }
+
+    /**
+     * 필드 유효성 검증 오류 메시지 추출
+     */
+    private Map<String, String> extractFieldErrors(MethodArgumentNotValidException e) {
+        return e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        error -> Optional.ofNullable(error.getDefaultMessage()).orElse("잘못된 입력입니다."),
+                        (first, second) -> first // 중복 필드는 첫 번째 메시지 유지
+                ));
+    }
+
+    /**
+     * 제약조건 위반 오류 메시지 추출
+     */
+    private Map<String, String> extractConstraintViolations(ConstraintViolationException e) {
+        return e.getConstraintViolations()
+                .stream()
+                .collect(Collectors.toMap(
+                        violation -> extractLeafProperty(violation.getPropertyPath().toString()),
+                        ConstraintViolation::getMessage,
+                        (first, second) -> first // 중복 필드는 첫 번째 메시지 유지
+                ));
+    }
+
+    /**
+     * 경로 문자열에서 마지막 필드명만 추출 (예: "method.param.field" → "field")
+     */
+    private String extractLeafProperty(String path) {
+        var lastDot = path.lastIndexOf('.');
+        return (lastDot != -1) ? path.substring(lastDot + 1) : path;
     }
 }
