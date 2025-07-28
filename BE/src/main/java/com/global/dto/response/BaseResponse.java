@@ -1,6 +1,8 @@
 package com.global.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.global.constants.ErrorCode;
+import com.global.constants.SuccessCode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import lombok.Builder;
@@ -43,36 +45,41 @@ public class BaseResponse<T> {
         this.details = details;
     }
 
-    // 성공 응답 생성
-    public static <T> BaseResponse<T> success(final String code, final String message, final T data) {
+    // 성공 응답 생성 - 데이터 포함
+    public static <T> BaseResponse<T> success(final SuccessCode successCode, final T data) {
         return BaseResponse.<T>builder()
-                .code(code)
-                .message(message)
-                .status(200)
+                .code(successCode.getCode())
+                .message(successCode.getMessage())
+                .status(successCode.getStatus())
                 .data(data)
                 .build();
     }
 
-    // 커스텀 상태 코드 포함한 성공 응답
-    public static <T> BaseResponse<T> success(final String code, final String message, final int status, final T data) {
+    // 성공 응답 생성 - 데이터 없음
+    public static <T> BaseResponse<T> success(final SuccessCode successCode) {
         return BaseResponse.<T>builder()
-                .code(code)
-                .message(message)
-                .status(status)
-                .data(data)
+                .code(successCode.getCode())
+                .message(successCode.getMessage())
+                .status(successCode.getStatus())
                 .build();
     }
 
-    // 에러 응답 생성
-    public static <T> BaseResponse<T> error(final String code,
-                                            final String message,
-                                            final int status,
-                                            final Object details) {
+    // 에러 응답 생성 - details 포함
+    public static <T> BaseResponse<T> error(final ErrorCode errorCode, final Object details) {
         return BaseResponse.<T>builder()
-                .code(code)
-                .message(message)
-                .status(status)
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .status(errorCode.getStatus())
                 .details(details)
+                .build();
+    }
+
+    // 에러 응답 생성 - details 없음
+    public static <T> BaseResponse<T> error(final ErrorCode errorCode) {
+        return BaseResponse.<T>builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .status(errorCode.getStatus())
                 .build();
     }
 }
