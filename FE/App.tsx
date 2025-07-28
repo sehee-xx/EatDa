@@ -1,52 +1,50 @@
 // App.tsx
-
-import React, { useCallback, useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StatusBar } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
 import { NavigationContainer } from "@react-navigation/native";
+import { useKeepAwake } from "expo-keep-awake";
 import AuthNavigator from "./src/navigation/AuthNavigator";
 import SplashScreenVideo from "./src/screens/SplashScreen";
 
-// prevent auto‑hide at cold start
+// 네이티브 스플래시 자동 숨김 방지
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
+  // 개발 중에만 화면 깨어있게 유지
+  if (__DEV__) {
+    useKeepAwake();
+  }
+
   const [appIsReady, setAppIsReady] = useState(false);
   const [showVideo, setShowVideo] = useState(true);
   const [fontsLoaded, fontError] = useFonts({
     AlfaSlabOne: require("./assets/fonts/AlfaSlabOneRegular.ttf"),
   });
 
-  // 1️⃣ When fonts are loaded (or error), mark app ready
+  // 폰트 로드 완료 시 네이티브 스플래시 숨기기
   useEffect(() => {
     if (fontsLoaded || fontError) {
       setAppIsReady(true);
-    }
-    const timer = setTimeout(() => setAppIsReady(true), 5000);
-    return () => clearTimeout(timer);
-  }, [fontsLoaded, fontError]);
-
-  // 2️⃣ As soon as appIsReady, hide the splash
-  useEffect(() => {
-    if (appIsReady) {
       SplashScreen.hideAsync();
     }
-  }, [appIsReady]);
+  }, [fontsLoaded, fontError]);
 
+  // 폰트 로딩 중
   if (!appIsReady) {
     return (
       <View
         style={{
           flex: 1,
-          backgroundColor: "blue",
+          backgroundColor: "#fff",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
         <Text
           style={{
-            color: "white",
+            color: "#000",
             fontSize: 18,
             textAlign: "center",
             padding: 20,
@@ -61,14 +59,19 @@ export default function App() {
     );
   }
 
-  // 3️⃣ Now we’re ready and splash is hidden—show the video
+  // 인트로 비디오 재생
   if (showVideo) {
     return <SplashScreenVideo onFinish={() => setShowVideo(false)} />;
   }
 
-  // 4️⃣ Video done, show your app
+  // 메인 앱
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      <StatusBar
+        barStyle="dark-content"
+        translucent={true}
+        backgroundColor="transparent"
+      />
       <NavigationContainer>
         <AuthNavigator />
       </NavigationContainer>
