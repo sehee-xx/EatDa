@@ -2,6 +2,7 @@ package com.global.exception;
 
 import com.global.constants.ErrorCode;
 import com.global.dto.response.BaseResponse;
+import com.global.dto.response.ErrorResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
@@ -25,7 +26,7 @@ public class GlobalExceptionHandler {
      * 비즈니스 예외 처리
      */
     @ExceptionHandler(GlobalException.class)
-    public ResponseEntity<BaseResponse<Void>> handleGlobalException(final GlobalException e) {
+    public ResponseEntity<BaseResponse> handleGlobalException(final GlobalException e) {
         return buildErrorResponse(e.getErrorCode(), e.getDetails());
     }
 
@@ -33,7 +34,8 @@ public class GlobalExceptionHandler {
      * @Valid, @Validated 유효성 검증 실패 처리
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<BaseResponse<Void>> handleValidationException(final MethodArgumentNotValidException e) {
+    public ResponseEntity<BaseResponse> handleValidationException(
+            final MethodArgumentNotValidException e) {
         var details = extractFieldErrors(e);
         return buildErrorResponse(ErrorCode.VALIDATION_ERROR, details);
     }
@@ -42,7 +44,8 @@ public class GlobalExceptionHandler {
      * URI 파라미터 등의 제약조건 검증 실패 처리
      */
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<BaseResponse<Void>> handleConstraintViolationException(final ConstraintViolationException e) {
+    public ResponseEntity<BaseResponse> handleConstraintViolationException(
+            final ConstraintViolationException e) {
         var details = extractConstraintViolations(e);
         return buildErrorResponse(ErrorCode.VALIDATION_ERROR, details);
     }
@@ -51,7 +54,7 @@ public class GlobalExceptionHandler {
      * 잘못된 JSON 형식 등 본문 파싱 실패
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<BaseResponse<Void>> handleInvalidFormat(final HttpMessageNotReadableException e) {
+    public ResponseEntity<BaseResponse> handleInvalidFormat(final HttpMessageNotReadableException e) {
         return buildErrorResponse(ErrorCode.INVALID_FORMAT);
     }
 
@@ -59,7 +62,8 @@ public class GlobalExceptionHandler {
      * 허용되지 않은 HTTP 메서드 요청 처리
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<BaseResponse<Void>> handleMethodNotAllowed(final HttpRequestMethodNotSupportedException e) {
+    public ResponseEntity<BaseResponse> handleMethodNotAllowed(
+            final HttpRequestMethodNotSupportedException e) {
         return buildErrorResponse(ErrorCode.METHOD_NOT_ALLOWED);
     }
 
@@ -67,24 +71,24 @@ public class GlobalExceptionHandler {
      * 정의되지 않은 모든 예외 처리
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<BaseResponse<Void>> handleUncaughtException(final Exception e) {
+    public ResponseEntity<BaseResponse> handleUncaughtException(final Exception e) {
         return buildErrorResponse(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 
     /**
      * 에러 응답 공통 생성 로직 - details 포함
      */
-    private ResponseEntity<BaseResponse<Void>> buildErrorResponse(final ErrorCode code, final Object details) {
-        return ResponseEntity
-                .status(code.getStatus())
-                .body(BaseResponse.error(code, details));
+    private ResponseEntity<BaseResponse> buildErrorResponse(final ErrorCode code, final Object details) {
+        var body = ErrorResponse.of(code.getCode(), code.getMessage(), code.getStatus(), details);
+        return ResponseEntity.status(code.getStatus()).body(body);
     }
 
     /**
      * 에러 응답 공통 생성 로직 - details 없음
      */
-    private ResponseEntity<BaseResponse<Void>> buildErrorResponse(final ErrorCode code) {
-        return buildErrorResponse(code, null);
+    private ResponseEntity<BaseResponse> buildErrorResponse(final ErrorCode code) {
+        var body = ErrorResponse.of(code.getCode(), code.getMessage(), code.getStatus());
+        return ResponseEntity.status(code.getStatus()).body(body);
     }
 
     /**
