@@ -490,6 +490,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: "#475569",
+    paddingBottom: 16,
     fontWeight: "600",
     letterSpacing: -0.2,
   },
