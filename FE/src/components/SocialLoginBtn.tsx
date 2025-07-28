@@ -1,3 +1,4 @@
+// src/components/SocialLoginBtn.tsx
 import React from "react";
 import {
   TouchableOpacity,
@@ -15,6 +16,7 @@ interface Props {
   onPress: () => void;
   style?: any;
   iconStyle?: { width: number; height: number };
+  textStyle?: any; // Text 스타일 추가 prop
 }
 
 export default function SocialLoginBtn({
@@ -23,9 +25,16 @@ export default function SocialLoginBtn({
   IconComponent,
   style,
   iconStyle,
+  textStyle = {},
 }: Props) {
-  const { height } = useWindowDimensions();
-  const btnHeight = height * 0.055;
+  const { width } = useWindowDimensions();
+
+  // 버튼 높이 (가로폭의 12%)
+  const btnHeight = width * 0.1;
+  // 폰트 크기: 가로폭의 3% 기준, 최소 10, 최대 14
+  const fontSize = Math.max(10, Math.min(width * 0.03, 14));
+  // 카카오일 땐 진한 텍스트 컬러
+  const textColor = title.includes("카카오") ? "#333" : COLORS.text;
 
   return (
     <Shadow
@@ -45,7 +54,11 @@ export default function SocialLoginBtn({
           style={styles.icon}
         />
         <Text
-          style={[styles.text, title.includes("카카오") && { color: "#333" }]}
+          style={[
+            styles.text,
+            { fontSize, color: textColor },
+            textStyle, // 외부에서 추가 스타일 가능
+          ]}
         >
           {title}
         </Text>
@@ -65,15 +78,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.md,
     width: "100%",
   },
-  icon: { marginRight: SPACING.sm },
+  icon: {
+    marginRight: SPACING.sm,
+  },
   text: {
-    fontSize: 14,
     fontWeight: "600",
-    color: COLORS.text,
     textAlign: "center",
   },
 });

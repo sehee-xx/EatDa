@@ -98,14 +98,14 @@ export default function EaterLoginScreen({
         onPress={handleGoogleLogin}
         IconComponent={GoogleIcon}
         style={{ backgroundColor: "#fff" }}
-        iconStyle={{ width: 16, height: 16 }}
+        iconStyle={{ width: 14, height: 14 }}
       />
       <SocialLoginBtn
         title="카카오 로그인"
         onPress={handleKakaoLogin}
         IconComponent={KakaoIcon}
         style={{ backgroundColor: "#FEE500" }}
-        iconStyle={{ width: 16, height: 16 }}
+        iconStyle={{ width: 14, height: 14 }}
       />
     </AuthForm>
   );

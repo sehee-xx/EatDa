@@ -1,3 +1,4 @@
+// src/components/LoginButton.tsx
 import React from "react";
 import { TouchableOpacity, Text, Image, StyleSheet } from "react-native";
 import { Shadow } from "react-native-shadow-2";
@@ -23,6 +24,14 @@ export default function LoginButton({
   iconStyle,
 }: Props) {
   const { hp, wp } = useResponsive();
+
+  // 버튼 높이·반경은 기존대로
+  const height = hp(0.055);
+  const borderRadius = wp(0.02);
+
+  // fontSize: 화면 너비의 4% 기준, 최소 12, 최대 16
+  const fontSize = Math.max(12, Math.min(wp(0.04), 16));
+  const color = "#fff";
   const backgroundColor = role === "maker" ? "#38CCA2" : "#53A3DA";
 
   return (
@@ -35,15 +44,16 @@ export default function LoginButton({
       <TouchableOpacity
         style={[
           styles.button,
-          { backgroundColor, height: hp(0.055), borderRadius: wp(0.02) },
+          { backgroundColor, height, borderRadius },
           style,
         ]}
         onPress={onPress}
+        activeOpacity={0.7}
       >
         {icon && (
           <Image source={icon} style={[{ marginRight: wp(0.02) }, iconStyle]} />
         )}
-        <Text style={[styles.text, { fontSize: wp(0.04) }, textStyle]}>
+        <Text style={[styles.text, { fontSize, color }, textStyle]}>
           {title}
         </Text>
       </TouchableOpacity>
@@ -59,5 +69,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
   },
-  text: { color: "#fff", fontWeight: "600" },
+  text: {
+    fontWeight: "600",
+    textAlign: "center",
+  },
 });
