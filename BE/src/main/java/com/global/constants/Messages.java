@@ -17,13 +17,17 @@ public enum Messages {
     SECURITY_SCHEME_NAME("BearerAuthentication"),
     BEARER_FORMAT("JWT"),
     BEARER_SCHEME("bearer"),
-    
+
     // 시스템 패키지 필터링
     SPRING_PACKAGE("org.springframework"),
     APACHE_PACKAGE("org.apache"),
 
     // 로깅 관련 메시지
-    LOG_ARG_CONVERSION_FAILED("Failed to convert argument");
+    LOG_ARG_CONVERSION_FAILED("Failed to convert argument"),
+    LOG_START_PREFIX("-->"),
+    LOG_COMPLETE_PREFIX("<--"),
+    LOG_EXCEPTION_PREFIX("<X-"),
+    LOG_UNSUPPORTED_LEVEL("Unsupported log level: {}");
 
 
     private final String message;

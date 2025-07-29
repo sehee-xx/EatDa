@@ -8,7 +8,17 @@ public final class TimestampUtils {
         throw new IllegalStateException("Utility class");
     }
 
+    /**
+     * ISO-8601 형식의 현재 시간을 문자열로 반환합니다.
+     */
     public static String now() {
         return Instant.now().truncatedTo(ChronoUnit.MILLIS).toString();
+    }
+
+    /**
+     * 현재 시간을 밀리초 단위로 반환합니다.
+     */
+    public static long currentTimeMillis() {
+        return Instant.now().toEpochMilli();
     }
 }
