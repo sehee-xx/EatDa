@@ -452,7 +452,7 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
 
       if (
         GOOGLE_VISION_API_KEY &&
-        GOOGLE_VISION_API_KEY !== "YOUR_GOOGLE_VISION_API_KEY"
+        GOOGLE_VISION_API_KEY !== API_KEYS.GOOGLE_VISION
       ) {
         // Google Vision API 사용
         const base64Image = await FileSystem.readAsStringAsync(imageUri, {
