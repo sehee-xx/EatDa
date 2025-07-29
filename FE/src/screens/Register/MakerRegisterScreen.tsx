@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   SafeAreaView,
   View,
@@ -12,6 +12,10 @@ import {
   Modal,
   TextInput,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import StepIndicator from "../../components/StepIndicator";
 import InputGroup from "../../components/InputGroup";
@@ -73,6 +77,7 @@ const NAVER_CLOVA_SECRET = ""; // 사용하지 않으므로 빈 문자열
 
 export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
   const { width, height } = useWindowDimensions();
+  const scrollViewRef = useRef<ScrollView>(null);
   const totalSteps = 4;
   const secondaryColor = COLORS.secondaryMaker;
   const btnHeight = height * 0.055;
@@ -154,6 +159,10 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
 
     if (currentStep < totalSteps) {
       setCurrentStep((s) => s + 1);
+      // 다음 단계로 이동 시 맨 위로 스크롤
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }, 100);
     } else {
       if (!agreementsState.terms || !agreementsState.marketing) {
         Alert.alert("알림", "필수 동의 항목을 모두 체크해주세요.");
@@ -184,7 +193,13 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
 
   const handleBack = () =>
     currentStep > 1 ? setCurrentStep((s) => s - 1) : onBack();
-  const handlePrevStep = () => setCurrentStep((s) => s - 1);
+  const handlePrevStep = () => {
+    setCurrentStep((s) => s - 1);
+    // 이전 단계로 이동 시 맨 위로 스크롤
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
+  };
   const handleModalClose = () => {
     setModalVisible(false);
     onComplete();
@@ -193,6 +208,11 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
   // Form data update
   const updateFormData = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // 키보드 닫기 함수
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   // 사업자 등록증 업로드
@@ -577,23 +597,35 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
 
   // Renderers
   const renderStep1 = () => (
-    <View>
-      {makerStep1Fields.map((f) => {
+    <View style={styles.step1Container}>
+      {makerStep1Fields.map((f, index) => {
         const { key, ...fieldProps } = f;
         return (
-          <InputGroup
-            key={key}
-            {...fieldProps}
-            value={formData[key as keyof typeof formData]}
-            onChangeText={(text: string) => updateFormData(key, text)}
-            style={{
-              height: btnHeight,
-              paddingHorizontal: width * 0.04,
-              marginBottom: height * 0.02,
-            }}
-          />
+          <View key={key} style={styles.inputWrapper}>
+            <InputGroup
+              {...fieldProps}
+              value={formData[key as keyof typeof formData]}
+              onChangeText={(text: string) => updateFormData(key, text)}
+              style={{
+                height: btnHeight,
+                paddingHorizontal: width * 0.04,
+                marginBottom: height * 0.015,
+              }}
+              onFocus={() => {
+                // 입력 필드가 포커스될 때 해당 필드로 스크롤
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({
+                    y: index * (btnHeight + height * 0.015 + 30),
+                    animated: true,
+                  });
+                }, 300);
+              }}
+            />
+          </View>
         );
       })}
+      {/* Step 1에 추가 여백 제공 */}
+      <View style={{ height: height * 0.3 }} />
     </View>
   );
 
@@ -780,180 +812,207 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-              <Text style={[styles.modalCancel, { fontSize: width * 0.04 }]}>
-                취소
-              </Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { fontSize: width * 0.045 }]}>
-              메뉴 수정
-            </Text>
-            <TouchableOpacity onPress={handleSaveMenuEdit}>
-              <Text
-                style={[
-                  styles.modalSave,
-                  { fontSize: width * 0.04, color: COLORS.secondaryMaker },
-                ]}
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                  <Text
+                    style={[styles.modalCancel, { fontSize: width * 0.04 }]}
+                  >
+                    취소
+                  </Text>
+                </TouchableOpacity>
+                <Text style={[styles.modalTitle, { fontSize: width * 0.045 }]}>
+                  메뉴 수정
+                </Text>
+                <TouchableOpacity onPress={handleSaveMenuEdit}>
+                  <Text
+                    style={[
+                      styles.modalSave,
+                      { fontSize: width * 0.04, color: COLORS.secondaryMaker },
+                    ]}
+                  >
+                    저장
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.modalContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                저장
-              </Text>
-            </TouchableOpacity>
-          </View>
+                {editingMenuId &&
+                  (() => {
+                    const menuItem = menuItems.find(
+                      (item) => item.id === editingMenuId
+                    );
+                    if (!menuItem) return null;
 
-          <ScrollView style={styles.modalContent}>
-            {editingMenuId &&
-              (() => {
-                const menuItem = menuItems.find(
-                  (item) => item.id === editingMenuId
-                );
-                if (!menuItem) return null;
+                    return (
+                      <>
+                        {/* 이미지 선택 */}
+                        <View style={styles.modalSection}>
+                          <Text
+                            style={[
+                              styles.modalSectionTitle,
+                              { fontSize: width * 0.04 },
+                            ]}
+                          >
+                            메뉴 이미지
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.imagePickerButton,
+                              {
+                                height: height * 0.15,
+                                marginBottom: height * 0.02,
+                              },
+                            ]}
+                            onPress={() => handleAddMenuImage(editingMenuId)}
+                          >
+                            {menuItem.imageUri ? (
+                              <Image
+                                source={{ uri: menuItem.imageUri }}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  borderRadius: 10,
+                                }}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <>
+                                <Text
+                                  style={[
+                                    styles.imagePickerIcon,
+                                    { fontSize: width * 0.08 },
+                                  ]}
+                                >
+                                  📷
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.imagePickerText,
+                                    { fontSize: width * 0.035 },
+                                  ]}
+                                >
+                                  이미지 추가
+                                </Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
 
-                return (
-                  <>
-                    {/* 이미지 선택 */}
-                    <View style={styles.modalSection}>
-                      <Text
-                        style={[
-                          styles.modalSectionTitle,
-                          { fontSize: width * 0.04 },
-                        ]}
-                      >
-                        메뉴 이미지
-                      </Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.imagePickerButton,
-                          {
-                            height: height * 0.15,
-                            marginBottom: height * 0.02,
-                          },
-                        ]}
-                        onPress={() => handleAddMenuImage(editingMenuId)}
-                      >
-                        {menuItem.imageUri ? (
-                          <Image
-                            source={{ uri: menuItem.imageUri }}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              borderRadius: 10,
-                            }}
-                            resizeMode="cover"
+                        {/* 메뉴 이름 */}
+                        <View style={styles.modalSection}>
+                          <Text
+                            style={[
+                              styles.modalSectionTitle,
+                              { fontSize: width * 0.04 },
+                            ]}
+                          >
+                            메뉴 이름
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.modalInput,
+                              { fontSize: width * 0.04 },
+                            ]}
+                            value={menuItem.name}
+                            onChangeText={(text) =>
+                              updateMenuItem(editingMenuId, "name", text)
+                            }
+                            placeholder="메뉴 이름을 입력하세요"
+                            returnKeyType="next"
+                            blurOnSubmit={false}
                           />
-                        ) : (
-                          <>
-                            <Text
-                              style={[
-                                styles.imagePickerIcon,
-                                { fontSize: width * 0.08 },
-                              ]}
-                            >
-                              📷
-                            </Text>
-                            <Text
-                              style={[
-                                styles.imagePickerText,
-                                { fontSize: width * 0.035 },
-                              ]}
-                            >
-                              이미지 추가
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                        </View>
 
-                    {/* 메뉴 이름 */}
-                    <View style={styles.modalSection}>
-                      <Text
-                        style={[
-                          styles.modalSectionTitle,
-                          { fontSize: width * 0.04 },
-                        ]}
-                      >
-                        메뉴 이름
-                      </Text>
-                      <TextInput
-                        style={[styles.modalInput, { fontSize: width * 0.04 }]}
-                        value={menuItem.name}
-                        onChangeText={(text) =>
-                          updateMenuItem(editingMenuId, "name", text)
-                        }
-                        placeholder="메뉴 이름을 입력하세요"
-                      />
-                    </View>
+                        {/* 가격 */}
+                        <View style={styles.modalSection}>
+                          <Text
+                            style={[
+                              styles.modalSectionTitle,
+                              { fontSize: width * 0.04 },
+                            ]}
+                          >
+                            가격
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.modalInput,
+                              { fontSize: width * 0.04 },
+                            ]}
+                            value={menuItem.price}
+                            onChangeText={(text) =>
+                              updateMenuItem(editingMenuId, "price", text)
+                            }
+                            placeholder="가격을 입력하세요"
+                            keyboardType="numeric"
+                            returnKeyType="next"
+                            blurOnSubmit={false}
+                          />
+                        </View>
 
-                    {/* 가격 */}
-                    <View style={styles.modalSection}>
-                      <Text
-                        style={[
-                          styles.modalSectionTitle,
-                          { fontSize: width * 0.04 },
-                        ]}
-                      >
-                        가격
-                      </Text>
-                      <TextInput
-                        style={[styles.modalInput, { fontSize: width * 0.04 }]}
-                        value={menuItem.price}
-                        onChangeText={(text) =>
-                          updateMenuItem(editingMenuId, "price", text)
-                        }
-                        placeholder="가격을 입력하세요"
-                        keyboardType="numeric"
-                      />
-                    </View>
+                        {/* 설명 */}
+                        <View style={styles.modalSection}>
+                          <Text
+                            style={[
+                              styles.modalSectionTitle,
+                              { fontSize: width * 0.04 },
+                            ]}
+                          >
+                            메뉴 설명
+                          </Text>
+                          <TextInput
+                            style={[
+                              styles.modalDescriptionInput,
+                              { fontSize: width * 0.04 },
+                            ]}
+                            value={menuItem.description}
+                            onChangeText={(text) =>
+                              updateMenuItem(editingMenuId, "description", text)
+                            }
+                            placeholder="메뉴 설명을 입력하세요"
+                            multiline
+                            textAlignVertical="top"
+                            returnKeyType="done"
+                          />
+                        </View>
 
-                    {/* 설명 */}
-                    <View style={styles.modalSection}>
-                      <Text
-                        style={[
-                          styles.modalSectionTitle,
-                          { fontSize: width * 0.04 },
-                        ]}
-                      >
-                        메뉴 설명
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.modalDescriptionInput,
-                          { fontSize: width * 0.04 },
-                        ]}
-                        value={menuItem.description}
-                        onChangeText={(text) =>
-                          updateMenuItem(editingMenuId, "description", text)
-                        }
-                        placeholder="메뉴 설명을 입력하세요"
-                        multiline
-                        textAlignVertical="top"
-                      />
-                    </View>
+                        {/* 메뉴 삭제 버튼 */}
+                        <TouchableOpacity
+                          style={styles.modalDeleteMenuButton}
+                          onPress={() => {
+                            removeMenuItem(editingMenuId);
+                            setEditModalVisible(false);
+                            setEditingMenuId(null);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.modalDeleteMenuText,
+                              { fontSize: width * 0.04 },
+                            ]}
+                          >
+                            이 메뉴 삭제하기
+                          </Text>
+                        </TouchableOpacity>
 
-                    {/* 메뉴 삭제 버튼 */}
-                    <TouchableOpacity
-                      style={styles.modalDeleteMenuButton}
-                      onPress={() => {
-                        removeMenuItem(editingMenuId);
-                        setEditModalVisible(false);
-                        setEditingMenuId(null);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.modalDeleteMenuText,
-                          { fontSize: width * 0.04 },
-                        ]}
-                      >
-                        이 메뉴 삭제하기
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                );
-              })()}
-          </ScrollView>
-        </View>
+                        {/* 키보드 여백 */}
+                        <View style={{ height: height * 0.1 }} />
+                      </>
+                    );
+                  })()}
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -1115,12 +1174,26 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
           >
             {getCurrentTitle()}
           </Text>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollViewContent}
+
+          {/* 키보드 대응 개선된 메인 컨텐츠 */}
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoidingView}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           >
-            {renderContent()}
-          </ScrollView>
+            <TouchableWithoutFeedback onPress={dismissKeyboard}>
+              <ScrollView
+                ref={scrollViewRef}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollViewContent}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+              >
+                {renderContent()}
+              </ScrollView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+
           <View style={styles.bottomButtonsContainer}>{renderButtons()}</View>
           <ResultModal
             visible={modalVisible}
@@ -1158,9 +1231,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 20,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollView: { flex: 1 },
-  scrollViewContent: { paddingHorizontal: 20, paddingBottom: 20 },
-  step2Container: { alignItems: "center" },
+  scrollViewContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  step1Container: {
+    flex: 1,
+  },
+  inputWrapper: {
+    marginBottom: 5,
+  },
+  step2Container: {
+    alignItems: "center",
+    flex: 1,
+  },
   step2Description: {
     color: COLORS.inactive,
     textAlign: "center",
