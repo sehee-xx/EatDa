@@ -2,6 +2,7 @@ package com.global.utils;
 
 import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
 
+import com.global.annotation.ExcludeFromLogging;
 import com.global.annotation.Sensitive;
 import java.lang.reflect.Field;
 import java.util.StringJoiner;
@@ -12,6 +13,8 @@ import java.util.StringJoiner;
 public final class MaskingUtils {
 
     private static final String MASK = "****";
+    private static final String EXCLUDE = "<excluded>";
+    private static final String ERROR = "<error>";
 
     private MaskingUtils() {
         throw new IllegalStateException(UTILITY_CLASS_ERROR.message());
@@ -44,18 +47,46 @@ public final class MaskingUtils {
         return result.toString();
     }
 
+    // @formatter:off
     /**
-     * 필드를 마스킹 여부에 따라 문자열로 변환합니다.
+     * 필드를 문자열로 변환합니다.
+     *
+     * @return 필드명=값 형태의 문자열. 예: fieldName=value
+     *   - 제외된 필드인 경우: fieldName=<excluded>
+     *   - 민감 정보인 경우: fieldName=****
+     *   - 일반 필드인 경우: fieldName={실제값}
+     *   - 접근 오류 시: fieldName=<error>
      */
+    // @formatter:on
     private static String formatField(final Field field, final Object target) {
-        field.setAccessible(true);
+        field.setAccessible(true); // private 필드에 접근 가능하도록 설정
         try {
+            if (isExcluded(field)) {
+                return formatExcluded(field);
+            }
+
             Object value = field.get(target);
-            boolean isSensitive = field.isAnnotationPresent(Sensitive.class);
-            String displayValue = isSensitive ? MASK : String.valueOf(value);
-            return field.getName() + "=" + displayValue;
+            String displayValue = isSensitive(field) ? MASK : String.valueOf(value);
+            return formatKeyValue(field.getName(), displayValue);
+
         } catch (IllegalAccessException e) {
-            return field.getName() + "=<error>";
+            return formatKeyValue(field.getName(), ERROR);
         }
+    }
+
+    private static boolean isExcluded(Field field) {
+        return field.isAnnotationPresent(ExcludeFromLogging.class);
+    }
+
+    private static boolean isSensitive(Field field) {
+        return field.isAnnotationPresent(Sensitive.class);
+    }
+
+    private static String formatExcluded(Field field) {
+        return formatKeyValue(field.getName(), EXCLUDE);
+    }
+
+    private static String formatKeyValue(String key, String value) {
+        return key + "=" + value;
     }
 }

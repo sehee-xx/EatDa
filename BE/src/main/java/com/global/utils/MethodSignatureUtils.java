@@ -1,10 +1,12 @@
 package com.global.utils;
 
 import static com.global.constants.Messages.APACHE_PACKAGE;
+import static com.global.constants.Messages.LOGGING_EXCLUDED_MESSAGE;
 import static com.global.constants.Messages.LOG_ARG_CONVERSION_FAILED;
 import static com.global.constants.Messages.SPRING_PACKAGE;
 import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
 
+import com.global.annotation.ExcludeFromLogging;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -48,10 +50,16 @@ public final class MethodSignatureUtils {
     }
 
     /**
-     * 인자를 문자열로 변환합니다.(변환 실패 시 기본 에러 메시지를 반환) 추가로, @Sensitive 필드는 마스킹 처리합니다.
+     * 인자를 문자열로 변환하고 마스킹 처리합니다.
      */
     private static String convertArgToString(final Object arg) {
         try {
+            // @ExcludeFromLogging 어노테이션이 있는 경우 제외 
+            if (arg.getClass().isAnnotationPresent(ExcludeFromLogging.class)) {
+                return LOGGING_EXCLUDED_MESSAGE.message();
+            }
+
+            // MaskingUtils를 통한 마스킹 처리
             return MaskingUtils.mask(arg);
         } catch (Exception e) {
             return LOG_ARG_CONVERSION_FAILED.message();
