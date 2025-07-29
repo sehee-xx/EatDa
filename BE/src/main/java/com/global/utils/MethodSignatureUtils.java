@@ -48,11 +48,11 @@ public final class MethodSignatureUtils {
     }
 
     /**
-     * 인자를 문자열로 변환합니다(변환 실패 시 기본 에러 메시지를 반환)
+     * 인자를 문자열로 변환합니다.(변환 실패 시 기본 에러 메시지를 반환) 추가로, @Sensitive 필드는 마스킹 처리합니다.
      */
     private static String convertArgToString(final Object arg) {
         try {
-            return arg.toString();
+            return MaskingUtils.mask(arg);
         } catch (Exception e) {
             return LOG_ARG_CONVERSION_FAILED.message();
         }
