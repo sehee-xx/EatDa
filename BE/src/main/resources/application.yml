@@ -1,5 +1,13 @@
 spring:
   application:
     name: EatDa
-  profiles:
-    active: local
+
+management: # Spring-Actuator 설정
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus # Spring-Actuator에서 외부로 노출할 엔드포인트
+  prometheus:
+    metrics: # 시스템이나 애플리케이션의 동작 상태를 수치로 표현한 정보
+      export:
+        enabled: true   # prometheus 엔드포인트 활성화 여부 *default = true
