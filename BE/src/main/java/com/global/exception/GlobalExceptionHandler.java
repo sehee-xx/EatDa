@@ -1,5 +1,6 @@
 package com.global.exception;
 
+import static com.global.constants.Messages.INVALID_INPUT;
 import static com.global.utils.PathUtils.extractLeafProperty;
 
 import com.global.constants.ErrorCode;
@@ -102,7 +103,7 @@ public class GlobalExceptionHandler {
                 .stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
-                        error -> Optional.ofNullable(error.getDefaultMessage()).orElse("잘못된 입력입니다."),
+                        error -> Optional.ofNullable(error.getDefaultMessage()).orElse(INVALID_INPUT.message()),
                         (first, second) -> first // 중복 필드는 첫 번째 메시지 유지
                 ));
     }

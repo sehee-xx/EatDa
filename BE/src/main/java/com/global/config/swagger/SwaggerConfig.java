@@ -35,34 +35,34 @@ public class SwaggerConfig {
     // JWT 인증 관련 설정 생성
     private Components createSecurityComponents() {
         SecurityScheme scheme = createJwtSecurityScheme();
-        return new Components().addSecuritySchemes(SECURITY_SCHEME_NAME.getMessage(), scheme);
+        return new Components().addSecuritySchemes(SECURITY_SCHEME_NAME.message(), scheme);
     }
 
-    // JWT 보안 구성 설정 생성 - Bearer 토큰 방식의 인증 스키마 정의
+    // JWT 보안 구성 설정 생성
     private SecurityScheme createJwtSecurityScheme() {
         return new SecurityScheme()
                 .type(HTTP)
-                .scheme(BEARER_SCHEME.getMessage())
-                .bearerFormat(BEARER_FORMAT.getMessage());
+                .scheme(BEARER_SCHEME.message())
+                .bearerFormat(BEARER_FORMAT.message());
     }
 
     // 보안 요구사항 설정
     private SecurityRequirement createSecurityRequirement() {
-        return new SecurityRequirement().addList(SECURITY_SCHEME_NAME.getMessage());
+        return new SecurityRequirement().addList(SECURITY_SCHEME_NAME.message());
     }
 
     // API 정보 설정
     private Info createApiInfo() {
         return new Info()
-                .title(API_TITLE.getMessage())
-                .description(API_DESCRIPTION.getMessage())
-                .version(API_VERSION.getMessage());
+                .title(API_TITLE.message())
+                .description(API_DESCRIPTION.message())
+                .version(API_VERSION.message());
     }
 
     // 서버 정보 설정
     private List<Server> createServers() {
-        Server localServer = new Server().url(LOCAL_SERVER_URL.getMessage());
-        Server devServer = new Server().url(DEV_SERVER_URL.getMessage());
+        Server localServer = new Server().url(LOCAL_SERVER_URL.message());
+        Server devServer = new Server().url(DEV_SERVER_URL.message());
         return List.of(localServer, devServer);
     }
 }
