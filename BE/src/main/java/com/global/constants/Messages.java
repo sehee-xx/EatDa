@@ -27,7 +27,10 @@ public enum Messages {
     LOG_START_PREFIX("-->"),
     LOG_COMPLETE_PREFIX("<--"),
     LOG_EXCEPTION_PREFIX("<X-"),
-    LOG_UNSUPPORTED_LEVEL("Unsupported log level: {}");
+    LOG_UNSUPPORTED_LEVEL("Unsupported log level: {}"),
+
+    // Utility 클래스 관련 메시지
+    UTILITY_CLASS_ERROR("Utility class");
 
 
     private final String message;

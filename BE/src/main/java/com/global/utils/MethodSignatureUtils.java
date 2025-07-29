@@ -3,6 +3,7 @@ package com.global.utils;
 import static com.global.constants.Messages.APACHE_PACKAGE;
 import static com.global.constants.Messages.LOG_ARG_CONVERSION_FAILED;
 import static com.global.constants.Messages.SPRING_PACKAGE;
+import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -12,7 +13,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 public final class MethodSignatureUtils {
 
     private MethodSignatureUtils() {
-        throw new IllegalStateException("Utility class");
+        throw new IllegalStateException(UTILITY_CLASS_ERROR.message());
     }
 
     /**

@@ -1,11 +1,13 @@
 package com.global.utils;
 
+import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 public final class TimestampUtils {
     private TimestampUtils() {
-        throw new IllegalStateException("Utility class");
+        throw new IllegalStateException(UTILITY_CLASS_ERROR.message());
     }
 
     /**
