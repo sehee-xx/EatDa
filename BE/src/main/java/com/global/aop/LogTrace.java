@@ -6,6 +6,7 @@ import static com.global.constants.Messages.LOG_START_PREFIX;
 import static com.global.constants.Messages.LOG_UNSUPPORTED_LEVEL;
 import static com.global.utils.TimestampUtils.currentTimeMillis;
 
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,8 @@ import org.springframework.stereotype.Component;
 public class LogTrace {
 
     // 로그 메시지 패턴 상수 
-    private static final String MESSAGE_PATTERN = "[%s] %s";
-    private static final String COMPLETE_MESSAGE_PATTERN = "[%s] %s time=%dms%s";
+    private static final String MESSAGE_PATTERN = "[%s] %s%s";
+    private static final String COMPLETE_MESSAGE_PATTERN = "[%s] %s%s time=%dms%s";
     private static final String EXCEPTION_FORMAT = " ex=%s";
 
     // 스레드별 TraceId를 관리하는 ThreadLocal 객체
@@ -31,7 +32,7 @@ public class LogTrace {
     public TraceStatus begin(final String methodSignature, final LogLevel level) {
         TraceId traceId = syncTraceId();
         String formattedSpace = formatSpace(LOG_START_PREFIX.message(), traceId.getLevel());
-        String message = String.format(MESSAGE_PATTERN, traceId.getId(), formattedSpace + methodSignature);
+        String message = String.format(MESSAGE_PATTERN, traceId.getId(), formattedSpace, methodSignature);
 
         logByLevel(level, message, null);
         return new TraceStatus(traceId, currentTimeMillis(), methodSignature);
@@ -68,13 +69,14 @@ public class LogTrace {
      */
     private String formatLogMessage(final TraceStatus status, final Exception e, final TraceId traceId,
                                     final long duration) {
-        String prefix = e == null ? LOG_COMPLETE_PREFIX.message() : LOG_EXCEPTION_PREFIX.message();
+        String prefix = Objects.isNull(e) ? LOG_COMPLETE_PREFIX.message() : LOG_EXCEPTION_PREFIX.message();
         String formattedSpace = formatSpace(prefix, traceId.getLevel());
-        String exceptionMessage = e != null ? String.format(EXCEPTION_FORMAT, e.getMessage()) : "";
+        String exceptionMessage = Objects.isNull(e) ? String.format(EXCEPTION_FORMAT, e.getMessage()) : "";
 
         return String.format(COMPLETE_MESSAGE_PATTERN,
                 traceId.getId(),
-                formattedSpace + status.methodSignature(),
+                formattedSpace,
+                status.methodSignature(),
                 duration,
                 exceptionMessage);
     }
@@ -96,7 +98,7 @@ public class LogTrace {
      */
     private TraceId syncTraceId() {
         TraceId traceId = traceIdHolder.get();
-        if (traceId == null) {
+        if (Objects.isNull(traceId)) {
             traceIdHolder.set(new TraceId());
             return traceIdHolder.get();
         }
@@ -111,7 +113,7 @@ public class LogTrace {
      */
     private void releaseTraceId() {
         TraceId traceId = traceIdHolder.get();
-        if (traceId == null) {
+        if (Objects.isNull(traceId)) {
             return;
         }
 

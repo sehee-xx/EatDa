@@ -8,12 +8,15 @@ import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
 import com.global.annotation.ExcludeFromLogging;
 import com.global.annotation.Sensitive;
 import java.lang.reflect.Field;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
  * `@Sensitive`는 마스킹 처리, `@ExcludeFromLogging`은 로그 제외 처리를 수행하는 필드 전용 유틸리티 클래스입니다.
  */
 public final class MaskingUtils {
+    private static final String NULL_TEXT = "null";
+    private static final String FIELD_FORMAT = "%s=%s";
 
     private MaskingUtils() {
         throw new IllegalStateException(UTILITY_CLASS_ERROR.message());
@@ -23,8 +26,8 @@ public final class MaskingUtils {
      * 대상 객체의 필드 중 @Sensitive 어노테이션이 붙은 항목을 마스킹 처리하여 문자열로 반환합니다.
      */
     public static String mask(final Object target) {
-        if (target == null) {
-            return "null";
+        if (Objects.isNull(target)) {
+            return NULL_TEXT;
         }
 
         Class<?> clazz = target.getClass();
@@ -67,25 +70,24 @@ public final class MaskingUtils {
             Object value = field.get(target);
             String displayValue = isSensitive(field) ? LOG_MASKED_VALUE.message() : String.valueOf(value);
             return formatKeyValue(field.getName(), displayValue);
-
         } catch (IllegalAccessException e) {
             return formatKeyValue(field.getName(), LOG_ERROR_VALUE.message());
         }
     }
 
-    private static boolean isExcluded(Field field) {
+    private static boolean isExcluded(final Field field) {
         return field.isAnnotationPresent(ExcludeFromLogging.class);
     }
 
-    private static boolean isSensitive(Field field) {
+    private static boolean isSensitive(final Field field) {
         return field.isAnnotationPresent(Sensitive.class);
     }
 
-    private static String formatExcluded(Field field) {
+    private static String formatExcluded(final Field field) {
         return formatKeyValue(field.getName(), LOG_EXCLUDED_VALUE.message());
     }
 
-    private static String formatKeyValue(String key, String value) {
-        return key + "=" + value;
+    private static String formatKeyValue(final String key, final String value) {
+        return String.format(FIELD_FORMAT, key, value);
     }
 }

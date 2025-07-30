@@ -10,6 +10,7 @@ import static com.global.utils.MaskingUtils.mask;
 import com.global.annotation.ExcludeFromLogging;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.StringJoiner;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -20,7 +21,8 @@ import org.aspectj.lang.reflect.MethodSignature;
 public final class MethodSignatureUtils {
 
     private static final String ARGUMENT_SEPARATOR = ", ";
-    private static final String EQUAL = "=";
+    private static final String METHOD_SIGNATURE_FORMAT = "%s.%s(%s)";
+    private static final String PARAMETER_FORMAT = "%s=%s";
 
     private MethodSignatureUtils() {
         throw new IllegalStateException(UTILITY_CLASS_ERROR.message());
@@ -35,7 +37,7 @@ public final class MethodSignatureUtils {
         String methodName = signature.getName();
         String arguments = formatArgumentsWithExclusions(joinPoint, signature);
 
-        return String.format("%s.%s(%s)", className, methodName, arguments);
+        return String.format(METHOD_SIGNATURE_FORMAT, className, methodName, arguments);
     }
 
     /**
@@ -68,7 +70,7 @@ public final class MethodSignatureUtils {
                     ? LOG_EXCLUDED_VALUE.message()
                     : convertArgToString(arg);
 
-            joiner.add(parameterNames[i] + EQUAL + argString);
+            joiner.add(String.format(PARAMETER_FORMAT, parameterNames[i], argString));
         }
         return joiner;
     }
@@ -85,13 +87,13 @@ public final class MethodSignatureUtils {
      * 유효(null이 아니고 spring/apache 패키지가 아닌 경우)한 인자인지 확인합니다.
      */
     private static boolean isValidArgument(final Object arg) {
-        return arg == null || (!isSpringOrApachePackage(arg.getClass().getName()));
+        return Objects.isNull(arg) || isNotSpringOrApachePackage(arg.getClass().getName());
     }
 
     /**
      * 주어진 클래스가 스프링 또는 아파치 패키지에 속하는지 확인합니다.
      */
-    private static boolean isSpringOrApachePackage(final String className) {
+    private static boolean isNotSpringOrApachePackage(final String className) {
         return className.startsWith(SPRING_PACKAGE.message())
                 || className.startsWith(APACHE_PACKAGE.message());
     }
