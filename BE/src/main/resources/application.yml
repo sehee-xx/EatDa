@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: EatDa
+
+redis:
+  host: localhost
+  port: 6370
+  password: test
+  timeout: 2000
