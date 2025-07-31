@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EatDa!",
-    "slug": "EatDa!",
+    "slug": "eatda",
     "entryPoint": "index.js",
     "version": "1.0.0",
     "orientation": "portrait",
