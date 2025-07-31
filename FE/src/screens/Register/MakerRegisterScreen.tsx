@@ -118,20 +118,20 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
 
   // Form validation
   const validateStep1 = () => {
-    if (
-      !formData.email ||
-      !formData.password ||
-      !formData.passwordConfirm ||
-      !formData.storeName ||
-      !formData.storeLocation
-    ) {
-      Alert.alert("알림", "모든 필드를 입력해주세요.");
-      return false;
-    }
-    if (formData.password !== formData.passwordConfirm) {
-      Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
-      return false;
-    }
+    // if (
+    //   !formData.email ||
+    //   !formData.password ||
+    //   !formData.passwordConfirm ||
+    //   !formData.storeName ||
+    //   !formData.storeLocation
+    // ) {
+    //   Alert.alert("알림", "모든 필드를 입력해주세요.");
+    //   return false;
+    // }
+    // if (formData.password !== formData.passwordConfirm) {
+    //   Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+    //   return false;
+    // }
     return true;
   };
 
@@ -625,7 +625,7 @@ export default function MakerRegisterScreen({ onBack, onComplete }: Props) {
         );
       })}
       {/* Step 1에 추가 여백 제공 */}
-      <View style={{ height: height * 0.3 }} />
+      {/* <View style={{ height: height * 0.3 }} /> */}
     </View>
   );
 
