@@ -31,7 +31,7 @@ public class RedisStreamCleanerTasklet implements Tasklet {
     public RepeatStatus execute(@NonNull final StepContribution contribution,
                                 @NonNull final ChunkContext chunkContext) {
 
-        cleanerService.cleanAllStreams();
+        cleanerService.cleanExpiredMessagesFromAllStreams();
         return RepeatStatus.FINISHED;
     }
 }

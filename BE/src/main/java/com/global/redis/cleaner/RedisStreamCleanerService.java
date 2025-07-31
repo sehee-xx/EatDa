@@ -34,9 +34,9 @@ public class RedisStreamCleanerService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 모든 Redis Stream에 대해 만료 메시지를 정리한다
+     * 모든 Redis Stream에 대해 만료된 메시지를 정리한다
      */
-    public void cleanAllStreams() {
+    public void cleanExpiredMessagesFromAllStreams() {
         log.info(STARTED_STREAM_TTL_CLEANUP);
         for (final RedisStreamKey stream : RedisStreamKey.values()) {
             try {
