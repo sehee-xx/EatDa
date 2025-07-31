@@ -8,6 +8,10 @@ import {
   Text,
 } from "react-native";
 
+// 사이드바에 사용될 숟가락, 포크 이미지
+import Spoon from "../../assets/sideSpoon.svg";
+import Fork from "../../assets/sideFork.svg";
+
 export interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,22 +67,6 @@ export default function Sidebar({
           { width: width * 0.8, transform: [{ translateX: slideAnim }] },
         ]}
       >
-        <View style={styles.header}>
-          <View
-            style={[
-              styles.profileImage,
-              { backgroundColor: userRole === "eater" ? "#ff6b6b" : "#4dabf7" },
-            ]}
-          >
-            <Text style={styles.profileInitial}>
-              {userRole === "eater" ? "냠" : "사"}
-            </Text>
-          </View>
-          <Text style={styles.profileName}>
-            {userRole === "eater" ? "냠냠이" : "사장님"}
-          </Text>
-        </View>
-
         <View style={styles.menuItems}>
           <TouchableOpacity
             style={[
@@ -92,23 +80,29 @@ export default function Sidebar({
               // }
             }}
           >
-            <Text>🍽 고객 리뷰</Text>
+            <Text style={activePage === "reviewPage" && styles.activeText}>
+              고객 리뷰
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem}>
-            <Text>📋 이벤트 게시판</Text>
+            <Text>이벤트 게시판</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem}>
-            <Text>👥 마이페이지</Text>
+            <Text>마이페이지</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
+          {/* <TouchableOpacity style={styles.menuItem}>
             <Text>⚙️ 설정</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem}>
             <Text>📞 고객센터</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
-            <Text>🚪 로그아웃</Text>
+            <Text>로그아웃</Text>
           </TouchableOpacity>
+          <View style={styles.characterContainer}>
+            <Spoon style={styles.spoonStyle} width={350} height={350}></Spoon>
+            <Fork style={styles.forkStyle} width={350} height={350}></Fork>
+          </View>
         </View>
       </Animated.View>
     </>
@@ -132,8 +126,9 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: "white",
     zIndex: 30,
-    paddingTop: 50,
+    paddingTop: 30,
     paddingHorizontal: 20,
+    overflow: "hidden",
   },
   header: {
     alignItems: "center",
@@ -167,6 +162,35 @@ const styles = StyleSheet.create({
 
   active: {
     backgroundColor: "#FEC566",
-    opacity: 0.5,
+    opacity: 0.7,
+  },
+  
+  activeText: {
+    fontWeight: 700,
+  },
+
+  characterContainer: {
+    position: "absolute",
+    bottom: -500,
+    left: 0,
+    right: 0,
+    pointerEvents: "none",
+    backgroundColor: "yellow",
+  },
+
+  spoonStyle: {
+    position: "absolute",
+    left: -160,
+    bottom: -45,
+    transform: [{ rotate: "20deg" }],
+    opacity: 0.9,
+  },
+
+  forkStyle: {
+    position: "absolute",
+    right: -185,
+    bottom: 100,
+    transform: [{ rotate: "-15deg" }],
+    opacity: 0.9,
   },
 });
