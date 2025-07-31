@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     zIndex: 30,
     paddingTop: 30,
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
     overflow: "hidden",
   },
   header: {
@@ -153,11 +153,14 @@ const styles = StyleSheet.create({
   },
   menuItems: {
     marginTop: 10,
+    // paddingHorizontal:20,
+    
   },
   menuItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    paddingHorizontal:20,
   },
 
   active: {
@@ -180,7 +183,7 @@ const styles = StyleSheet.create({
 
   spoonStyle: {
     position: "absolute",
-    left: -160,
+    left: -140,
     bottom: -45,
     transform: [{ rotate: "20deg" }],
     opacity: 0.9,
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
 
   forkStyle: {
     position: "absolute",
-    right: -185,
+    right: -165,
     bottom: 100,
     transform: [{ rotate: "-15deg" }],
     opacity: 0.9,
