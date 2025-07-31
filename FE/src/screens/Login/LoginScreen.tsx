@@ -15,7 +15,7 @@ import MakerLoginScreen from "./MakerLoginScreen";
 import RoleSelectionScreen from "../Register/RoleSelectionScreen";
 import RegisterScreen from "../Register/RegisterScreen";
 // import ReviewTabScreen from "../Review/ReviewTabScreen";
-import Reviews from "../Review/ReviewPageJh";
+import Reviews from "../Review/ReviewTabScreen";
 import ResultModal from "../../components/ResultModal";
 import { COLORS, textStyles } from "../../constants/theme";
 
