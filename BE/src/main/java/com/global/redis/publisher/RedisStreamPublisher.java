@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.RedisTemplate;
  * @param <T> 발행할 메시지의 타입
  */
 public abstract class RedisStreamPublisher<T> {
+    private static final String ERROR_SERIALIZATION_FAILED = "Redis Stream 직렬화 실패";
 
     private final RedisTemplate<String, Object> redisTemplate;    // Redis 작업을 위한 템플릿
     private final ObjectMapper objectMapper;                      // JSON 변환을 위한 매퍼
@@ -38,7 +39,7 @@ public abstract class RedisStreamPublisher<T> {
             });
             redisTemplate.opsForStream().add(streamKey, map);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Redis Stream 직렬화 실패", e);
+            throw new RuntimeException(ERROR_SERIALIZATION_FAILED, e);
         }
     }
 }
