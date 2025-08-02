@@ -1,5 +1,8 @@
 package com.global.constants;
 
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
 public enum Messages {
     // 유효성 검증 메시지
     INVALID_INPUT("잘못된 입력입니다."),
@@ -35,12 +38,7 @@ public enum Messages {
     // Utility 클래스 관련 메시지
     UTILITY_CLASS_ERROR("Utility class");
 
-
     private final String message;
-
-    Messages(String message) {
-        this.message = message;
-    }
 
     public String message() {  // getMessage() 대신 더 간단한 이름으로 변경
         return this.message;
