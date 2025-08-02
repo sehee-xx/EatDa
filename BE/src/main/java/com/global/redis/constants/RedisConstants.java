@@ -14,7 +14,6 @@ public final class RedisConstants {
 
     // ===== 스트림 메시지 TTL 설정 =====
     public static final Duration STREAM_DEFAULT_TTL = Duration.ofMinutes(60);             // 기본 스트림 TTL
-    public static final Duration STREAM_POI_STORE_DISTANCE_TTL = Duration.ofDays(1);      // POI별 가게 거리 TTL 
     public static final Duration STREAM_OCR_REQUEST_TTL = Duration.ofMinutes(3);          // OCR 요청 메시지 TTL
     public static final Duration STREAM_REVIEW_ASSET_TTL = Duration.ofMinutes(5);         // 리뷰 에셋 생성 요청 TTL
     public static final Duration STREAM_MENU_POSTER_TTL = Duration.ofMinutes(3);          // 메뉴 포스터 생성 요청 TTL
