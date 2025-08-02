@@ -1,5 +1,11 @@
 package com.global.redis.cleaner;
 
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_ERROR_MESSAGE;
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_FINISH_MESSAGE;
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_INFO_MESSAGE;
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_MISSING_EXPIRE_MESSAGE;
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE;
+import static com.global.redis.constants.RedisConstants.REDIS_STREAM_CLEANER_START_MESSAGE;
 import static com.global.redis.constants.RedisConstants.STREAM_FIELD_EXPIRE_AT;
 import static com.global.redis.constants.RedisConstants.STREAM_MESSAGE_BATCH_SIZE;
 import static org.springframework.data.domain.Range.unbounded;
@@ -23,13 +29,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class RedisStreamCleanerService {
-    private static final String STARTED_STREAM_TTL_CLEANUP = "[RedisCleaner] Started stream TTL cleanup";
-    private static final String STREAM_CLEANUP_INFO = "[RedisCleaner] Stream: {}, Deleted messages: {}";
-    private static final String STREAM_CLEANUP_ERROR = "[RedisCleaner] Failed to clean stream: {}";
-    private static final String FINISHED_STREAM_CLEANUP = "[RedisCleaner] Finished all stream cleanup";
-    private static final String MISSING_EXPIRE_AT = "[RedisCleaner] expireAt 필드 없음 - messageId: {} (stream: {})";
-    private static final String EXPIRE_AT_PARSE_ERROR = "[RedisCleaner] expireAt 파싱 실패 - messageId: {} (stream: {})";
-
+    
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -37,16 +37,16 @@ public class RedisStreamCleanerService {
      * 모든 Redis Stream에 대해 만료된 메시지를 정리한다
      */
     public void cleanExpiredMessagesFromAllStreams() {
-        log.info(STARTED_STREAM_TTL_CLEANUP);
+        log.info(REDIS_STREAM_CLEANER_START_MESSAGE);
         for (final RedisStreamKey stream : RedisStreamKey.values()) {
             try {
                 int deleted = cleanExpiredMessages(stream);
-                log.info(STREAM_CLEANUP_INFO, stream.value(), deleted);
+                log.info(REDIS_STREAM_CLEANER_INFO_MESSAGE, stream.value(), deleted);
             } catch (Exception e) {
-                log.error(STREAM_CLEANUP_ERROR, stream.value(), e);
+                log.error(REDIS_STREAM_CLEANER_ERROR_MESSAGE, stream.value(), e);
             }
         }
-        log.info(FINISHED_STREAM_CLEANUP);
+        log.info(REDIS_STREAM_CLEANER_FINISH_MESSAGE);
     }
 
     /**
@@ -112,14 +112,14 @@ public class RedisStreamCleanerService {
     private LocalDateTime extractExpireAt(final MapRecord<String, Object, Object> record, final String streamKey) {
         Object raw = record.getValue().get(STREAM_FIELD_EXPIRE_AT);
         if (Objects.isNull(raw)) {
-            log.debug(MISSING_EXPIRE_AT, record.getId(), streamKey);
+            log.debug(REDIS_STREAM_CLEANER_MISSING_EXPIRE_MESSAGE, record.getId(), streamKey);
             return null;
         }
 
         try {
             return objectMapper.convertValue(raw, LocalDateTime.class);
         } catch (Exception e) {
-            log.warn(EXPIRE_AT_PARSE_ERROR, record.getId(), streamKey, e);
+            log.warn(REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE, record.getId(), streamKey, e);
             return null;
         }
     }

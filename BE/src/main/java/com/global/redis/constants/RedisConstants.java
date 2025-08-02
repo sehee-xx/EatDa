@@ -45,6 +45,19 @@ public final class RedisConstants {
     public static final String REDIS_STREAM_CLEANER_EXECUTION_ERROR =
             "[RedisCleanerScheduler] 배치 실행 실패";                                      // 배치 실행 실패 에러 메시지
 
+    // ===== Redis Stream Cleaner 로그 메시지 =====
+    public static final String REDIS_STREAM_CLEANER_START_MESSAGE =
+            "[RedisCleaner] Started stream TTL cleanup";              // 스트림 정리 시작 메시지
+    public static final String REDIS_STREAM_CLEANER_INFO_MESSAGE =
+            "[RedisCleaner] Stream: {}, Deleted messages: {}";        // 스트림 정리 정보 메시지
+    public static final String REDIS_STREAM_CLEANER_ERROR_MESSAGE =
+            "[RedisCleaner] Failed to clean stream: {}";             // 스트림 정리 실패 메시지
+    public static final String REDIS_STREAM_CLEANER_FINISH_MESSAGE =
+            "[RedisCleaner] Finished all stream cleanup";            // 스트림 정리 완료 메시지
+    public static final String REDIS_STREAM_CLEANER_MISSING_EXPIRE_MESSAGE =
+            "[RedisCleaner] expireAt 필드 없음 - messageId: {} (stream: {})";    // expireAt 필드 누락 메시지
+    public static final String REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE =
+            "[RedisCleaner] expireAt 파싱 실패 - messageId: {} (stream: {})";    // expireAt 파싱 실패 메시지
 
     private RedisConstants() {
         throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
