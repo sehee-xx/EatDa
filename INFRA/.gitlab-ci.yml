@@ -18,7 +18,7 @@ reload-infra:
     pull_policy: if-not-present
     entrypoint: [""]
   script:
-    - cp -r $CI_PROJECT_DIR/INFRA/nginx/* /srv/nginx/
+    - cp -r $CI_PROJECT_DIR/INFRA/* /srv/
     - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.yml up -d
   rules:
     - changes:
