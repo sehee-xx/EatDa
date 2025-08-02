@@ -1,0 +1,64 @@
+package com.global.redis.constants;
+
+import static com.global.constants.Messages.UTILITY_CLASS_ERROR;
+
+import java.time.Duration;
+
+public final class RedisConstants {
+    // ===== 스트림 필드 =====
+    public static final String STREAM_FIELD_EXPIRE_AT = "expireAt";        // 스트림 메시지 만료 시간 필드
+    public static final int STREAM_MESSAGE_BATCH_SIZE = 1000;              // 스트림 메시지 최대 조회 건수
+
+    // ===== DLQ (Dead Letter Queue) 관련 =====
+    public static final String DLQ_SUFFIX = ".dead";
+
+    // ===== 스트림 메시지 TTL 설정 =====
+    public static final Duration STREAM_DEFAULT_TTL = Duration.ofMinutes(60);             // 기본 스트림 TTL
+    public static final Duration STREAM_OCR_REQUEST_TTL = Duration.ofMinutes(3);          // OCR 요청 메시지 TTL
+    public static final Duration STREAM_REVIEW_ASSET_TTL = Duration.ofMinutes(5);         // 리뷰 에셋 생성 요청 TTL
+    public static final Duration STREAM_MENU_POSTER_TTL = Duration.ofMinutes(3);          // 메뉴 포스터 생성 요청 TTL
+    public static final Duration STREAM_EVENT_ASSET_TTL = Duration.ofMinutes(3);          // 이벤트 에셋 생성 요청 TTL
+
+    // ===== Stream Publisher 이름 =====
+    public static final String STREAM_REVIEW_ASSET = "review.asset.generate";       // 리뷰 에셋 생성 요청
+    public static final String STREAM_MENU_POSTER = "menu.poster.generate";         // 메뉴 포스터 생성 요청
+    public static final String STREAM_EVENT_ASSET = "event.asset.generate";         // 이벤트 에셋 생성 요청
+    public static final String STREAM_OCR_VERIFICATION = "ocr.verification.request"; // OCR 검증 요청
+    public static final String STREAM_OCR_MENU = "ocr.menu.request";               // OCR 메뉴 요청
+
+    // ===== Retry 관련 =====
+    public static final int MAX_RETRY_COUNT = 3;
+
+    // ===== 캐시 TTL 설정 =====
+    public static final Duration CACHE_DEFAULT_TTL = Duration.ofMinutes(60);       // 일반 기본 캐시
+    public static final Duration CACHE_POI_STORE_DISTANCE_TTL = Duration.ofDays(1);      // POI 별 가게 목록
+    public static final Duration CACHE_REVIEW_FEED_TTL = Duration.ofMinutes(30);   // 리뷰 피드 캐시
+    public static final Duration CACHE_EVENT_FEED_TTL = Duration.ofMinutes(30);    // 이벤트 피드 캐시
+    public static final Duration CACHE_STORE_DETAIL_TTL = Duration.ofHours(1);     // 가게 상세 정보  
+    public static final Duration CACHE_JWT_TOKEN_TTL = Duration.ofMinutes(15);     // 로그인 토큰
+
+    // ===== Batch Job 관련 =====
+    public static final String REDIS_STREAM_CLEANER_JOB_NAME = "redisStreamCleanerJob";
+    public static final String REDIS_STREAM_CLEANER_STEP_NAME = "redisStreamCleanerStep";
+    public static final String REDIS_STREAM_CLEANER_JOB_PARAM_TIMESTAMP = "timestamp";    // Job 실행 시간 파라미터
+    public static final String REDIS_STREAM_CLEANER_EXECUTION_ERROR =
+            "[RedisCleanerScheduler] 배치 실행 실패";                                      // 배치 실행 실패 에러 메시지
+
+    // ===== Redis Stream Cleaner 로그 메시지 =====
+    public static final String REDIS_STREAM_CLEANER_START_MESSAGE =
+            "[RedisCleaner] Started stream TTL cleanup";              // 스트림 정리 시작 메시지
+    public static final String REDIS_STREAM_CLEANER_INFO_MESSAGE =
+            "[RedisCleaner] Stream: {}, Deleted messages: {}";        // 스트림 정리 정보 메시지
+    public static final String REDIS_STREAM_CLEANER_ERROR_MESSAGE =
+            "[RedisCleaner] Failed to clean stream: {}";             // 스트림 정리 실패 메시지
+    public static final String REDIS_STREAM_CLEANER_FINISH_MESSAGE =
+            "[RedisCleaner] Finished all stream cleanup";            // 스트림 정리 완료 메시지
+    public static final String REDIS_STREAM_CLEANER_MISSING_EXPIRE_MESSAGE =
+            "[RedisCleaner] expireAt 필드 없음 - messageId: {} (stream: {})";    // expireAt 필드 누락 메시지
+    public static final String REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE =
+            "[RedisCleaner] expireAt 파싱 실패 - messageId: {} (stream: {})";    // expireAt 파싱 실패 메시지
+
+    private RedisConstants() {
+        throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
+    }
+}
