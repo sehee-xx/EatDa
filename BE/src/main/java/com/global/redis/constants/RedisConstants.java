@@ -65,6 +65,30 @@ public final class RedisConstants {
     public static final String REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE =
             "[RedisCleaner] expireAt 파싱 실패 - messageId: {} (stream: {})";    // expireAt 파싱 실패 메시지
 
+    // ===== Redis Stream Publisher 관련 상수 =====
+    public static final String REDIS_XADD_SCRIPT = """
+                return redis.call('XADD', KEYS[1], 'MAXLEN', '~', ARGV[1], '*', unpack(ARGV, 2))
+            """;
+
+    public static final String ERROR_SERIALIZATION_FAILED = "Redis Stream 직렬화 실패";
+    public static final String ERROR_REDIS_CONNECTION_FAILED = "Redis 연결 실패";
+    public static final String ERROR_REDIS_PROCESSING_FAILED = "Redis Stream 처리 중 오류 발생";
+    public static final String ERROR_REDIS_LUA_EXECUTION_FAILED = "Redis Lua Script 실행 실패 (streamKey=%s)";
+    public static final String ERROR_REDIS_STREAM_KEY_SERIALIZATION_FAILED = "Stream key 직렬화 실패: %s";
+    public static final String ERROR_REDIS_ARG_SERIALIZATION_FAILED = "ARG 직렬화 실패: %s";
+
+    // ===== Redis Stream Publisher 로그 메시지 =====
+    public static final String REDIS_PUBLISHER_PUBLISHING_MESSAGE =
+            "[RedisPublisher] Publishing to stream: {}, maxLen={}, payload={}";    // 스트림 발행 시작 메시지
+    public static final String REDIS_PUBLISHER_SUCCESS_MESSAGE =
+            "[RedisPublisher] Successfully published to stream: {}";               // 스트림 발행 성공 메시지
+    public static final String REDIS_PUBLISHER_SERIALIZATION_ERROR =
+            "[RedisPublisher] Payload serialization failed for stream: {}, error: {}";  // 직렬화 실패 메시지
+    public static final String REDIS_PUBLISHER_CONNECTION_ERROR =
+            "[RedisPublisher] Redis connection failed for stream: {}";            // Redis 연결 실패 메시지
+    public static final String REDIS_PUBLISHER_UNEXPECTED_ERROR =
+            "[RedisPublisher] Unexpected error publishing to stream: {}, error: {}";  // 예상치 못한 오류 메시지
+
     private RedisConstants() {
         throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
     }
