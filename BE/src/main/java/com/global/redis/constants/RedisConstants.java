@@ -7,7 +7,7 @@ import java.time.Duration;
 public final class RedisConstants {
     // ===== 스트림 필드 =====
     public static final String STREAM_FIELD_EXPIRE_AT = "expireAt";        // 스트림 메시지 만료 시간 필드
-    public static final int STREAM_MESSAGE_BATCH_SIZE = 1000;              // 스트림 메시지 최대 조회 건수
+    public static final int STREAM_MESSAGE_BATCH_SIZE = 1_000;              // 스트림 메시지 최대 조회 건수
 
     // ===== DLQ (Dead Letter Queue) 관련 =====
     public static final String DLQ_SUFFIX = ".dead";
@@ -43,6 +43,13 @@ public final class RedisConstants {
     public static final String REDIS_STREAM_CLEANER_JOB_PARAM_TIMESTAMP = "timestamp";    // Job 실행 시간 파라미터
     public static final String REDIS_STREAM_CLEANER_EXECUTION_ERROR =
             "[RedisCleanerScheduler] 배치 실행 실패";                                      // 배치 실행 실패 에러 메시지
+
+    // ===== 스트림 메시지 MAXLEN 설정 =====
+    public static final long STREAM_REVIEW_ASSET_MAX_LEN = 2_000;      // 리뷰 에셋 생성 요청 최대 메시지 수
+    public static final long STREAM_MENU_POSTER_MAX_LEN = 1_000;       // 메뉴 포스터 생성 요청 최대 메시지 수
+    public static final long STREAM_EVENT_ASSET_MAX_LEN = 1_000;       // 이벤트 에셋 생성 요청 최대 메시지 수
+    public static final long STREAM_OCR_VERIFICATION_MAX_LEN = 500;   // OCR 검증 요청 최대 메시지 수
+    public static final long STREAM_OCR_MENU_MAX_LEN = 1_000;          // OCR 메뉴 요청 최대 메시지 수
 
     // ===== Redis Stream Cleaner 로그 메시지 =====
     public static final String REDIS_STREAM_CLEANER_START_MESSAGE =
