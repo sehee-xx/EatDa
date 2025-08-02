@@ -33,7 +33,7 @@ import MenuStyleDummy2 from "../../data/menuStyleDummy/menuStyleDummy2.svg";
 import MenuStyleDummy3 from "../../data/menuStyleDummy/menuStyleDummy3.svg";
 import MenuStyleDummy4 from "../../data/menuStyleDummy/menuStyleDummy4.svg";
 import MenuStyleDummy5 from "../../data/menuStyleDummy/menuStyleDummy5.svg";
-
+import StoreMenuScreen from "./StoreMenuScreen";
 
 interface StoreProps {
   //   storeId: number;
@@ -57,7 +57,7 @@ export default function StoreScreen() {
 
   return (
     //  아래에서 부터 화면 구성 코드
-    <SafeAreaView>
+    <SafeAreaView style={[{backgroundColor:"#F7F8F9", flex:1}]}>
       {/* 헤더 */}
       <View style={styles.headerContainer}>
         {/* 햄버거 버튼 */}
@@ -77,7 +77,6 @@ export default function StoreScreen() {
         {/* <Text style={styles.storeName}>{storeName}</Text> */}
         {/* 가게 주소 */}
         <Text style={styles.storeAddress}>
-          {" "}
           📍서울특별시 강남구 테헤란로 212
         </Text>
         {/* <Text style={styles.storeAddress}>{storeAddress}</Text> */}
@@ -91,9 +90,9 @@ export default function StoreScreen() {
           setActiveTab(key);
         }}
       ></TabSwitcher>
-      <View>
+      <View style={{flex:1}}>
         {/* 활성화 탭에 따라 화면 가져오기 */}
-        {activeTab === "menu" && <></>}
+        {activeTab === "menu" && <StoreMenuScreen></StoreMenuScreen>}
         {activeTab === "event" && <></>}
         {activeTab === "review" && <></>}
       </View>
@@ -101,23 +100,23 @@ export default function StoreScreen() {
       {/* 메뉴판 스타일 탭 */}
       <View style={styles.menuStyleContainer}>
         <TouchableOpacity style={styles.menuStyleBtn}>
-            <MenuStyleDummy1></MenuStyleDummy1>
+          <MenuStyleDummy1></MenuStyleDummy1>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuStyleBtn}>
-            <MenuStyleDummy2></MenuStyleDummy2>
+          <MenuStyleDummy2></MenuStyleDummy2>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuStyleBtn}>
-            <MenuStyleDummy3></MenuStyleDummy3>
+          <MenuStyleDummy3></MenuStyleDummy3>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuStyleBtn}>
-            <MenuStyleDummy4></MenuStyleDummy4>
+          <MenuStyleDummy4></MenuStyleDummy4>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuStyleBtn}>
-            <MenuStyleDummy5></MenuStyleDummy5>
+          <MenuStyleDummy5></MenuStyleDummy5>
         </TouchableOpacity>
       </View>
 
@@ -164,25 +163,24 @@ const styles = StyleSheet.create({
 
   menuStyleContainer: {
     flexDirection: "row",
-    backgroundColor: "blue",
-    paddingVertical:10,
-    marginVertical:20,
+    paddingVertical: 10,
+    // marginVertical: 10,
   } as ViewStyle,
 
   menuStyleBtn: {
     flex: 1,
-    alignItems:"center",
-    
+    alignItems: "center",
   } as ViewStyle,
 
   bottomBtnContainer: {
     flexDirection: "row",
-    backgroundColor: "yellow",
+    marginBottom:60,
+    paddingVertical:20,
+    backgroundColor:"#eeeeee"
   } as ViewStyle,
 
   bottomTextWrapper: {
     flex: 1,
-    paddingVertical: 20,
   } as ViewStyle,
 
   bottomText: {
