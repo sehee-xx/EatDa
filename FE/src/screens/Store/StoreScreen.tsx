@@ -35,6 +35,7 @@ import MenuStyleDummy4 from "../../data/menuStyleDummy/menuStyleDummy4.svg";
 import MenuStyleDummy5 from "../../data/menuStyleDummy/menuStyleDummy5.svg";
 import StoreMenuScreen from "./StoreMenuScreen";
 import StoreEventScreen from "./StoreEventScreen";
+import StoreReviewScreen from "./StoreReviewScreen";
 
 interface StoreProps {
   //   storeId: string;
@@ -95,7 +96,7 @@ export default function StoreScreen() {
         {/* 활성화 탭에 따라 화면 가져오기 */}
         {activeTab === "menu" && <StoreMenuScreen></StoreMenuScreen>}
         {activeTab === "event" && <StoreEventScreen></StoreEventScreen>}
-        {activeTab === "review" && <></>}
+        {activeTab === "review" && <StoreReviewScreen></StoreReviewScreen>}
       </View>
 
       {/* 메뉴판 스타일 탭, 메뉴 볼 때만 활성화 되도록 */}
