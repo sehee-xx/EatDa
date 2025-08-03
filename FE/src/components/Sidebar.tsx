@@ -27,6 +27,7 @@ export default function Sidebar({
   userRole,
   onLogout,
   activePage,
+  // onNavigate,
 }: SidebarProps) {
   const { width, height } = useWindowDimensions();
   // 사이드바 내에서 숟가락, 포크 위치 결정용
@@ -34,7 +35,7 @@ export default function Sidebar({
   const sidebarHeight = height;
 
   const slideAnim = useRef(new Animated.Value(-width * 0.8)).current;
-  const [visible, setVisible] = useState(isOpen);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +54,7 @@ export default function Sidebar({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!visible) return null;
 
   return (
     <>
@@ -78,10 +79,10 @@ export default function Sidebar({
               activePage === "reviewPage" && styles.active,
             ]}
             onPress={() => {
-              // if(activePage !== "reviewPage"){
+              if(activePage !== "reviewPage"){
               // onNavigate("reviewPage");
-              // onClose();
-              // }
+              onClose();
+              }
             }}
           >
             <Text style={activePage === "reviewPage" && styles.activeText}>

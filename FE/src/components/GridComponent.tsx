@@ -12,7 +12,8 @@ export interface ReviewItem {
   description: string;
   likes: number;
   views: number;
-  // onNavigate: () =>    // 추후에 가게페이지로 이동 시 사용하면 될 것 같음.
+  // storeId:string;
+  
 }
 
 // 이벤트아이템 추가
@@ -21,7 +22,7 @@ export interface eventItem {
   eventName: string;
   eventDescription: string;
   uri: number;
-  storeId?:string; 
+  // storeId:string; 
   // eventStartDate:Date;
   // eventEndDate:Date;
 }

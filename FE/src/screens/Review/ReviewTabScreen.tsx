@@ -257,6 +257,7 @@ export default function Reviews({ userRole, onLogout }: ReviewProps) {
           userRole="eater"
           onLogout={onLogout}
           activePage="reviewPage"
+          // onNavigate={}
         />
       </SafeAreaView>
     </TouchableWithoutFeedback>
