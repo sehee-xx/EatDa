@@ -126,7 +126,10 @@ deploy-slot-based:
       export PREV_SLOT=$( [ "$NEXT_SLOT" = "blue" ] && echo "green" || echo "blue" )
       docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml up -d ${ENV}-${NEXT_SLOT}
       docker exec ${ENV}-nginx cp /srv/nginx/${ENV}/default-${NEXT_SLOT}.conf /etc/nginx/conf.d/default.conf
-      $CI_PROJECT_DIR/INFRA/scripts/check-slot-health.sh $ENV $NEXT_SLOT
+      if ! $CI_PROJECT_DIR/INFRA/scripts/check-slot-health.sh $ENV $NEXT_SLOT; then
+        docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml stop ${ENV}-${NEXT_SLOT}
+        exit 1
+      fi
       docker exec ${ENV}-nginx nginx -s reload
       docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml stop ${ENV}-${PREV_SLOT}
   rules:
