@@ -136,6 +136,17 @@ export default function StoreScreen() {
           <Text style={styles.bottomText}>메뉴판 꾸미기</Text>
         </TouchableOpacity>
       </View>
+
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        userRole="eater"
+        onLogout={() => {
+          // 나중에 로그인 페이지로 보내버리기?
+          console.log("로그아웃");
+        }}
+        activePage="storePage"
+      ></Sidebar>
     </SafeAreaView>
   );
 }
@@ -148,7 +159,6 @@ const styles = StyleSheet.create({
   storeInfo: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    // backgroundColor:"yellow",
 
     marginVertical: 10,
   } as ViewStyle,
@@ -168,7 +178,6 @@ const styles = StyleSheet.create({
   menuStyleContainer: {
     flexDirection: "row",
     paddingVertical: 10,
-    // marginVertical: 10,
   } as ViewStyle,
 
   menuStyleBtn: {
