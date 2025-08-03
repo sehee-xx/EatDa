@@ -34,12 +34,13 @@ import MenuStyleDummy3 from "../../data/menuStyleDummy/menuStyleDummy3.svg";
 import MenuStyleDummy4 from "../../data/menuStyleDummy/menuStyleDummy4.svg";
 import MenuStyleDummy5 from "../../data/menuStyleDummy/menuStyleDummy5.svg";
 import StoreMenuScreen from "./StoreMenuScreen";
+import StoreEventScreen from "./StoreEventScreen";
 
 interface StoreProps {
-  //   storeId: number;
+  //   storeId: string;
   //   storeName: string;
   //   storeAddress: string;
-  // { storeName, storeAddress }: StoreProps
+  // { storeId, storeName, storeAddress }: StoreProps
 }
 
 export default function StoreScreen() {
@@ -57,7 +58,7 @@ export default function StoreScreen() {
 
   return (
     //  아래에서 부터 화면 구성 코드
-    <SafeAreaView style={[{backgroundColor:"#F7F8F9", flex:1}]}>
+    <SafeAreaView style={[{ backgroundColor: "#F7F8F9", flex: 1 }]}>
       {/* 헤더 */}
       <View style={styles.headerContainer}>
         {/* 햄버거 버튼 */}
@@ -90,35 +91,37 @@ export default function StoreScreen() {
           setActiveTab(key);
         }}
       ></TabSwitcher>
-      <View style={{flex:1}}>
+      <View style={{ flex: 1 }}>
         {/* 활성화 탭에 따라 화면 가져오기 */}
         {activeTab === "menu" && <StoreMenuScreen></StoreMenuScreen>}
-        {activeTab === "event" && <></>}
+        {activeTab === "event" && <StoreEventScreen></StoreEventScreen>}
         {activeTab === "review" && <></>}
       </View>
 
-      {/* 메뉴판 스타일 탭 */}
-      <View style={styles.menuStyleContainer}>
-        <TouchableOpacity style={styles.menuStyleBtn}>
-          <MenuStyleDummy1></MenuStyleDummy1>
-        </TouchableOpacity>
+      {/* 메뉴판 스타일 탭, 메뉴 볼 때만 활성화 되도록 */}
+      {activeTab === "menu" && (
+        <View style={styles.menuStyleContainer}>
+          <TouchableOpacity style={styles.menuStyleBtn}>
+            <MenuStyleDummy1></MenuStyleDummy1>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuStyleBtn}>
-          <MenuStyleDummy2></MenuStyleDummy2>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.menuStyleBtn}>
+            <MenuStyleDummy2></MenuStyleDummy2>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuStyleBtn}>
-          <MenuStyleDummy3></MenuStyleDummy3>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.menuStyleBtn}>
+            <MenuStyleDummy3></MenuStyleDummy3>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuStyleBtn}>
-          <MenuStyleDummy4></MenuStyleDummy4>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.menuStyleBtn}>
+            <MenuStyleDummy4></MenuStyleDummy4>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuStyleBtn}>
-          <MenuStyleDummy5></MenuStyleDummy5>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.menuStyleBtn}>
+            <MenuStyleDummy5></MenuStyleDummy5>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 하단 탭버튼 3개 */}
       <View style={styles.bottomBtnContainer}>
@@ -174,9 +177,9 @@ const styles = StyleSheet.create({
 
   bottomBtnContainer: {
     flexDirection: "row",
-    marginBottom:60,
-    paddingVertical:20,
-    backgroundColor:"#eeeeee"
+    marginBottom: 60,
+    paddingVertical: 20,
+    backgroundColor: "#eeeeee",
   } as ViewStyle,
 
   bottomTextWrapper: {
