@@ -7,7 +7,7 @@ import java.time.Duration;
 public final class RedisConstants {
     // ===== 스트림 필드 =====
     public static final String STREAM_FIELD_EXPIRE_AT = "expireAt";        // 스트림 메시지 만료 시간 필드
-    public static final int STREAM_MESSAGE_BATCH_SIZE = 1000;              // 스트림 메시지 최대 조회 건수
+    public static final int STREAM_MESSAGE_BATCH_SIZE = 1_000;              // 스트림 메시지 최대 조회 건수
 
     // ===== DLQ (Dead Letter Queue) 관련 =====
     public static final String DLQ_SUFFIX = ".dead";
@@ -44,6 +44,13 @@ public final class RedisConstants {
     public static final String REDIS_STREAM_CLEANER_EXECUTION_ERROR =
             "[RedisCleanerScheduler] 배치 실행 실패";                                      // 배치 실행 실패 에러 메시지
 
+    // ===== 스트림 메시지 MAXLEN 설정 =====
+    public static final long STREAM_REVIEW_ASSET_MAX_LEN = 2_000;      // 리뷰 에셋 생성 요청 최대 메시지 수
+    public static final long STREAM_MENU_POSTER_MAX_LEN = 1_000;       // 메뉴 포스터 생성 요청 최대 메시지 수
+    public static final long STREAM_EVENT_ASSET_MAX_LEN = 1_000;       // 이벤트 에셋 생성 요청 최대 메시지 수
+    public static final long STREAM_OCR_VERIFICATION_MAX_LEN = 500;   // OCR 검증 요청 최대 메시지 수
+    public static final long STREAM_OCR_MENU_MAX_LEN = 1_000;          // OCR 메뉴 요청 최대 메시지 수
+
     // ===== Redis Stream Cleaner 로그 메시지 =====
     public static final String REDIS_STREAM_CLEANER_START_MESSAGE =
             "[RedisCleaner] Started stream TTL cleanup";              // 스트림 정리 시작 메시지
@@ -57,6 +64,30 @@ public final class RedisConstants {
             "[RedisCleaner] expireAt 필드 없음 - messageId: {} (stream: {})";    // expireAt 필드 누락 메시지
     public static final String REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE =
             "[RedisCleaner] expireAt 파싱 실패 - messageId: {} (stream: {})";    // expireAt 파싱 실패 메시지
+
+    // ===== Redis Stream Publisher 관련 상수 =====
+    public static final String REDIS_XADD_SCRIPT = """
+                return redis.call('XADD', KEYS[1], 'MAXLEN', '~', ARGV[1], '*', unpack(ARGV, 2))
+            """;
+
+    public static final String ERROR_SERIALIZATION_FAILED = "Redis Stream 직렬화 실패";
+    public static final String ERROR_REDIS_CONNECTION_FAILED = "Redis 연결 실패";
+    public static final String ERROR_REDIS_PROCESSING_FAILED = "Redis Stream 처리 중 오류 발생";
+    public static final String ERROR_REDIS_LUA_EXECUTION_FAILED = "Redis Lua Script 실행 실패 (streamKey=%s)";
+    public static final String ERROR_REDIS_STREAM_KEY_SERIALIZATION_FAILED = "Stream key 직렬화 실패: %s";
+    public static final String ERROR_REDIS_ARG_SERIALIZATION_FAILED = "ARG 직렬화 실패: %s";
+
+    // ===== Redis Stream Publisher 로그 메시지 =====
+    public static final String REDIS_PUBLISHER_PUBLISHING_MESSAGE =
+            "[RedisPublisher] Publishing to stream: {}, maxLen={}, payload={}";    // 스트림 발행 시작 메시지
+    public static final String REDIS_PUBLISHER_SUCCESS_MESSAGE =
+            "[RedisPublisher] Successfully published to stream: {}";               // 스트림 발행 성공 메시지
+    public static final String REDIS_PUBLISHER_SERIALIZATION_ERROR =
+            "[RedisPublisher] Payload serialization failed for stream: {}, error: {}";  // 직렬화 실패 메시지
+    public static final String REDIS_PUBLISHER_CONNECTION_ERROR =
+            "[RedisPublisher] Redis connection failed for stream: {}";            // Redis 연결 실패 메시지
+    public static final String REDIS_PUBLISHER_UNEXPECTED_ERROR =
+            "[RedisPublisher] Unexpected error publishing to stream: {}, error: {}";  // 예상치 못한 오류 메시지
 
     private RedisConstants() {
         throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
