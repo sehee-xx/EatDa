@@ -32,14 +32,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 // @formatter:off
 /**
- * Redis Stream에 메시지를 Lua 기반으로 MAXLEN 제어하여 발행하는 추상 클래스.
- * RedisRetryableMessage를 상속하여 메시지 재시도 처리가 가능한 객체만 발행할 수 있다.
- *
- * @param <T> 발행할 메시지의 타입 (RedisRetryableMessage 구현체)
- */
+ /**
+  * Redis Stream에 발행되는 메시지를 처리하는 추상 클래스.
+  * RedisRetryableMessage를 통해 메시지 재시도 기능을 제공하고,
+  * RedisStreamWriter 인터페이스로 메시지 발행 책임을 수행한다.
+  *
+  * @param <T> 발행할 메시지의 타입 (RedisRetryableMessage 구현체)
+  */
 // @formatter:on
 @Slf4j
-public abstract class RedisStreamPublisher<T extends RedisRetryableMessage> {
+public abstract class RedisStreamPublisher<T extends RedisRetryableMessage> implements RedisStreamWriter<T> {
 
     private final RedisTemplate<String, Object> redisTemplate;    // Redis 작업을 위한 템플릿
     private final ObjectMapper objectMapper;                      // JSON 변환을 위한 매퍼
@@ -54,6 +56,11 @@ public abstract class RedisStreamPublisher<T extends RedisRetryableMessage> {
                                    final ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public void publish(RedisStreamKey key, T payload) {
+        publishToStreamWithMaxLen(key, payload); // 기존 protected 메서드 호출
     }
 
     /**
