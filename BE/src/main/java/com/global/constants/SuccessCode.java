@@ -1,8 +1,10 @@
 package com.global.constants;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 @Getter
 public enum SuccessCode {
 
@@ -75,10 +77,4 @@ public enum SuccessCode {
     private final String code;
     private final String message;
     private final int status;
-
-    SuccessCode(final String code, final String message, final int status) {
-        this.code = code;
-        this.message = message;
-        this.status = status;
-    }
 }
