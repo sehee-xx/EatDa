@@ -161,6 +161,7 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
               userRole="eater"
               onLogout={onLogout}
               activePage="review"
+              onMypage={handleNavigateToMypage}
             ></HamburgerButton>
           </TouchableOpacity>
           {/* 로고 */}

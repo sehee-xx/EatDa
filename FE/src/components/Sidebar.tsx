@@ -18,8 +18,8 @@ export interface SidebarProps {
   userRole: "eater" | "maker";
   onLogout: () => void;
   onMypage: () => void;
+  onReview: () => void;
   activePage: string;
-  // onNavigate: (currentPage: string) => void;
 }
 
 export default function Sidebar({
@@ -27,9 +27,9 @@ export default function Sidebar({
   onClose,
   onLogout,
   onMypage,
+  onReview,
   activePage,
-}: // onNavigate,
-SidebarProps) {
+}: SidebarProps) {
   const { width, height } = useWindowDimensions();
 
   // 사이드바 내에서 숟가락, 포크 위치 결정용
@@ -86,7 +86,6 @@ SidebarProps) {
             ]}
             onPress={() => {
               if (activePage !== "reviewPage") {
-                // onNavigate("reviewPage");
                 onClose();
               }
             }}
@@ -95,9 +94,11 @@ SidebarProps) {
               고객 리뷰
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem}>
             <Text>이벤트 게시판</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={onMypage}>
             <Text>마이페이지</Text>
           </TouchableOpacity>
@@ -105,6 +106,7 @@ SidebarProps) {
           <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
             <Text>로그아웃</Text>
           </TouchableOpacity>
+          
           <View style={styles.characterContainer}>
             <Spoon
               style={{

@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.xs,
   },
   tabContent: {
     flex: 1,
