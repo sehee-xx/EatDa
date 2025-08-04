@@ -61,7 +61,7 @@ export default function TabNavigation({ userType, activeTab, onTabPress }: TabNa
 const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: "row",
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray300,
   },

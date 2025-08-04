@@ -1,208 +1,169 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  useWindowDimensions,
+  TouchableOpacity,
   Image,
-  Dimensions,
-  Animated,
-  FlatList,
+  useWindowDimensions,
 } from "react-native";
-import { Video, ResizeMode } from "expo-av";
-import { COLORS, textStyles, SPACING, RADIUS } from "../../constants/theme";
-import MypageGridComponent, { ReviewItem } from "../../components/MypageGridComponent";
-import ProfileSection from "../../components/ProfileSection";
-import TabNavigation from "../../components/TabNavigation";
+import { COLORS, SPACING } from "../../constants/theme";
+import HeaderLogo from "../../components/HeaderLogo";
+import Hamburger from "../../components/Hamburger";
+import StatsCard from "../../components/StatsCard";
+import ActivityCard from "../../components/ActivityCard";
+import CategoryCard from "../../components/CategoryCard";
+import MypageProfile from "../../components/MypageProfile";
 import { reviewData } from "../../data/reviewData";
-import CloseBtn from "../../../assets/closeBtn.svg";
+import MakerMypageDetail from "./MakerMypageDetail";
+
+// 배경 이미지 import
+const maker_background = require("../../../assets/maker_background.png");
+const MakerProfileIcon = require("../../../assets/maker-profile.svg");
+
+// 통계 카드용 아이콘들 (임시로 기존 아이콘 사용, 나중에 적절한 아이콘으로 교체)
+const ReviewIcon = require("../../../assets/3d-sms.png");
+const EventIcon = require("../../../assets/3d-invitation.png");
+const MenuIcon = require("../../../assets/3d-sms.png");
+
+// MakerMypageDetail과 동일한 TabKey 사용
+type TabKey = "storeReviews" | "storeEvents" | "receivedMenuBoard";
 
 interface MakerMypageProps {
-  userRole: "maker";
   onLogout: () => void;
 }
 
-type TabKey = "storeReviews" | "storeEvents" | "receivedMenuBoard";
-
-export default function MakerMypage({ userRole, onLogout }: MakerMypageProps) {
-  const { width, height } = useWindowDimensions();
-  const screenHeight = Dimensions.get("window").height;
+export default function MakerMyPage({ onLogout }: MakerMypageProps) {
+  const { width } = useWindowDimensions();
+  const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("storeReviews");
- 
-  //상세보기 관리
-  const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
 
-  //상세보기 스크롤 및 비디오 관리
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList<ReviewItem>>(null);
-  const vdoRefs = useRef<{ [key: number]: Video | null }>({});
-  
-  useEffect(() => {
-    Object.keys(vdoRefs.current).forEach((key) => {
-      const idx = parseInt(key, 10);
-      const video = vdoRefs.current[idx];
-      if (!video) return;
-      if (idx === currentIndex) {
-        video.playAsync();
-      } else {
-        video.pauseAsync();
-      }
-    });
-  }, [currentIndex]);
-  
-  // 확대 애니메이션 (전체 그리드 레이아웃 -> 단일 그리드)
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const handleOpenDetail = (item: ReviewItem) => {
-      setSelectedItem(item);
-      scaleAnim.setValue(0.8);
-      Animated.spring(scaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-      }).start();
-      };
-
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
-      const newIdx = viewableItems[0].index;
-      setCurrentIndex(newIdx);
+  // Maker 전용 데이터 개수 계산 (TabKey 순서로 정리)
+  const tabData = {
+    storeReviews: {
+      data: reviewData.slice(6, 12),
+      label: "가게 리뷰 보기"
+    },
+    storeEvents: {
+      data: reviewData.slice(12, 15),
+      label: "가게 이벤트 보기"
+    },
+    receivedMenuBoard: {
+      data: [],
+      label: "받은 메뉴판"
     }
-  }).current;
+  };
 
-  const viewConfig = useRef({
-    viewAreaCoveragePercentThreshold: 80,
-  }).current;
+  // Maker 전용 설정
+  const backgroundImage = maker_background;
 
-  // 데이터 
-  const storeReviewsData = reviewData.slice(6, 12);
+  // CategoryCard 클릭 핸들러
+  const handleCategoryPress = (tabKey: TabKey) => {
+    setActiveTab(tabKey);
+    setShowDetail(true);
+  };
 
-  // 그리드 사이즈 계산 - 넓힘
-  const gridSize = (width - SPACING.md * 2 - 16) / 2; // 2열 그리드, 간격 8px씩 총 16px 고려
+  // Detail 화면에서 뒤로가기
+  const handleBackToMain = () => {
+    setShowDetail(false);
+  };
+
+  // Detail 화면 표시
+  if (showDetail) {
+    return (
+      <MakerMypageDetail 
+        userRole="maker"
+        onLogout={onLogout}
+        initialTab={activeTab}
+        onBack={handleBackToMain}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
-
-      {/* 상세보기 모드 */}
-      {selectedItem ? (
-        <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
-          <FlatList
-            key="detail"
-            ref={flatListRef}
-            data={storeReviewsData}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => (
-              <View style={{ height: screenHeight }}>
-                {item.type === "image" ? (
-                  <Image
-                    source={{ uri: item.uri }}
-                    style={StyleSheet.absoluteFillObject}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Video
-                    ref={(ref: Video | null) => {
-                      vdoRefs.current[index] = ref;
-                    }}
-                    source={{ uri: item.uri }}
-                    style={StyleSheet.absoluteFillObject}
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay={index === currentIndex}
-                    isLooping
-                    isMuted
-                  />
-                )}
-
-                {/* 닫기 버튼 */}
-                <TouchableOpacity
-                  style={styles.closeBtn}
-                  onPress={() => {
-                    setSelectedItem(null);
-                  }}
-                >
-                  <CloseBtn></CloseBtn>
-                </TouchableOpacity>
-
-                {/* 하단 텍스트 리뷰 오버레이 */}
-                <View style={styles.textOverlay}>
-                  <Text style={styles.titleText}>#{item.title}</Text>
-                  <Text style={styles.descText}>{item.description}</Text>
-                </View>
-              </View>
-            )}
-            pagingEnabled
-            decelerationRate="fast"
-            snapToInterval={screenHeight}
-            snapToAlignment="start"
-            initialScrollIndex={storeReviewsData.findIndex(
-              (i) => i.id === selectedItem.id
-            )}
-            getItemLayout={(data, index) => ({
-              length: screenHeight,
-              offset: screenHeight * index,
-              index,
-            })}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewConfig}
-            windowSize={2}
-            initialNumToRender={1}
-            maxToRenderPerBatch={1}
-            removeClippedSubviews
+      {/* 헤더 */}
+      <View style={styles.headerContainer}> 
+        <TouchableOpacity>
+          <Hamburger  
+            userRole="maker"
+            onLogout={onLogout}
+            onMypage={() => {}}
           />
-        </Animated.View>
-      ) : (
-        // 일반 모드
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 프로필 섹션 */}
-          <ProfileSection userType="maker" userName="Maker" />
+        </TouchableOpacity>
+        <HeaderLogo />
+      </View>
 
-        {/* 탭 메뉴 */}
-        <TabNavigation
-          userType="maker"
-          activeTab={activeTab}
-          onTabPress={(tabKey) => setActiveTab(tabKey as TabKey)}
-        />
-
-        {/* 탭 콘텐츠 */}
-        <View style={styles.tabContent}>
-          {activeTab === "storeReviews" && (
-            storeReviewsData.length > 0 ? (
-              <View style={styles.gridContainer}>
-                {storeReviewsData.map((item, index) => (
-                  <MypageGridComponent
-                    key={item.id}
-                    item={item}
-                    size={gridSize}
-                    index={index}
-                    totalLength={storeReviewsData.length}
-                    onPress={() => {
-                      // TODO: 리뷰 상세보기로 이동
-                      console.log("가게 리뷰 상세보기:", item.title); 
-                    }}
-                  />
-                ))}
-              </View>
-              ) : (
-                <View style={styles.emptyContent}>
-                  <Text style={styles.emptyText}>내가 작성한 리뷰가 없습니다</Text>
-                </View>
-              )
-            )}
-
-          {/* 스토리 이벤트가 없을 때입니다.. 일단 일일히 넣을 수 있는데 없을 때는 이렇게 넣고, 분기처리 고민... */}
-          {activeTab === "storeEvents" && (
-            <View style={styles.emptyContent}>
-              <Text style={styles.emptyText}>가게 이벤트가 없습니다</Text>
+      <ScrollView style={styles.content}>
+        {/* 프로필 섹션 (핑크색 배경) */}
+        <View style={styles.profileSection}>
+          <Image source={backgroundImage} style={styles.backgroundImage} />
+          <View style={styles.profileContent}>
+            <MypageProfile 
+              userRole="maker"
+              nickname="Sol"
+            />
+            
+            {/* 통계 카드들 - 타입으로 라벨 결정 */}
+            <View style={styles.statsContainer}>
+              <StatsCard
+                type="리뷰"
+                count={tabData.storeReviews.data.length}
+              />
+              <StatsCard
+                type="스크랩"
+                count={tabData.storeEvents.data.length}
+              />
+              <StatsCard
+                type="메뉴판"
+                count={tabData.receivedMenuBoard.data.length}
+              />
             </View>
-          )}
+          </View>
+        </View>
 
-          {activeTab === "receivedMenuBoard" && (
-            <View style={styles.emptyContent}>
-              <Text style={styles.emptyText}>받은 메뉴판이 없습니다</Text>
-            </View>
-          )}
+        {/* 카테고리 섹션 - TabKey에 따른 내용 */}
+        <View style={styles.categorySection}>
+          <CategoryCard
+            icon={ReviewIcon}
+            title={tabData.storeReviews.label}
+            count={tabData.storeReviews.data.length}
+            onPress={() => handleCategoryPress("storeReviews")}
+          />
+          <CategoryCard
+            icon={EventIcon}
+            title={tabData.storeEvents.label}
+            count={tabData.storeEvents.data.length}
+            onPress={() => handleCategoryPress("storeEvents")}
+          />
+          <CategoryCard
+            icon={MenuIcon}
+            title={tabData.receivedMenuBoard.label}
+            count={tabData.receivedMenuBoard.data.length}
+            onPress={() => handleCategoryPress("receivedMenuBoard")}
+          />
+        </View>
+
+        {/* 최근 활동 섹션 */}
+        <View style={styles.activitySection}>
+          <Text style={styles.sectionTitle}>최근 활동</Text>
+          
+          <ActivityCard
+            icon={ReviewIcon}
+            text="가게 리뷰가 등록되었습니다"
+            time="2시간 전"
+            onPress={() => console.log("활동 1 클릭")}
+          />
+          
+          <ActivityCard
+            icon={MenuIcon}
+            text="받은 메뉴판이 업데이트되었습니다"
+            time="3시간 전"
+            onPress={() => console.log("활동 2 클릭")}
+          />
         </View>
       </ScrollView>
-      )}
     </View>
   );
 }
@@ -210,51 +171,51 @@ export default function MakerMypage({ userRole, onLogout }: MakerMypageProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    paddingTop: 40,
     backgroundColor: "#fff",
   },
   content: {
     flex: 1,
-    paddingHorizontal: SPACING.md,
   },
-  tabContent: {
+  profileSection: {
+    position: "relative",
+    height: 300,
+    marginBottom: SPACING.lg,
+  },
+  backgroundImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%", // 크기 줄임
+    height: "60%", // 크기 줄임
+    alignSelf: "center", // 가운데 정렬
+  },
+  profileContent: {
     flex: 1,
+    padding: SPACING.lg,
+    justifyContent: "space-between",
   },
-  gridContainer: {
+
+  statsContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
-  emptyContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: SPACING.xl,
+  categorySection: {
+    padding: SPACING.lg,
   },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textColors.secondary,
+  activitySection: {
+    padding: SPACING.lg,
   },
-  closeBtn: {
-    position: "absolute",
-    top: SPACING.md,
-    right: SPACING.md,
-    zIndex: 10,
-  },
-  textOverlay: {
-    position: "absolute",
-    bottom: SPACING.md,
-    left: SPACING.md,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    padding: SPACING.sm,
-    borderRadius: RADIUS.md,
-  },
-  titleText: {
-    color: "#fff",
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "bold",
-  },
-  descText: {
-    color: "#fff",
-    fontSize: 14,
-    marginTop: SPACING.xs,
+    color: COLORS.textColors.primary,
+    marginBottom: SPACING.md,
   },
 });

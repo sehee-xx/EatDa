@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, ReactElement } from "react";
 import {
   View,
   Text,
@@ -158,9 +158,8 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
           >
             {/* 햄버거 아이콘 */}
             <HamburgerButton
-              userRole="eater"
+              userRole={userRole}
               onLogout={onLogout}
-              activePage="review"
               onMypage={handleNavigateToMypage}
             ></HamburgerButton>
           </TouchableOpacity>
@@ -273,15 +272,6 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
             removeClippedSubviews
           />
         )}
-        {/* 사이드바 */}
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          userRole={userRole}
-          onLogout={onLogout}
-          onMypage={handleNavigateToMypage}
-          activePage={currentPage}
-        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );

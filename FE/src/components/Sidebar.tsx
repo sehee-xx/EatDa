@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from "react";
 import {
   Animated,
@@ -17,18 +18,16 @@ export interface SidebarProps {
   onClose: () => void;
   userRole: "eater" | "maker";
   onLogout: () => void;
-  onMypage: () => void;
-  onReview: () => void;
   activePage: string;
+  onMypage: () => void;
 }
 
 export default function Sidebar({
   isOpen,
   onClose,
   onLogout,
-  onMypage,
-  onReview,
   activePage,
+  onMypage,
 }: SidebarProps) {
   const { width, height } = useWindowDimensions();
 
@@ -86,6 +85,7 @@ export default function Sidebar({
             ]}
             onPress={() => {
               if (activePage !== "reviewPage") {
+                // onNavigate("reviewPage");
                 onClose();
               }
             }}
@@ -94,11 +94,9 @@ export default function Sidebar({
               고객 리뷰
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.menuItem}>
             <Text>이벤트 게시판</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.menuItem} onPress={onMypage}>
             <Text>마이페이지</Text>
           </TouchableOpacity>
@@ -106,7 +104,6 @@ export default function Sidebar({
           <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
             <Text>로그아웃</Text>
           </TouchableOpacity>
-          
           <View style={styles.characterContainer}>
             <Spoon
               style={{
