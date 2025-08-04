@@ -25,6 +25,11 @@ import Sidebar from "../../components/Sidebar";
 import MypageScreen from "../Mypage/MypageScreen";
 import { reviewData } from "../../data/reviewData";
 import CloseBtn from "../../../assets/closeBtn.svg";
+// 햄버거 버튼 컴포넌트로 분리
+import HamburgerButton from "../../components/Hamburger";
+
+// 헤더로고 컴포넌트로 분리
+import HeaderLogo from "../../components/HeaderLogo";
 
 interface ReviewProps {
   userRole: "eater" | "maker";
@@ -119,7 +124,7 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
     return (
       <MypageScreen 
         userRole={userRole} 
-        onLogout={onLogout} 
+        onLogout={onLogout}
       />
     );
   }
@@ -152,15 +157,14 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
             }}
           >
             {/* 햄버거 아이콘 */}
-            <Text style={[styles.hamburgerIcon, { paddingTop: 4 }]}>☰</Text>
+            <HamburgerButton
+              userRole="eater"
+              onLogout={onLogout}
+              activePage="review"
+            ></HamburgerButton>
           </TouchableOpacity>
           {/* 로고 */}
-          <Text style={[textStyles.logo, styles.headerLogo]}>
-            <Text style={{ color: COLORS.primaryEater }}>E</Text>
-            <Text style={{ color: COLORS.textColors.primary }}>at</Text>
-            <Text style={{ color: COLORS.primaryMaker }}>D</Text>
-            <Text style={{ color: COLORS.textColors.primary }}>a</Text>
-          </Text>
+          <HeaderLogo></HeaderLogo>
         </View>
         {/* 서치바 */}
         <SearchBar
@@ -210,7 +214,6 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
                       setSelectedItem(null);
                     }}
                   >
-                    {/* 배경이 흰색일 경우에 버튼이 안보여서 어떻게 하면 좋을지 질문해야할듯 */}
                     <CloseBtn></CloseBtn>
                   </TouchableOpacity>
 
@@ -288,14 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingTop: 40,
   },
-  hamburgerIcon: {
-    fontSize: 18,
-    paddingHorizontal: 20,
-    marginTop: 3,
-  },
-  headerLogo: {
-    fontSize: 24,
-  },
+
   closeBtn: {
     position: "absolute",
     top: 0,
