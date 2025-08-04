@@ -1,4 +1,4 @@
-package com.global.filestore;
+package com.global.filestorage;
 
 import org.springframework.web.multipart.MultipartFile;
 
