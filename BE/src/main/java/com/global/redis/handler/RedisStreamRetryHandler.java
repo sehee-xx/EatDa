@@ -30,24 +30,42 @@ public class RedisStreamRetryHandler<T extends RedisRetryableMessage> {
 
     // @formatter:off
     /**
-     * 재시도 로직의 진입점.
-     * retryCount를 기준으로 재시도 가능 여부 판단 후, 지수 백오프 기반 nextRetryAt 계산 및 발행 수행.
-     * 재시도 초과 시 DLQ로 메시지 전송.
+     * 재시도 처리 진입점
+     *
+     * 재시도 가능 여부를 판단하여,
+     * - 가능하면 다음 재시도 시각 계산 후 retryPublisher 발행
+     * - 초과 시 DLQ로 전송
      */
     // @formatter:on
     public void handleRetry(final T message) {
         int retryCount = message.getRetryCount();
 
-        // 재시도 가능 횟수 초과 시 DLQ로 이동
         if (retryCount >= MAX_RETRY_COUNT) {
-            log.warn(RETRY_MAX_COUNT_EXCEEDED_MESSAGE, message);
-            dlqPublisher.publish(getDLQStreamKey(), message);
+            sendToDlq(message);
             return;
         }
 
-        // 다음 재시도 시각 계산 및 메시지 업데이트 후 재발행
-        LocalDateTime nextRetryAt = calculateNextRetryTime(retryCount);
-        T updatedMessage = updateRetryFields(message, retryCount + 1, nextRetryAt);
+        retryMessage(message, retryCount);
+    }
+
+    /**
+     * DLQ 전송 처리
+     * <p>
+     * 재시도 한도를 초과한 메시지를 Dead Letter Queue로 이동시킨다.
+     */
+    protected void sendToDlq(final T message) {
+        log.warn(RETRY_MAX_COUNT_EXCEEDED_MESSAGE, message);
+        dlqPublisher.publish(getDLQStreamKey(), message);
+    }
+    
+    /**
+     * 재시도 메시지 발행 처리
+     * <p>
+     * 지수 백오프 기반 nextRetryAt 계산 후, retryCount 증가 및 업데이트된 메시지를 발행한다.
+     */
+    protected void retryMessage(final T original, final int currentRetryCount) {
+        LocalDateTime nextRetryAt = calculateNextRetryTime(currentRetryCount);
+        T updatedMessage = updateRetryFields(original, currentRetryCount + 1, nextRetryAt);
         retryPublisher.publish(getRetryStreamKey(), updatedMessage);
     }
 
