@@ -84,7 +84,6 @@ public class RedisStreamCleanerService {
     private int filterAndDeleteExpiredMessages(final String streamKey,
                                                final List<MapRecord<String, Object, Object>> inputRecords) {
         List<MapRecord<String, Object, Object>> records = Objects.requireNonNullElse(inputRecords, List.of());
-        LocalDateTime now = LocalDateTime.now();
         int deletedCount = 0;
 
         for (final MapRecord<String, Object, Object> record : records) {
@@ -93,7 +92,7 @@ public class RedisStreamCleanerService {
                 continue;
             }
 
-            if (expireAt.isBefore(now)) {
+            if (expireAt.isBefore(LocalDateTime.now())) {
                 redisTemplate.opsForStream().delete(streamKey, record.getId());
                 deletedCount++;
             }
