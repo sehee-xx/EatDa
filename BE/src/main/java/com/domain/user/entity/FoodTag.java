@@ -1,12 +1,15 @@
 package com.domain.user.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,4 +29,8 @@ public class FoodTag {
     private String name;
 
     private Boolean isCustom;
+
+    // 연관관계 매핑 - 태그를 사용하는 사용자 목록
+    @OneToMany(mappedBy = "foodTag", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserFoodTag> userFoodTags;
 }
