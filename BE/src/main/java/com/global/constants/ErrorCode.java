@@ -16,6 +16,20 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             HttpStatus.INTERNAL_SERVER_ERROR.value()),
 
+    // 유저 관련
+    EMAIL_REQUIRED("EMAIL_REQUIRED", "이메일은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    EMAIL_DUPLICATED("EMAIL_DUPLICATED", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT.value()),
+    EMAIL_INVALID_FORMAT("EMAIL_INVALID_FORMAT", "유효하지 않은 이메일 형식입니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_REQUIRED("PASSWORD_REQUIRED", "비밀번호는 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_TOO_SHORT("PASSWORD_TOO_SHORT", "비밀번호는 최소 8자 이상 작성해야 합니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_MISMATCH("PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_CONFIRM_REQUIRED("PASSWORD_CONFIRM_REQUIRED", "비밀번호 확인은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    NICKNAME_REQUIRED("NICKNAME_REQUIRED", "닉네임은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    NICKNAME_DUPLICATED("NICKNAME_DUPLICATED", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT.value()),
+    NICKNAME_BLANK("NICKNAME_BLANK", "닉네임은 공백일 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
+    TAG_NOT_FOUND("TAG_NOT_FOUND", "선택한 태그를 찾을 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
+    CUSTOM_TAG_TOO_LONG("CUSTOM_TAG_TOO_LONG", "50자를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
+
     // 인증/인가 관련
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED.value()),
     INVALID_CREDENTIALS("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 일치하지 않습니다.", HttpStatus.UNAUTHORIZED.value()),
