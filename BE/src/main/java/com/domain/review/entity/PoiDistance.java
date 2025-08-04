@@ -1,11 +1,17 @@
 package com.domain.review.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+@Getter
+@Builder
 @Entity
 @Table(name = "poi_distance")
+@AllArgsConstructor
 public class PoiDistance {
 
     @Id
