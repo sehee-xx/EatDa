@@ -1,6 +1,6 @@
 // src/components/Hamburger.tsx
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Animated,
   StyleSheet,
@@ -14,8 +14,6 @@ import {
 //
 
 // 사이드바에 사용될 숟가락, 포크 이미지
-import Spoon from "../../assets/sidespoon.svg";
-import Fork from "../../assets/sidefork.svg";
 import Sidebar from "./Sidebar";
 
 export interface Props {

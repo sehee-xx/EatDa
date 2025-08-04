@@ -6,7 +6,6 @@ import {
   useWindowDimensions,
   View,
   Text,
-  Dimensions,
 } from "react-native";
 
 // 사이드바에 사용될 숟가락, 포크 이미지
@@ -25,7 +24,6 @@ export interface SidebarProps {
 export default function Sidebar({
   isOpen,
   onClose,
-  userRole,
   onLogout,
   activePage,
 }: // onNavigate,
