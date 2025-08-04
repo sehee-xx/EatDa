@@ -9,12 +9,19 @@ import {
   FlatList,
   ViewStyle,
   TextStyle,
+  TouchableOpacity,
 } from "react-native";
 
 import { menuData } from "../../data/menuData";
+import NoContentImage from "../../../assets/noContentImage.svg";
+import NoDataScreen from "../../components/NoDataScreen";
 
 export default function StoreMenuScreen() {
-  return (
+  const isEmpty = !menuData || menuData.length === 0;
+
+  return isEmpty ? (
+    <NoDataScreen></NoDataScreen>
+  ) : (
     <FlatList
       data={menuData}
       renderItem={({ item }) => (
@@ -30,11 +37,14 @@ export default function StoreMenuScreen() {
               </Text>
             </View>
           </View>
+         
         </View>
       )}
       keyExtractor={(item) => item.id}
+     
       contentContainerStyle={{ paddingVertical: 10 }}
     />
+    
   );
 }
 
@@ -43,7 +53,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7f8f9",
     borderRadius: 12,
     marginHorizontal: 8,
-    marginBottom:8,
+    marginBottom: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
@@ -81,4 +91,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#757575",
   } as TextStyle,
+
+  noData: {
+    alignItems: "center",
+  },
+
+
 });

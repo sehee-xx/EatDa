@@ -17,6 +17,7 @@ import { Video, ResizeMode } from "expo-av";
 import GridComponent, { ReviewItem } from "../../components/GridComponent";
 import CloseBtn from "../../../assets/closeBtn.svg";
 import { reviewData } from "../../data/reviewData";
+import NoDataScreen from "../../components/NoDataScreen";
 
 interface StoreReviewScreenProps {
   //   storeId: string;
@@ -66,7 +67,11 @@ export default function StoreReviewScreen() {
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
-  return (
+  const isEmpty = !reviewData || reviewData.length === 0;
+
+  return isEmpty ? (
+    <NoDataScreen></NoDataScreen>
+  ) : (
     <View style={{ flex: 1 }}>
       {selectedItem ? (
         <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
