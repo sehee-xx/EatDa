@@ -8,6 +8,7 @@ import com.global.constants.SuccessCode;
 import com.global.dto.response.BaseResponse;
 import com.global.dto.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +28,7 @@ public class EaterController {
             description = "Eater의 회원가입을 진행합니다."
     )
     @PostMapping("/")
-    public BaseResponse signUp(@RequestBody EaterSignUpRequest request) {
+    public BaseResponse signUp(@Valid @RequestBody EaterSignUpRequest request) {
         User user = eaterService.registerEater(request);
         return SuccessResponse.of(SuccessCode.EATERS_SIGNUP, eaterMapper.toResponse(user));
     }
