@@ -44,8 +44,8 @@ export default function ActiveEventScreen() {
   // 전체보기 -> 상세보기 클릭 시 애니메이션
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
-    if(selectedEvent){
-        scaleAnim.setValue(0.8);
+    if (selectedEvent) {
+      scaleAnim.setValue(0.8);
     }
     Animated.spring(scaleAnim, {
       toValue: 1,
