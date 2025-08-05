@@ -1,5 +1,5 @@
 // 3. GenerateStep.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ImageUploader from "../../../components/ImageUploader";
 
 type ContentType = "image" | "shorts_ray2" | "shorts_gen4" | null;
@@ -21,14 +23,8 @@ interface GenProps {
   onRemove: (i: number) => void;
   onPrompt: (t: string) => void;
   onNext: () => void;
+  onBack: () => void;
 }
-
-// 더미 이미지 URL들
-const DUMMY_IMAGES = [
-  "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&h=400&fit=crop",
-];
 
 const contentTypeLabels = {
   image: "이미지",
@@ -45,26 +41,42 @@ export default function GenerateStep({
   onRemove,
   onPrompt,
   onNext,
+  onBack,
 }: GenProps) {
-  // 테스트용 로컬 state (실제로는 부모에서 관리)
-  const [localImages, setLocalImages] = useState<string[]>(uploadedImages);
+  const { width } = useWindowDimensions();
+  const [localImages, setLocalImages] = useState<(string | null)[]>([
+    null,
+    null,
+    null,
+  ]);
 
-  // 더미 이미지 추가 핸들러
-  const handleAddImage = (imageUrl: string) => {
-    console.log("Adding dummy image:", imageUrl);
-    const newImages = [...localImages, imageUrl];
+  useEffect(() => {
+    const newImages: (string | null)[] = [null, null, null];
+    uploadedImages.forEach((img, index) => {
+      if (index < 3) {
+        newImages[index] = img;
+      }
+    });
     setLocalImages(newImages);
-    // 부모 컴포넌트에도 알림 (있다면)
+  }, [uploadedImages]);
+
+  const handleAddImage = (index: number, imageUrl: string) => {
+    const newImages = [...localImages];
+    newImages[index] = imageUrl;
+    setLocalImages(newImages);
     if (onAdd) onAdd(imageUrl);
   };
 
-  // 이미지 제거 핸들러
   const handleRemoveImage = (index: number) => {
-    const newImages = localImages.filter((_, i) => i !== index);
+    const newImages = [...localImages];
+    newImages[index] = null;
     setLocalImages(newImages);
-    // 부모 컴포넌트에도 알림 (있다면)
     if (onRemove) onRemove(index);
   };
+
+  const hasImages = localImages.some((img) => img !== null);
+  const isDisabled = !contentType || !hasImages || !prompt.trim();
+
   const placeholderText = `한글 텍스트가 깨질 수 있어요
 일부 AI 모델은 한글을 완벽하게 인식하지 못해 텍스트가 이미지에 올바르게 출력되지 않을 수 있습니다.
 
@@ -78,6 +90,11 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
 
   return (
     <>
+      {/* 뒤로가기 버튼 */}
+      <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={width * 0.06} color="#1A1A1A" />
+      </TouchableOpacity>
+
       <ScrollView style={styles.scroll}>
         <View style={styles.header}>
           <Text style={styles.title}>리뷰 생성</Text>
@@ -138,17 +155,15 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
         </View>
       </ScrollView>
 
+      {/* 확인 버튼 */}
       <View style={styles.bottom}>
         <TouchableOpacity
-          style={[
-            styles.btn,
-            (!contentType || localImages.length < 1 || !prompt.trim()) &&
-              styles.btnOff,
-          ]}
-          onPress={onNext}
-          disabled={!contentType || localImages.length < 1 || !prompt.trim()}
+          style={[styles.button, isDisabled && styles.buttonDisabled]}
+          onPress={isDisabled ? () => {} : onNext}
+          disabled={isDisabled}
+          activeOpacity={isDisabled ? 1 : 0.7}
         >
-          <Text style={styles.btnText}>확인</Text>
+          <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -156,6 +171,12 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    position: "absolute",
+    top: 20,
+    left: 16,
+    zIndex: 10,
+  },
   scroll: {
     flex: 1,
     backgroundColor: "#F7F8F9",
@@ -178,7 +199,6 @@ const styles = StyleSheet.create({
     color: "#666666",
     textAlign: "center",
   },
-
   typeSec: {
     backgroundColor: "#F7F8F9",
     paddingHorizontal: 20,
@@ -224,14 +244,12 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "400",
   },
-
   upSec: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     backgroundColor: "#F7F8F9",
     marginBottom: 12,
   },
-
   promptSec: {
     backgroundColor: "#F7F8F9",
     paddingHorizontal: 20,
@@ -250,7 +268,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlignVertical: "top",
   },
-
   bottom: {
     position: "absolute",
     bottom: 0,
@@ -262,7 +279,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
   },
-  btn: {
+  button: {
     backgroundColor: "#FF69B4",
     borderRadius: 12,
     paddingVertical: 16,
@@ -273,12 +290,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  btnOff: {
+  buttonDisabled: {
     backgroundColor: "#D1D5DB",
     shadowOpacity: 0,
     elevation: 0,
   },
-  btnText: {
+  buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
