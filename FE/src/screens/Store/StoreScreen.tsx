@@ -26,7 +26,8 @@ import StoreMenuScreen from "./StoreMenuScreen";
 import StoreEventScreen from "./StoreEventScreen";
 import StoreReviewScreen from "./StoreReviewScreen";
 import ReviewWriteScreen from "./Review/ReviewWriteScreen";
-import MapScreen from "./Map/MapScreen";
+import MapScreen2 from "./Map/MapScreen2";
+// import MapScreen from "./Map/MapScreen";
 import MenuCustomScreen from "./Menu/MenuCustomScreen";
 
 // 새로 추가할 하단 버튼 화면들
@@ -64,7 +65,7 @@ export default function StoreScreen({ onGoBack }: StoreProps) {
       case "review":
         return <ReviewWriteScreen onClose={handleCloseBottomScreen} />;
       case "map":
-        return <MapScreen onClose={handleCloseBottomScreen} />;
+        return <MapScreen2 onClose={handleCloseBottomScreen} />;
       case "menu":
         return <MenuCustomScreen onClose={handleCloseBottomScreen} />;
       default:
