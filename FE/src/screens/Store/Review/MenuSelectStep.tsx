@@ -7,20 +7,34 @@ import {
   Text,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { menuData } from "../../../data/menuData";
+import LoginButton from "../../../components/LoginButton";
 
 interface MenuSelectStepProps {
   selected: string[];
   onToggle: (id: string) => void;
+  onBack: () => void;
+  onNext: () => void; // 확인 버튼 핸들러 prop 추가
 }
 
 export default function MenuSelectStep({
   selected,
   onToggle,
+  onBack,
+  onNext,
 }: MenuSelectStepProps) {
+  const { width } = useWindowDimensions();
+
   return (
     <View style={styles.container}>
+      {/* 뒤로가기 버튼 */}
+      <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={width * 0.06} color="#1A1A1A" />
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={styles.title}>메뉴 선택</Text>
         <Text style={styles.subtitle}>리뷰에 참고할 메뉴를 선택해주세요</Text>
@@ -28,7 +42,7 @@ export default function MenuSelectStep({
 
       <FlatList
         data={menuData}
-        keyExtractor={(i) => i.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
@@ -60,6 +74,20 @@ export default function MenuSelectStep({
           );
         }}
       />
+
+      {/* LoginButton을 사용한 확인 버튼 */}
+      <View style={styles.absoluteBottom}>
+        <LoginButton
+          title="확인"
+          onPress={onNext}
+          role="eater"
+          style={[
+            styles.confirmButton,
+            !selected.length && styles.disabledButton,
+          ]}
+          textStyle={!selected.length && styles.disabledText}
+        />
+      </View>
     </View>
   );
 }
@@ -68,6 +96,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  backButton: {
+    position: "absolute",
+    top: 20,
+    left: 16,
+    zIndex: 10,
   },
   header: {
     paddingTop: 60,
@@ -92,13 +126,12 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     backgroundColor: "#FFFFFF",
   },
-
   card: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     marginVertical: 6,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#F0F0F0",
@@ -114,7 +147,6 @@ const styles = StyleSheet.create({
     shadowColor: "#FF69B4",
     shadowOpacity: 0.15,
   },
-
   menuImage: {
     width: 64,
     height: 64,
@@ -137,7 +169,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 2,
   },
-
   checkWrap: {
     width: 24,
     height: 24,
@@ -156,5 +187,28 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
+  },
+  absoluteBottom: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: 34,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    zIndex: 10,
+  },
+  confirmButton: {
+    // LoginButton의 기본 스타일을 그대로 사용
+  },
+  disabledButton: {
+    backgroundColor: "#D1D5DB",
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: "#9CA3AF",
   },
 });
