@@ -9,6 +9,9 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 import HamburgerButton from "../../components/Hamburger";
 import HeaderLogo from "../../components/HeaderLogo";
@@ -29,13 +32,35 @@ import ReviewWriteScreen from "./Review/ReviewWriteScreen";
 import MapScreen from "./Map/MapScreen";
 import MenuCustomScreen from "./Menu/MenuCustomScreen";
 
-// 새로 추가할 하단 버튼 화면들
+type NavigationProp = NativeStackNavigationProp<
+  AuthStackParamList,
+  "StoreScreen"
+>;
 
 interface StoreProps {
-  onGoBack: () => void;
+  onGoBack?: () => void;
 }
 
-export default function StoreScreen({ onGoBack }: StoreProps) {
+export default function StoreScreen(props?: StoreProps) {
+  const navigation = useNavigation<NavigationProp>();
+
+  // 내장 네비게이션 함수들
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
+  const handleLogout = () => {
+    navigation.navigate("Login");
+  };
+
+  const handleMypage = () => {
+    console.log("마이페이지로 이동");
+    // navigation.navigate('MyPageScreen'); // 실제 마이페이지 화면으로 변경
+  };
+
+  // props가 있으면 props 함수 사용, 없으면 내장 함수 사용
+  const goBack = props?.onGoBack || handleGoBack;
+
   // 탭스위쳐 관리
   const [activeTab, setActiveTab] = useState("menu");
   // 하단 버튼 화면 관리
@@ -78,14 +103,12 @@ export default function StoreScreen({ onGoBack }: StoreProps) {
       <View style={styles.headerContainer}>
         <HamburgerButton
           userRole="eater"
-          onLogout={() => {
-            console.log("로그아웃");
-          }}
-          activePage="storePage"
+          onLogout={handleLogout}
+          onMypage={handleMypage}
         />
         <HeaderLogo />
         <TouchableOpacity
-          onPress={onGoBack}
+          onPress={goBack}
           style={{
             padding: 10,
             alignSelf: "flex-end",

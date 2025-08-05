@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback, ReactElement } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  ReactElement,
+} from "react";
 import {
   View,
   Text,
@@ -15,6 +21,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 import { Video, ResizeMode } from "expo-av";
 
 import SearchBar from "../../components/SearchBar";
@@ -32,15 +41,37 @@ import BookMark from "../../../assets/bookMark.svg";
 import ColoredBookMark from "../../../assets/coloredBookMark.svg";
 import GoToStore from "../../../assets/goToStore.svg";
 import ColoredGoToStore from "../../../assets/coloredGoToStore.svg";
+
+type NavigationProp = NativeStackNavigationProp<
+  AuthStackParamList,
+  "ReviewTabScreen"
+>;
+
 interface ReviewProps {
-  userRole: "eater" | "maker";
-  onLogout: () => void;
+  userRole?: "eater" | "maker";
+  onLogout?: () => void;
   onMypage?: () => void;
 }
 
-export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
+export default function Reviews(props?: ReviewProps) {
+  const navigation = useNavigation<NavigationProp>();
   const { height } = useWindowDimensions();
   const screenHeight = Dimensions.get("window").height;
+
+  // 내장 네비게이션 함수들
+  const handleLogout = () => {
+    navigation.navigate("Login");
+  };
+
+  const handleMypage = () => {
+    setCurrentPage("mypage");
+    setIsSidebarOpen(false);
+  };
+
+  // props가 있으면 props 함수 사용, 없으면 내장 함수 사용
+  const userRole = props?.userRole || "eater";
+  const onLogout = props?.onLogout || handleLogout;
+  const onMypage = props?.onMypage || handleMypage;
 
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
@@ -49,8 +80,9 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
   const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
 
   // 페이지 네비게이션 관리
-  // 어느 페이지에 있는지 일일히 이렇게 설정하면 복잡해질 것 같은데... 어떻게 하면 좋을지 몰라서 일단 이렇게 둡니다..
-  const [currentPage, setCurrentPage] = useState<"reviewPage" | "mypage">("reviewPage");
+  const [currentPage, setCurrentPage] = useState<"reviewPage" | "mypage">(
+    "reviewPage"
+  );
 
   //상세보기 스크롤 및 비디오 관리
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -119,12 +151,7 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
 
   // 마이페이지 렌더링
   if (currentPage === "mypage") {
-    return (
-      <MypageScreen 
-        userRole={userRole} 
-        onLogout={onLogout}
-      />
-    );
+    return <MypageScreen userRole={userRole} onLogout={onLogout} />;
   }
 
   return (
@@ -145,7 +172,7 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
               setShowStoreScreen(false);
               setIsGoToStoreClicked(false);
             }}
-          ></StoreScreen>
+          />
         ) : (
           <>
             {/* 헤더 */}
@@ -160,9 +187,9 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
                 }}
               >
                 <HamburgerButton
-                  userRole="eater"
+                  userRole={userRole}
                   onLogout={onLogout}
-                  activePage="review"
+                  onMypage={onMypage}
                 />
               </TouchableOpacity>
               <HeaderLogo />
@@ -221,7 +248,7 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
                       >
                         <CloseBtn />
                       </TouchableOpacity>
-                      {/*  */}
+
                       {/* 텍스트 오버레이 (클릭 시 가게화면 띄움) */}
                       <View
                         style={[styles.textOverlay, { bottom: height * 0.25 }]}
@@ -306,15 +333,6 @@ export default function Reviews({ userRole, onLogout, onMypage }: ReviewProps) {
                 removeClippedSubviews
               />
             )}
-
-            {/* 사이드바 */}
-            {/* <Sidebar
-              isOpen={isSidebarOpen}
-              onClose={() => setIsSidebarOpen(false)}
-              userRole="eater"
-              onLogout={onLogout}
-              activePage="reviewPage"
-            /> */}
           </>
         )}
       </SafeAreaView>

@@ -10,8 +10,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 
 // 사이드바에 사용될 숟가락, 포크 이미지
-import Spoon from "../../assets/sidespoon.svg";
-import Fork from "../../assets/sidefork.svg";
+import Spoon from "../../assets/sideSpoon.svg";
+import Fork from "../../assets/sideFork.svg";
 
 export interface SidebarProps {
   isOpen: boolean;
@@ -119,9 +119,21 @@ export default function Sidebar({
             </Text>
           </TouchableOpacity>
 
-          {/* 마이페이지 - 팀원이 추가한 onMypage 함수 사용 */}
-          <TouchableOpacity style={styles.menuItem} onPress={onMypage}>
-            <Text style={styles.menuText}>마이페이지</Text>
+          <TouchableOpacity
+            style={[
+              styles.menuItem,
+              activePage === "MypageScreen" && styles.active,
+            ]}
+            onPress={() => handleNavigation("MypageScreen")}
+          >
+            <Text
+              style={[
+                styles.menuText,
+                activePage === "MypageScreen" && styles.activeText,
+              ]}
+            >
+              마이페이지
+            </Text>
           </TouchableOpacity>
 
           {/* 로그아웃 */}
