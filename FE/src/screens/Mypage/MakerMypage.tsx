@@ -17,9 +17,9 @@ import MakerMypageDetail from "./MakerMypageDetail";
 const maker_background = require("../../../assets/maker_background.png");
 
 // 통계 카드용 아이콘들 (임시로 기존 아이콘 사용, 나중에 적절한 아이콘으로 교체)
-const ReviewIcon = require("../../../assets/makermypage-review.png");
-const EventIcon = require("../../../assets/makermypage-event.png");
-const MenuIcon = require("../../../assets/makermypage-menuboard.png");
+import ReviewIcon from "../../../assets/makermypage-review.svg";
+import EventIcon from "../../../assets/makermypage-event.svg";
+import MenuIcon from "../../../assets/makermypage-menuboard.svg";
 
 // MakerMypageDetail과 동일한 TabKey 사용
 type TabKey = "storeReviews" | "storeEvents" | "receivedMenuBoard";
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color : "#333333",
-    fontSize: 18,
+    fontSize: 13     ,
     fontWeight: "bold",
     marginBottom: SPACING.xs,
   },

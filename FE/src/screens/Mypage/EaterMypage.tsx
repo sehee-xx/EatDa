@@ -16,10 +16,9 @@ import { reviewData } from "../../data/reviewData";
 import EaterMypageDetail from "./EaterMypageDetail";
 const eater_background = require("../../../assets/eater_background.png");
 
-// 카드용 아이콘들 (임시로 기존 아이콘 사용, 나중에 적절한 아이콘으로 교체)
-const ReviewIcon = require("../../../assets/eatermypage-review.png");
-const EventIcon = require("../../../assets/eatermypage-scrap.png");
-const MenuIcon = require("../../../assets/eatermypage-menuboard.png");
+import ReviewIcon from "../../../assets/eatermypage-review.svg";
+import EventIcon from "../../../assets/eatermypage-scrap.svg";
+import MenuIcon from "../../../assets/eatermypage-menuboard.svg";
 
 // EaterMypageDetail과 동일한 TabKey 사용
 type TabKey = "myReviews" | "scrappedReviews" | "myMenuBoard";
@@ -179,7 +178,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
     paddingTop: SPACING.md,
   },
   categorySection: {
@@ -195,7 +194,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color : "#333333",
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: "bold",
     marginBottom: SPACING.xs,
   },
