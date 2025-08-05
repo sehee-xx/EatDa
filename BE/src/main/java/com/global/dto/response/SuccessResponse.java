@@ -3,6 +3,7 @@ package com.global.dto.response;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.global.constants.SuccessCode;
 import com.global.utils.TimestampUtils;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -32,6 +33,16 @@ public record SuccessResponse<T>(
                 .code(code)
                 .message(message)
                 .status(status)
+                .timestamp(TimestampUtils.now())
+                .build();
+    }
+
+    public static <T> SuccessResponse<T> of(final SuccessCode successCode, final T data) {
+        return SuccessResponse.<T>builder()
+                .code(successCode.getCode())
+                .message(successCode.getMessage())
+                .status(successCode.getStatus())
+                .data(data)
                 .timestamp(TimestampUtils.now())
                 .build();
     }
