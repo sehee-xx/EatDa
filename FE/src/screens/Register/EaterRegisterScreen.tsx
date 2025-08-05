@@ -10,14 +10,23 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 import InputGroup from "../../components/InputGroup";
 import { AuthField } from "../../components/AuthForm";
 import { COLORS, textStyles } from "../../constants/theme";
 import ResultModal from "../../components/ResultModal";
 
+type NavigationProp = NativeStackNavigationProp<
+  AuthStackParamList,
+  "EaterRegisterScreen"
+>;
+
+// Props를 optional로 변경
 type Props = {
-  onBack: () => void;
-  onComplete: () => void;
+  onBack?: () => void;
+  onComplete?: () => void;
 };
 
 const eaterFields: AuthField[] = [
@@ -50,7 +59,8 @@ const foodCategories = [
   { id: "malaTang", label: "마라탕" },
 ];
 
-export default function EaterRegisterScreen({ onBack, onComplete }: Props) {
+export default function EaterRegisterScreen(props?: Props) {
+  const navigation = useNavigation<NavigationProp>();
   const { width, height } = useWindowDimensions();
   const secondaryColor = COLORS.secondaryEater;
 
@@ -64,6 +74,19 @@ export default function EaterRegisterScreen({ onBack, onComplete }: Props) {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalType, setModalType] = useState<"success" | "failure">("success");
 
+  // 내장 네비게이션 함수들
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  const handleComplete = () => {
+    navigation.navigate("Login");
+  };
+
+  // props가 있으면 props 함수 사용, 없으면 내장 함수 사용
+  const goBack = props?.onBack || handleBack;
+  const complete = props?.onComplete || handleComplete;
+
   const handleSubmit = (): void => {
     setModalType("success");
     setModalVisible(true);
@@ -71,7 +94,7 @@ export default function EaterRegisterScreen({ onBack, onComplete }: Props) {
 
   const handleModalClose = (): void => {
     setModalVisible(false);
-    onComplete();
+    complete();
   };
 
   const toggleFoodSelection = (id: string) =>
@@ -91,7 +114,7 @@ export default function EaterRegisterScreen({ onBack, onComplete }: Props) {
         >
           {/* Header with Back Button */}
           <View style={[styles.header, { paddingTop: height * 0.048 }]}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <TouchableOpacity onPress={goBack} style={styles.backButton}>
               <Text style={[styles.backArrow, { fontSize: width * 0.06 }]}>
                 ←
               </Text>
