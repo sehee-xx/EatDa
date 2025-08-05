@@ -174,7 +174,7 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
 const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
-    top: 20,
+    top: 40,
     left: 16,
     zIndex: 10,
   },
