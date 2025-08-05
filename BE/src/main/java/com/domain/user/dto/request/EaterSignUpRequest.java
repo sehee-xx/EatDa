@@ -27,7 +27,7 @@ public record EaterSignUpRequest(
         String nickname,
 
         @Schema(description = "선호 음식", example = "[1, 4, 9]")
-        List<Integer> foodTagIds,
+        List<Long> foodTagIds,
 
         @Size(max = 50, message = "CUSTOM_FOOD_TAG_TOO_LONG")
         @Schema(description = "사용자 정의 선호 음식", example = "마라탕")
