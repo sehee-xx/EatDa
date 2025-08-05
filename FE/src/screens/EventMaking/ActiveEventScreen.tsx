@@ -65,7 +65,7 @@ export default function ActiveEventScreen() {
             onPress={() => setSelectedEvent(null)}
             style={[
               { position: "absolute" },
-              { top: height * 0.04, left: width * 0.07 },
+              { top: height * 0.04, right: width * 0.07 },
             ]}
           ></CloseButton>
           <View
