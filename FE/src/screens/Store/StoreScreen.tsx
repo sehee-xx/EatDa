@@ -36,9 +36,9 @@ import MenuStyleDummy5 from "../../data/menuStyleDummy/menuStyleDummy5.svg";
 import StoreMenuScreen from "./StoreMenuScreen";
 import StoreEventScreen from "./StoreEventScreen";
 import StoreReviewScreen from "./StoreReviewScreen";
-import ReviewWriteScreen from "./ReviewWriteScreen";
 import StoreMapScreen from "./StoreMapScreen";
 import MenuCustomScreen from "./MenuCustomScreen";
+import ReviewWriteScreen from "./Review/ReviewWriteScreen";
 
 // 새로 추가할 하단 버튼 화면들
 
