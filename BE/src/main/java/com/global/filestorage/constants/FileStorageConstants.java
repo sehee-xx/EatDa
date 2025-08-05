@@ -25,11 +25,12 @@ public final class FileStorageConstants {
 
     // ===== 이미지 최적화 기본 설정값 =====
     public static final int DEFAULT_IMAGE_WIDTH = 720; // 이미지 리사이징 시 기본 너비
-    public static final float DEFAULT_IMAGE_QUALITY = 0.85f; // 이미지 압축 시 기본 품질 수준
-
+    public static final int WEBP_QUALITY = 80;     // WebP 품질 설정 (0 = 낮음, 100 = 최고)
+    public static final int WEBP_COMPRESSION_METHOD = 4;     // WebP 압축 알고리즘 단계 (0~6, 높을수록 느리지만 압축률 높음)
+    public static final int WEBP_COMPRESSION_LEVEL = 6;     // WebP 압축 수준 (0~9, 높을수록 용량 감소)
+    
     // ===== 이미지 포맷 상수 =====
-    public static final String FORMAT_AVIF = "AVIF"; // AVIF 포맷 문자열
-    public static final String FORMAT_JPEG = "JPEG"; // JPEG 포맷 문자열
+    public static final String FORMAT_WEBP = "WEBP"; // WEBP 포맷 문자열
 
     // ===== 파일 저장 관련 로그 메시지 =====
     public static final String FILE_STORAGE_FILE_UPLOAD_ERROR =
@@ -55,7 +56,7 @@ public final class FileStorageConstants {
     public static final String EXCEPTION_ENCODER_NOT_FOUND = "지원하지 않는 이미지 포맷입니다: %s";
     public static final String EXCEPTION_DECODING_FAILED = "유효하지 않은 이미지 파일입니다: %s";
     public static final String EXCEPTION_ENCODING_FAILED = "이미지 인코딩 실패 (포맷: %s, 파일명: %s)";
-    
+
     // Utility 클래스 생성자 제한
     private FileStorageConstants() {
         throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
