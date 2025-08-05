@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
-import { SPACING } from "../constants/theme";
+import { SPACING, textStyles, THEME_COLORS } from "../constants/theme";
 
-// 프로필 이미지 import
-const EaterProfileIcon = require("../../assets/eater-profile.svg");
-const MakerProfileIcon = require("../../assets/maker-profile.svg");
+// 프로필 이미지 import (SVG 컴포넌트로 사용)
+import EaterProfileIcon from "../../assets/eater-profile.svg";
+import MakerProfileIcon from "../../assets/maker-profile.svg";
 
 interface MypageProfileProps {
   userRole: "eater" | "maker";
@@ -12,19 +12,23 @@ interface MypageProfileProps {
 }
 
 export default function MypageProfile({ userRole, nickname }: MypageProfileProps) {
-  const profileIcon = userRole === "eater" ? EaterProfileIcon : MakerProfileIcon;
+  const ProfileIconComponent = userRole === "eater" ? EaterProfileIcon : MakerProfileIcon;
   const userTypeText = userRole === "eater" ? "Eater" : "Maker";
 
   return (
     <View style={styles.profileInfo}>
       {/* 흰색 동그란 배경 + 프로필 아이콘 */}
       <View style={styles.profileImageContainer}>
-        <Image source={profileIcon} style={styles.profileImage} />
+        <ProfileIconComponent width={50} height={50} />
       </View>
       
       {/* 텍스트 영역 */}
+      {/* [userRole].secondary
+      Eater: 핑크색 (#fc6fae) / Maker: 노란색 (#fec566) */}
       <View style={styles.profileText}>
-        <Text style={styles.greeting}>Hello, {nickname}!</Text>
+        <Text style={textStyles.logo}>
+          Hello, <Text style={{ color: THEME_COLORS[userRole].secondary }}>{nickname}</Text> !
+        </Text>
         <Text style={styles.userType}>{userTypeText}</Text>
       </View>
     </View>
@@ -37,8 +41,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileImageContainer: {
-    width: 80,
-    height: 80,
+    width: 55,
+    height: 55,
     borderRadius: 40,
     backgroundColor: "#fff", // 흰색 동그란 배경
     justifyContent: "center",
@@ -58,20 +62,21 @@ const styles = StyleSheet.create({
     height: 50,
   },
   profileText: {
-    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
     marginBottom: SPACING.xs,
   },
   userType: {
-    fontSize: 14,
-    color: "#666",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    fontSize: 10,
+    color: "#fff",
+    backgroundColor: "rgba(80, 62, 80, 0.25)",
+    paddingHorizontal: SPACING.sm, //pill-shaped로 잡기 위함
+    paddingVertical: SPACING.xs, //pill-shaped로 잡기 위함
     borderRadius: 12,
     alignSelf: "flex-start",
   },

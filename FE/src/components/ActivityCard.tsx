@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, useWindowDimensions } from "react-native";
 import { COLORS, SPACING } from "../constants/theme";
 
 interface ActivityCardProps {
@@ -10,10 +10,18 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ icon, text, time, onPress }: ActivityCardProps) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const width = screenWidth * 0.08;  // 화면 너비의 8%
+  const height = screenHeight * 0.04; // 화면 높이의 4%
+  
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.iconContainer}>
-        <Image source={icon} style={styles.icon} resizeMode="contain" />
+        <Image 
+          source={icon} 
+          style={[styles.icon, { width: width * 2, height: height * 2 }]} 
+          resizeMode="contain" 
+        />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.text}>{text}</Text>
@@ -27,7 +35,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: SPACING.md,
+    padding: SPACING.sm,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: SPACING.sm,
@@ -41,22 +49,26 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   iconContainer: {
-    marginRight: SPACING.md,
+    marginRight: SPACING.xs,
   },
   icon: {
-    width: 32,
-    height: 32,
+    // width와 height는 인라인으로 동적 적용
   },
   textContainer: {
     flex: 1,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    marginLeft: SPACING.sm,
   },
   text: {
     fontSize: 14,
-    color: COLORS.textColors.primary,
+    fontWeight: "600",
+    color: "#333333",
     marginBottom: SPACING.xs,
   },
   time: {
-    fontSize: 12,
-    color: COLORS.textColors.secondary,
+    fontSize: 10,
+    color: "#333333",
   },
 }); 

@@ -17,8 +17,7 @@ import MypageGridComponent, { ReviewItem } from "../../components/MypageGridComp
 import TabNavigation from "../../components/TabNavigation";
 import { reviewData } from "../../data/reviewData";
 import CloseBtn from "../../../assets/closeBtn.svg";
-import HeaderLogo from "../../components/HeaderLogo";
-import Hamburger from "../../components/Hamburger";
+
 
 // 빈 상태 아이콘 import
 const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
@@ -28,6 +27,7 @@ interface EaterMypageProps {
   onLogout: () => void;
   initialTab?: TabKey; // 초기 탭 설정
   onBack?: () => void; // 뒤로가기 핸들러
+  setHeaderVisible?: (visible: boolean) => void;
 }
 
 type TabKey = "myReviews" | "scrappedReviews" | "myMenuBoard";
@@ -40,7 +40,7 @@ const EmptyState = ({ message, icon }: { message: string; icon?: any }) => (
   </View>
 );
 
-export default function EaterMypage({ userRole, onLogout, initialTab = "myReviews", onBack }: EaterMypageProps) {
+export default function EaterMypage({ userRole, onLogout, initialTab = "myReviews", onBack, setHeaderVisible }: EaterMypageProps) {
   const { width, height } = useWindowDimensions();
   const screenHeight = Dimensions.get("window").height;
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
@@ -70,6 +70,7 @@ export default function EaterMypage({ userRole, onLogout, initialTab = "myReview
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const handleOpenDetail = (item: ReviewItem) => {
       setSelectedItem(item);
+      setHeaderVisible?.(false); // 헤더 숨기기
       scaleAnim.setValue(0.8);
       Animated.spring(scaleAnim, {
           toValue: 1,
@@ -97,19 +98,6 @@ export default function EaterMypage({ userRole, onLogout, initialTab = "myReview
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.headerContainer}> 
-        <TouchableOpacity>
-          {/* 햄버거 아이콘 */}
-          <Hamburger
-            userRole="eater"
-            onLogout={onLogout}
-            onMypage={() => {}}
-          />
-        </TouchableOpacity>
-        {/* 로고 */}
-        <HeaderLogo />
-      </View>
 
       {/* 상세보기 모드 */}
       {selectedItem ? (
@@ -146,6 +134,7 @@ export default function EaterMypage({ userRole, onLogout, initialTab = "myReview
                   style={styles.closeBtn}
                   onPress={() => {
                     setSelectedItem(null);
+                    setHeaderVisible?.(true); // 헤더 다시 보이기
                   }}
                 >
                   <CloseBtn />
@@ -162,9 +151,9 @@ export default function EaterMypage({ userRole, onLogout, initialTab = "myReview
             decelerationRate="fast"
             snapToInterval={screenHeight}
             snapToAlignment="start"
-            initialScrollIndex={myReviewsData.findIndex(
+            initialScrollIndex={Math.max(0, myReviewsData.findIndex(
               (i) => i.id === selectedItem.id
-            )}
+            ))}
             getItemLayout={(data, index) => ({
               length: screenHeight,
               offset: screenHeight * index,

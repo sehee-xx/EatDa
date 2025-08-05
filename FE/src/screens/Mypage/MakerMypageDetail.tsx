@@ -28,6 +28,7 @@ interface MakerMypageProps {
   onLogout: () => void;
   initialTab?: TabKey; // 초기 탭 설정
   onBack?: () => void; // 뒤로가기 핸들러
+  setHeaderVisible?: (visible: boolean) => void;
 }
 
 type TabKey = "storeReviews" | "storeEvents" | "receivedMenuBoard";
@@ -40,7 +41,7 @@ const EmptyState = ({ message, icon }: { message: string; icon?: any }) => (
   </View>
 );
 
-export default function MakerMypageDetail({ userRole, onLogout, initialTab = "storeReviews", onBack }: MakerMypageProps) {
+export default function MakerMypageDetail({ userRole, onLogout, initialTab = "storeReviews", onBack, setHeaderVisible }: MakerMypageProps) {
   const { width, height } = useWindowDimensions();
   const screenHeight = Dimensions.get("window").height;
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
@@ -97,19 +98,6 @@ export default function MakerMypageDetail({ userRole, onLogout, initialTab = "st
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.headerContainer}> 
-        <TouchableOpacity>
-          {/* 햄버거 아이콘 */}
-          <Hamburger
-            userRole="maker"
-            onLogout={onLogout}
-            onMypage={() => {}} // Detail 화면에서는 마이페이지 이동 불필요
-          />
-        </TouchableOpacity>
-        {/* 로고 */}
-        <HeaderLogo />
-      </View>
 
       {/* 상세보기 모드 */}
       {selectedItem ? (

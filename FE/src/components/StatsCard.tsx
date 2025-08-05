@@ -1,6 +1,5 @@
 import React from "react";
 import { Text, StyleSheet, TouchableOpacity} from "react-native";
-import { SPACING } from "../constants/theme";
 
 interface StatsCardProps {
   type: "리뷰" | "스크랩" | "메뉴판"; // 타입 (리뷰, 스크랩, 메뉴판)
@@ -18,25 +17,21 @@ export default function StatsCard({ type, count }: StatsCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(80, 62, 80, 0.25)", // 연보라색 배경
+    backgroundColor: "rgba(80, 62, 80, 0.25)", 
     borderRadius: 16,
-    padding: SPACING.xs,
     alignItems: "center",
     justifyContent: "center", 
-    minHeight: 80,
-    flex: 1,
-    marginHorizontal: SPACING.xs,
+    width: 90,
+    height: 60,
   },
   count: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: SPACING.xs,
   },
   label: {
     fontSize: 12,
+    fontWeight: "bold",
     color: "#fff",
-    textAlign: "center",
-    fontWeight: "500",
   },
 }); 
