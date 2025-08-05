@@ -21,7 +21,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
-import javax.imageio.ImageIO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,32 +33,28 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImageOptimizer {
 
     /**
-     * 이미지 최적화 메인 진입점 - WebP + 크기 동일 → 변환 생략 - WebP + 작음 → 리사이징만 생략, 인코딩도 생략 - WebP + 큼  → 리사이징 + 인코딩 - WebP 아님 → 리사이징
-     * 조건 판단 후 무조건 인코딩
+     * 이미지 최적화 메인 진입점
      */
     public InputStream optimize(final MultipartFile file) {
         try {
             BufferedImage original = decode(file);
             int width = original.getWidth();
+            int height = original.getHeight();
             boolean isWebp = isWebp(file);
 
-            // WebP + 이미 최적화된 사이즈라면 그대로 반환
-            if (isWebp && width == DEFAULT_IMAGE_WIDTH) {
+            // WebP이며 크기까지 최적화된 경우 → 그대로 반환
+            if (isWebp && width <= DEFAULT_IMAGE_WIDTH && height <= DEFAULT_IMAGE_WIDTH) {
                 log.debug(IMAGE_OPTIMIZER_SKIP_WEBP_SAME_SIZE, file.getOriginalFilename());
                 return file.getInputStream();
             }
 
-            // 리사이징 필요 여부 확인
-            ImmutableImage image = prepareImage(original, width, file.getOriginalFilename());
+            ImmutableImage image = prepareImage(original, file.getOriginalFilename());
 
-            // 인코딩 여부 판단
-            if (!isWebp || width > DEFAULT_IMAGE_WIDTH) {
+            if (!isWebp || shouldResize(width, height)) {
                 return encodeAsStream(image);
             }
 
-            // WebP이고 리사이징도 안 한 경우
             return file.getInputStream();
-
         } catch (IOException e) {
             log.error(IMAGE_OPTIMIZER_UNEXPECTED_ERROR, FORMAT_WEBP, file.getOriginalFilename(), e.getMessage());
             throw new GlobalException(IMAGE_PROCESSING_FAILED,
@@ -68,41 +63,65 @@ public class ImageOptimizer {
     }
 
     /**
-     * MultipartFile을 BufferedImage로 디코딩 유효하지 않은 이미지면 예외 발생
+     * MultipartFile을 BufferedImage로 디코딩 - 실패 시 예외
      */
     private BufferedImage decode(final MultipartFile file) throws IOException {
-        BufferedImage original = ImageIO.read(file.getInputStream());
-        if (Objects.isNull(original)) {
-            log.error(IMAGE_OPTIMIZER_DECODING_FAILED, file.getOriginalFilename());
-            throw new IOException(String.format(EXCEPTION_DECODING_FAILED, file.getOriginalFilename()));
+        try (InputStream input = file.getInputStream()) {
+            ImmutableImage image = ImmutableImage.loader().fromStream(input);
+            return image.awt();
+        } catch (Exception e) {
+            log.error(IMAGE_OPTIMIZER_DECODING_FAILED, e.getMessage());
+            throw new IOException(String.format(EXCEPTION_DECODING_FAILED, file.getOriginalFilename()), e);
         }
-        return original;
     }
 
     /**
      * MIME 타입이 WebP인지 확인
      */
-    private boolean isWebp(MultipartFile file) {
+    private boolean isWebp(final MultipartFile file) {
         String contentType = file.getContentType();
-        return contentType != null && contentType.equalsIgnoreCase(MIME_TYPE_WEBP);
+        return !Objects.isNull(contentType) && contentType.equalsIgnoreCase(MIME_TYPE_WEBP);
     }
 
     /**
      * 이미지 리사이징 여부 판단 후 ImmutableImage 생성
      */
-    private ImmutableImage prepareImage(BufferedImage image, int width, String filename) {
+    private ImmutableImage prepareImage(final BufferedImage image, final String filename) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
         ImmutableImage immutable = ImmutableImage.fromAwt(image);
-        if (width > DEFAULT_IMAGE_WIDTH) {
-            return immutable.scaleToWidth(DEFAULT_IMAGE_WIDTH);
+        if (!shouldResize(width, height)) {
+            log.debug(IMAGE_OPTIMIZER_SKIP_RESIZE, filename);
+            return immutable;
         }
-        log.debug(IMAGE_OPTIMIZER_SKIP_RESIZE, filename);
-        return immutable;
+
+        int[] resized = calculateResizedDimensions(width, height);
+        return immutable.scaleTo(resized[0], resized[1]);
     }
 
     /**
-     * ImmutableImage를 WebP로 인코딩하고 InputStream으로 반환
+     * 긴 변이 DEFAULT_IMAGE_WIDTH를 초과하면 리사이징 필요
      */
-    private InputStream encodeAsStream(ImmutableImage image) throws IOException {
+    private boolean shouldResize(final int width, final int height) {
+        return Math.max(width, height) > DEFAULT_IMAGE_WIDTH;
+    }
+
+    /**
+     * 비율 유지하며 리사이징할 크기 계산
+     */
+    private int[] calculateResizedDimensions(final int width, final int height) {
+        int maxDim = Math.max(width, height);
+        double scale = (double) DEFAULT_IMAGE_WIDTH / maxDim;
+        int newWidth = Math.max((int) (width * scale), 3);
+        int newHeight = Math.max((int) (height * scale), 3);
+        return new int[]{newWidth, newHeight};
+    }
+
+    /**
+     * ImmutableImage를 WebP로 인코딩하고 InputStream 반환
+     */
+    private InputStream encodeAsStream(final ImmutableImage image) throws IOException {
         WebpWriter writer = WebpWriter.DEFAULT
                 .withQ(WEBP_QUALITY)
                 .withM(WEBP_COMPRESSION_METHOD)
