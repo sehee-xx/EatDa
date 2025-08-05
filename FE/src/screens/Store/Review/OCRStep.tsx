@@ -1,4 +1,3 @@
-// 1. OCRStep.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -100,38 +99,42 @@ export default function OCRStep({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { fontSize: width * 0.045 }]}>
-          영수증 인증
-        </Text>
-        <Text style={[styles.description, { fontSize: width * 0.035 }]}>
-          영수증 인증을 먼저 하셔야{"\n"}AI 리뷰를 생성할 수 있습니다
-        </Text>
-      </View>
-
       <View style={styles.content}>
-        <TouchableOpacity
-          style={[styles.uploadArea, { height: height * 0.35 }]}
-          onPress={handleBusinessLicenseUpload}
-        >
-          {businessLicenseUri ? (
-            <Image
-              source={{ uri: businessLicenseUri }}
-              style={styles.uploadedImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.uploadPlaceholder}>
-              <Text style={styles.uploadIcon}>📄</Text>
-              <Text style={[styles.uploadText, { fontSize: width * 0.04 }]}>
-                영수증을 업로드하세요
-              </Text>
-              <Text style={[styles.uploadSubtext, { fontSize: width * 0.03 }]}>
-                JPG, PNG 파일만 업로드 가능합니다
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.header}>
+          <Text style={[styles.title, { fontSize: width * 0.045 }]}>
+            영수증 인증
+          </Text>
+          <Text style={[styles.description, { fontSize: width * 0.035 }]}>
+            영수증 인증을 먼저 하셔야{"\n"}AI 리뷰를 생성할 수 있습니다
+          </Text>
+        </View>
+
+        <View style={styles.uploadContainer}>
+          <TouchableOpacity
+            style={[styles.uploadArea, { height: height * 0.35 }]}
+            onPress={handleBusinessLicenseUpload}
+          >
+            {businessLicenseUri ? (
+              <Image
+                source={{ uri: businessLicenseUri }}
+                style={styles.uploadedImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadIcon}>📄</Text>
+                <Text style={[styles.uploadText, { fontSize: width * 0.04 }]}>
+                  영수증을 업로드하세요
+                </Text>
+                <Text
+                  style={[styles.uploadSubtext, { fontSize: width * 0.03 }]}
+                >
+                  JPG, PNG 파일만 업로드 가능합니다
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -143,8 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F8F9",
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 30,
+    paddingBottom: 40,
     paddingHorizontal: 20,
     alignItems: "center",
   },
@@ -163,6 +165,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     justifyContent: "center",
+    alignItems: "center",
+  },
+  uploadContainer: {
+    width: "100%",
+    alignItems: "center",
   },
   uploadArea: {
     width: "100%",
