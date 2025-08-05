@@ -15,14 +15,10 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { Video, ResizeMode } from "expo-av";
-
-import { COLORS, textStyles } from "../../constants/theme";
 
 import SearchBar from "../../components/SearchBar";
 import GridComponent, { ReviewItem } from "../../components/GridComponent";
-import Sidebar from "../../components/Sidebar";
 import { reviewData } from "../../data/reviewData";
 import CloseBtn from "../../../assets/closeBtn.svg";
 import HamburgerButton from "../../components/Hamburger";
@@ -202,7 +198,9 @@ export default function Reviews({ userRole, onLogout }: ReviewProps) {
                       </TouchableOpacity>
                       {/*  */}
                       {/* 텍스트 오버레이 (클릭 시 가게화면 띄움) */}
-                      <View style={[styles.textOverlay, {bottom:height*0.25}]}>
+                      <View
+                        style={[styles.textOverlay, { bottom: height * 0.25 }]}
+                      >
                         <Text style={styles.titleText}>#{item.title}</Text>
                         <Text style={styles.descText}>{item.description}</Text>
                       </View>
