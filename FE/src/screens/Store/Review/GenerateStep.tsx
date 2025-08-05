@@ -28,8 +28,8 @@ interface GenProps {
 
 const contentTypeLabels = {
   image: "이미지",
-  shorts_ray2: "쇼츠 Ray-2",
-  shorts_gen4: "쇼츠 Gen-4",
+  shorts_ray2: "예쁜 쇼츠",
+  shorts_gen4: "빠른 쇼츠",
 };
 
 export default function GenerateStep({
@@ -77,15 +77,16 @@ export default function GenerateStep({
   const hasImages = localImages.some((img) => img !== null);
   const isDisabled = !contentType || !hasImages || !prompt.trim();
 
-  const placeholderText = `한글 텍스트가 깨질 수 있어요
+  const placeholderText = `1. 한글 텍스트가 깨질 수 있어요
 일부 AI 모델은 한글을 완벽하게 인식하지 못해 텍스트가 이미지에 올바르게 출력되지 않을 수 있습니다.
 
-구체적으로 작성할수록 좋아요
+2. 구체적으로 작성할수록 좋아요
 원하는 이미지가 있다면, 색상, 분위기, 배치, 텍스트 위치 등을 최대한 자세히 설명해 주세요.
 예) "20대 남성이 집에서 음식을 맛있게 먹고 활짝 웃으면서 행복해하는 모습을 친구가 찍어준 구도(음식과 남성이 다 보이는)로 이미지를 생성해줘"
 
-한 번 더 고민해주세요.
+3. 한 번 더 고민해주세요.
 리뷰는 사용자의 경험을 기록하고, 도움이 될만한 정보를 공유하며 다른 이용자는 물론 사업자와도 소통 할 수 있는 공간입니다.
+
 AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할 수 있도록 배려해 주세요`;
 
   return (
