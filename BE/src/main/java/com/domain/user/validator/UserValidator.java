@@ -37,6 +37,9 @@ public class UserValidator {
         if (Objects.isNull(password) || password.isBlank()) {
             throw new IllegalArgumentException(ErrorCode.PASSWORD_REQUIRED.getMessage());
         }
+        if (Objects.isNull(confirmPassword) || confirmPassword.isBlank()) {
+            throw new IllegalArgumentException(ErrorCode.CONFIRM_PASSWORD_REQUIRED.getMessage());
+        }
         if (!password.equals(confirmPassword)) {
             throw new IllegalArgumentException(ErrorCode.PASSWORD_MISMATCH.getMessage());
         }

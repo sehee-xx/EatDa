@@ -84,9 +84,18 @@ public class EaterServiceTest {
     @NullAndEmptySource
     @ValueSource(strings = {""})
     void 회원가입_실패_비밀번호_누락(String invalidPassword) {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", invalidPassword, invalidPassword,
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", invalidPassword, "password",
                 "nickname");
         assertRegisterEaterThrows(request, ErrorCode.PASSWORD_REQUIRED);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {""})
+    void 회원가입_실패_비밀번호_확인_누락(String invalidConfirmPassword) {
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", invalidConfirmPassword,
+                "nickname");
+        assertRegisterEaterThrows(request, ErrorCode.CONFIRM_PASSWORD_REQUIRED);
     }
 
     @Test
