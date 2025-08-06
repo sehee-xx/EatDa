@@ -27,9 +27,6 @@ public enum ErrorCode {
     PASSWORD_CONFIRM_REQUIRED("PASSWORD_CONFIRM_REQUIRED", "비밀번호 확인은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
     NICKNAME_REQUIRED("NICKNAME_REQUIRED", "닉네임은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
     NICKNAME_DUPLICATED("NICKNAME_DUPLICATED", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT.value()),
-    NICKNAME_BLANK("NICKNAME_BLANK", "닉네임은 공백일 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
-    TAG_NOT_FOUND("TAG_NOT_FOUND", "선택한 태그를 찾을 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
-    CUSTOM_TAG_TOO_LONG("CUSTOM_TAG_TOO_LONG", "50자를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
 
     // 인증/인가 관련
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED.value()),

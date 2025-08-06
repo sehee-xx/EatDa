@@ -11,7 +11,6 @@ import com.domain.user.mapper.EaterMapper;
 import com.domain.user.repository.EaterRepository;
 import com.domain.user.service.impl.EaterServiceImpl;
 import com.global.constants.ErrorCode;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,8 +33,8 @@ public class EaterServiceTest {
     private EaterServiceImpl eaterService;
 
     private EaterSignUpRequest createEaterSingUpRequest(String email, String password, String confirmPassword,
-                                                        String nickname, List<Long> foodTagIds, String customFoodTag) {
-        return new EaterSignUpRequest(email, password, confirmPassword, nickname, foodTagIds, customFoodTag);
+                                                        String nickname) {
+        return new EaterSignUpRequest(email, password, confirmPassword, nickname);
     }
 
     private void assertRegisterEaterThrows(EaterSignUpRequest request, ErrorCode errorCode) {
@@ -46,8 +45,7 @@ public class EaterServiceTest {
 
     @Test
     void 회원가입_성공() {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname",
-                null, null);
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname");
         User mockUser = User.builder()
                 .email("email@email.com")
                 .password("password")
@@ -71,16 +69,14 @@ public class EaterServiceTest {
     @NullAndEmptySource
     @ValueSource(strings = {" "})
     void 회원가입_실패_이메일_누락(String invalidEmail) {
-        EaterSignUpRequest request = createEaterSingUpRequest(invalidEmail, "password", "password", "nickname", null,
-                null);
+        EaterSignUpRequest request = createEaterSingUpRequest(invalidEmail, "password", "password", "nickname");
         assertRegisterEaterThrows(request, ErrorCode.EMAIL_REQUIRED);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"invalid", "no-at.com", "abc@com"})
     void 회원가입_실패_이메일_형식(String invalidEmail) {
-        EaterSignUpRequest request = createEaterSingUpRequest(invalidEmail, "password", "password", "nickname", null,
-                null);
+        EaterSignUpRequest request = createEaterSingUpRequest(invalidEmail, "password", "password", "nickname");
         assertRegisterEaterThrows(request, ErrorCode.EMAIL_INVALID_FORMAT);
     }
 
@@ -89,21 +85,19 @@ public class EaterServiceTest {
     @ValueSource(strings = {""})
     void 회원가입_실패_비밀번호_누락(String invalidPassword) {
         EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", invalidPassword, invalidPassword,
-                "nickname",
-                null, null);
+                "nickname");
         assertRegisterEaterThrows(request, ErrorCode.PASSWORD_REQUIRED);
     }
 
     @Test
     void 회원가입_실패_비밀번호_불일치() {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "passw0rd", "nickname",
-                null, null);
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "passw0rd", "nickname");
         assertRegisterEaterThrows(request, ErrorCode.PASSWORD_MISMATCH);
     }
 
     @Test
     void 회원가입_실패_비밀번호_길이가_짧음() {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "pw", "pw", "nickname", null, null);
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "pw", "pw", "nickname");
         assertRegisterEaterThrows(request, ErrorCode.PASSWORD_TOO_SHORT);
     }
 
@@ -111,25 +105,20 @@ public class EaterServiceTest {
     @NullAndEmptySource
     void 회원가입_실패_닉네임_누락(String invalidNickname) {
         EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password",
-                invalidNickname, null,
-                null);
+                invalidNickname);
         assertRegisterEaterThrows(request, ErrorCode.NICKNAME_REQUIRED);
     }
 
     @Test
     void 회원가입_실패_이메일_중복() {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname",
-                null,
-                null);
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname");
         given(eaterRepository.existsByEmail("email@email.com")).willReturn(true);
         assertRegisterEaterThrows(request, ErrorCode.EMAIL_DUPLICATED);
     }
 
     @Test
     void 회원가입_실패_닉네임_중복() {
-        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname",
-                null,
-                null);
+        EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "password", "nickname");
         given(eaterRepository.existsByNickname("nickname")).willReturn(true);
         assertRegisterEaterThrows(request, ErrorCode.NICKNAME_DUPLICATED);
     }

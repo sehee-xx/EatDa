@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.util.List;
 
 public record EaterSignUpRequest(
 
@@ -24,13 +23,6 @@ public record EaterSignUpRequest(
 
         @NotBlank(message = "NICKNAME_REQUIRED")
         @Schema(description = "닉네임", example = "우갸갹!")
-        String nickname,
-
-        @Schema(description = "선호 음식", example = "[1, 4, 9]")
-        List<Long> foodTagIds,
-
-        @Size(max = 50, message = "CUSTOM_FOOD_TAG_TOO_LONG")
-        @Schema(description = "사용자 정의 선호 음식", example = "마라탕")
-        String customFoodTag
+        String nickname
 ) {
 }
