@@ -17,40 +17,32 @@ interface AICompleteModalProps {
   visible: boolean;
   onClose: () => void;
   generatedContent?: string | null;
-  reviewText?: string;
-  contentType?: "image" | "video" | null;
-  onConfirm?: () => void; // 게시하기 버튼
-  onCancel?: () => void; // 취소 버튼
+  // 텍스트 props
+  title: string;
+  subtitle: string;
+  confirmButtonText: string;
+  cancelButtonText: string;
+  // 버튼 함수 props
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export default function AICompleteModal({
   visible,
   onClose,
   generatedContent,
+  title,
+  subtitle,
+  confirmButtonText,
+  cancelButtonText,
   onConfirm,
   onCancel,
 }: AICompleteModalProps) {
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const modalWidth = width * 0.9;
 
-  const handleConfirm = () => {
-    if (onConfirm) {
-      onConfirm();
-    } else {
-      onClose();
-    }
-  };
-
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      onClose();
-    }
-  };
-
-  // 더미 햄스터 이미지 URL
-  const hamsterImageUrl =
+  // 더미 이미지 URL (기본값)
+  const defaultImageUrl =
     "https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=300&fit=crop";
 
   return (
@@ -65,7 +57,7 @@ export default function AICompleteModal({
           {/* AI 생성 이미지 */}
           <View style={styles.imageSection}>
             <Image
-              source={{ uri: generatedContent || hamsterImageUrl }}
+              source={{ uri: generatedContent || defaultImageUrl }}
               style={styles.generatedImage}
               resizeMode="cover"
             />
@@ -73,28 +65,26 @@ export default function AICompleteModal({
 
           {/* 텍스트 콘텐츠 */}
           <View style={styles.textContent}>
-            <Text style={styles.title}>리뷰 생성 완료!</Text>
-            <Text style={styles.subtitle}>
-              생성된 리뷰를 리뷰 게시판에 게시하시겠습니까?
-            </Text>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
           {/* 버튼들 */}
           <View style={styles.buttonSection}>
             <TouchableOpacity
               style={styles.confirmButton}
-              onPress={handleConfirm}
+              onPress={onConfirm}
               activeOpacity={0.7}
             >
-              <Text style={styles.confirmButtonText}>게시하기</Text>
+              <Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={handleCancel}
+              onPress={onCancel}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>취소</Text>
+              <Text style={styles.cancelButtonText}>{cancelButtonText}</Text>
             </TouchableOpacity>
           </View>
         </View>
