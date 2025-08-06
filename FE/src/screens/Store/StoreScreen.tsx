@@ -83,18 +83,21 @@ export default function StoreScreen(props?: StoreProps) {
     setBottomActiveScreen(null);
   };
 
-  // 하단 버튼 화면이 활성화된 경우 해당 화면 렌더링
+  // 하단 버튼 화면이 활성화된 경우 navigation으로 이동
   if (bottomActiveScreen) {
     switch (bottomActiveScreen) {
       case "review":
-        return <ReviewWriteScreen onClose={handleCloseBottomScreen} />;
+        navigation.navigate("ReviewWriteScreen");
+        break;
       case "map":
-        return <MapScreen onClose={handleCloseBottomScreen} />;
+        navigation.navigate("MapScreen");
+        break;
       case "menu":
-        return <MenuCustomScreen onClose={handleCloseBottomScreen} />;
-      default:
-        return null;
+        navigation.navigate("MenuCustomScreen");
+        break;
     }
+    // 상태 초기화
+    setBottomActiveScreen(null);
   }
 
   return (
