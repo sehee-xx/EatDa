@@ -31,11 +31,11 @@ export default function MenuCustomScreen({ navigation }: Props) {
     setAiOk(false); // 초기화
     setStep("write"); // WriteStep으로 이동
 
-    // 3초 후 AI 생성 완료 시뮬레이션
+    // 5초 후 AI 생성 완료 시뮬레이션
     setTimeout(() => {
       setAiOk(true); // AI 생성 완료
       setGenLoading(false); // 로딩 종료
-    }, 3000);
+    }, 5000);
   };
 
   // WriteStep에서 완료 후 리뷰 페이지로 이동하는 핸들러
