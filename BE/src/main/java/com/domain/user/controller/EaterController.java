@@ -31,6 +31,6 @@ public class EaterController {
     @PostMapping("/")
     public ResponseEntity<BaseResponse> signUp(@Valid @RequestBody final EaterSignUpRequest request) {
         User user = eaterService.registerEater(request);
-        return ApiResponseFactory.success(SuccessCode.EATERS_SIGNUP, eaterMapper.toResponse(user));
+        return ApiResponseFactory.success(SuccessCode.EATER_SIGNUP, eaterMapper.toResponse(user));
     }
 }

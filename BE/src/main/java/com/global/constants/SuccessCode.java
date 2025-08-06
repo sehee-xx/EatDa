@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 public enum SuccessCode {
 
     // 냠냠이
-    EATERS_SIGNUP("EATERS_SIGNUP", "회원가입이 완료되었습니다.", HttpStatus.CREATED.value()),
+    EATER_SIGNUP("EATER_SIGNUP", "회원가입이 완료되었습니다.", HttpStatus.CREATED.value()),
 
     // 사장님 회원가입 단계
     OWNER_SIGNUP_STEP1("OWNER_SIGNUP_STEP1", "기본 정보가 저장되었습니다.", HttpStatus.CREATED.value()),
