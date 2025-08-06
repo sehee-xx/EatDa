@@ -1,13 +1,6 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  useWindowDimensions,
-} from "react-native";
-import { COLORS, SPACING } from "../../constants/theme";
+import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
+import { SPACING } from "../../constants/theme";
 import StatsCard from "../../components/StatsCard";
 import ActivityCard from "../../components/ActivityCard";
 import CategoryCard from "../../components/CategoryCard";
@@ -29,7 +22,10 @@ interface MakerMypageProps {
   setHeaderVisible?: (visible: boolean) => void;
 }
 
-export default function MakerMyPage({ onLogout, setHeaderVisible }: MakerMypageProps) {
+export default function MakerMyPage({
+  onLogout,
+  setHeaderVisible,
+}: MakerMypageProps) {
   const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("storeReviews");
 
@@ -37,16 +33,16 @@ export default function MakerMyPage({ onLogout, setHeaderVisible }: MakerMypageP
   const tabData = {
     storeReviews: {
       data: reviewData.slice(6, 12),
-      label: "가게 리뷰 보기"
+      label: "가게 리뷰 보기",
     },
     storeEvents: {
       data: reviewData.slice(12, 15),
-      label: "가게 이벤트 보기"
+      label: "가게 이벤트 보기",
     },
     receivedMenuBoard: {
       data: [],
-      label: "받은 메뉴판"
-    }
+      label: "받은 메뉴판",
+    },
   };
 
   // Maker 전용 설정
@@ -66,7 +62,7 @@ export default function MakerMyPage({ onLogout, setHeaderVisible }: MakerMypageP
   // Detail 화면 표시
   if (showDetail) {
     return (
-      <MakerMypageDetail 
+      <MakerMypageDetail
         userRole="maker"
         onLogout={onLogout}
         initialTab={activeTab}
@@ -78,35 +74,24 @@ export default function MakerMyPage({ onLogout, setHeaderVisible }: MakerMypageP
 
   return (
     <View style={styles.container}>
-
       <ScrollView style={styles.content}>
         {/* 프로필 섹션 (노란색 배경) */}
         <View style={styles.profileSection}>
           <Image source={backgroundImage} style={styles.backgroundImage} />
-          
+
           <View style={styles.profileContent}>
-            <MypageProfile 
-              userRole="maker"
-              nickname="Sol"
+            <MypageProfile userRole="maker" nickname="Sei" />
+          </View>
+
+          {/* 통계 카드들 - 타입으로 라벨 결정 */}
+          <View style={styles.statsContainer}>
+            <StatsCard type="리뷰" count={tabData.storeReviews.data.length} />
+            <StatsCard type="스크랩" count={tabData.storeEvents.data.length} />
+            <StatsCard
+              type="메뉴판"
+              count={tabData.receivedMenuBoard.data.length}
             />
-          </View>  
-
-            {/* 통계 카드들 - 타입으로 라벨 결정 */}
-            <View style={styles.statsContainer}>
-              <StatsCard
-                type="리뷰"
-                count={tabData.storeReviews.data.length}
-              />
-              <StatsCard
-                type="스크랩"
-                count={tabData.storeEvents.data.length}
-              />
-              <StatsCard
-                type="메뉴판"
-                count={tabData.receivedMenuBoard.data.length}
-              />
-            </View>
-
+          </View>
         </View>
 
         {/* 카테고리 섹션 - TabKey에 따른 내용 */}
@@ -134,13 +119,13 @@ export default function MakerMyPage({ onLogout, setHeaderVisible }: MakerMypageP
         {/* 최근 활동 섹션 */}
         <View style={styles.activitySection}>
           <Text style={styles.sectionTitle}>최근 활동</Text>
-          
+
           <ActivityCard
             icon={ReviewIcon}
             text="가게 리뷰가 등록되었습니다"
             time="2시간 전"
           />
-          
+
           <ActivityCard
             icon={MenuIcon}
             text="받은 메뉴판이 업데이트되었습니다"
@@ -161,41 +146,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    flexDirection: "column",
-    minHeight: 100, // 배경 이미지가 안정적으로 표시될 최소 높이
-    padding: SPACING.lg,
+    position: "relative", // 배경 이미지가 제대로 표시되도록
+    minHeight: 100,
     marginBottom: SPACING.md,
+    // padding 제거하여 전체 너비 사용
   },
   backgroundImage: {
     position: "absolute",
-    top: 0,    
-    left: 0,   
-    right: SPACING.md, // 전체 영역을 잡기 위한 코드
-    bottom: SPACING.md, // 전체 영역을 잡기 위한 코드 
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%", // 명시적으로 전체 너비 지정
+    height: "100%", // 명시적으로 전체 높이 지정
+    resizeMode: "cover",
   },
   profileContent: {
     justifyContent: "space-between",
+    padding: SPACING.lg, // 내부 콘텐츠에만 패딩 적용
   },
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
-    paddingTop: SPACING.md,
+    paddingLeft: SPACING.lg, // 좌우 패딩만 적용
+    paddingRight: SPACING.lg,
+    paddingBottom: SPACING.lg,
   },
   categorySection: {
-    paddingTop: SPACING.xs, // paddingtop 조정
+    paddingTop: SPACING.xs,
     padding: SPACING.lg,
-    gap: 10
+    gap: 10,
   },
   activitySection: {
-    backgroundColor: '#eee', 
-    paddingTop: SPACING.md, // paddingtop 조정
+    backgroundColor: "#eee",
+    paddingTop: SPACING.md,
     padding: SPACING.lg,
-    gap: 10
+    gap: 10,
   },
   sectionTitle: {
-    color : "#333333",
-    fontSize: 13     ,
+    color: "#333333",
+    fontSize: 13,
     fontWeight: "bold",
     marginBottom: SPACING.xs,
   },
