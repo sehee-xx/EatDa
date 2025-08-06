@@ -11,6 +11,7 @@ import com.domain.user.mapper.EaterMapper;
 import com.domain.user.repository.EaterRepository;
 import com.domain.user.service.impl.EaterServiceImpl;
 import com.global.constants.ErrorCode;
+import com.global.exception.ApiException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,7 +40,7 @@ public class EaterServiceTest {
 
     private void assertRegisterEaterThrows(EaterSignUpRequest request, ErrorCode errorCode) {
         assertThatThrownBy(() -> eaterService.registerEater(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ApiException.class)
                 .hasMessageContaining(errorCode.getMessage());
     }
 
@@ -101,7 +102,7 @@ public class EaterServiceTest {
     @Test
     void 회원가입_실패_비밀번호_불일치() {
         EaterSignUpRequest request = createEaterSingUpRequest("email@email.com", "password", "passw0rd", "nickname");
-        assertRegisterEaterThrows(request, ErrorCode.PASSWORD_MISMATCH);
+        assertRegisterEaterThrows(request, ErrorCode.CONFIRM_PASSWORD_MISMATCH);
     }
 
     @Test
