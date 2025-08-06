@@ -37,7 +37,7 @@ services:
       - backend
 
   mysql:
-    image: mysql:8
+    image: mysql:8.0.36
     container_name: mysql
     ports:
       - "3306:3306"
@@ -49,9 +49,7 @@ services:
       - TZ=Asia/Seoul
     volumes:
       - /srv/mysql:/var/lib/mysql
-      - /srv/mysql/conf.d:/etc/mysql/conf.d
     command:
-      - "mysqld"
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
     restart: always
