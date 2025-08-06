@@ -1,6 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
-import { COLORS, SPACING } from "../constants/theme";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
+import { SPACING } from "../constants/theme";
 
 interface CategoryCardProps {
   icon: React.FC<any>; // SVG 컴포넌트
@@ -9,19 +15,20 @@ interface CategoryCardProps {
   onPress?: () => void;
 }
 
-export default function CategoryCard({ icon: IconComponent, title, count, onPress }: CategoryCardProps) {
+export default function CategoryCard({
+  icon: IconComponent,
+  title,
+  count,
+  onPress,
+}: CategoryCardProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const width = screenWidth * 0.08;  // 화면 너비의 8%
+  const width = screenWidth * 0.08; // 화면 너비의 8%
   const height = screenHeight * 0.04; // 화면 높이의 4%
-  
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.iconContainer}>
-        <IconComponent 
-          width={width * 2} 
-          height={height * 2}
-        />
+        <IconComponent width={width * 2} height={height * 2} />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.title}>{title}</Text>
@@ -51,9 +58,9 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginLeft: SPACING.xs,
   },
-     icon: {
-     // width와 height는 인라인으로 동적 적용
-   },
+  icon: {
+    // width와 height는 인라인으로 동적 적용
+  },
   textContainer: {
     flex: 1,
     flexDirection: "column",
@@ -72,4 +79,4 @@ const styles = StyleSheet.create({
     color: "#868688",
     fontWeight: "600",
   },
-}); 
+});
