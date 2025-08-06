@@ -16,6 +16,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
+import { Ionicons } from "@expo/vector-icons";
 
 // 더미데이터
 import { eventData } from "../../data/eventData";
@@ -39,12 +40,17 @@ export default function ActiveEventScreen() {
 
   // 마이페이지 이동 함수
   const handleMypage = () => {
-    // 여기서 마이페이지로 이동하는 로직 구현
     console.log("마이페이지로 이동");
-    // navigation.navigate('MyPageScreen'); // 실제 마이페이지 화면 이름으로 변경
+    // navigation.navigate('MyPageScreen');
   };
 
-  // 진행중인 이벤튼 눌렀을 때 날짜안에 들어있는거만 보여주기
+  // 이벤트 포스터 생성하기 버튼 클릭 핸들러
+  const handleCreateEventPoster = () => {
+    console.log("이벤트 포스터 생성하기 클릭");
+    navigation.navigate("EventMakingScreen");
+  };
+
+  // 진행중인 이벤트 눌렀을 때 날짜안에 들어있는거만 보여주기
   const [selectedEvent, setSelectedEvent] = useState<eventItem | null>(null);
   const today = dayjs();
 
@@ -57,6 +63,7 @@ export default function ActiveEventScreen() {
       (today.isBefore(end) || today.isSame(end))
     );
   });
+
   // 전체보기 -> 상세보기 클릭 시 애니메이션
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
@@ -83,7 +90,7 @@ export default function ActiveEventScreen() {
               { position: "absolute" },
               { top: height * 0.04, right: width * 0.07 },
             ]}
-          ></CloseButton>
+          />
           <View
             style={[
               styles.storeNameContainer,
@@ -100,7 +107,7 @@ export default function ActiveEventScreen() {
                 borderRadius: 10,
               }}
               source={selectedEvent.uri}
-            ></Image>
+            />
           </View>
           {/* 포스터 하단 텍스트 영역 */}
           <View style={[styles.textOverLay, { marginHorizontal: width * 0.1 }]}>
@@ -126,7 +133,7 @@ export default function ActiveEventScreen() {
     );
   }
 
-  //   전체 보기
+  // 전체 보기
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {/* 헤더 */}
@@ -135,34 +142,10 @@ export default function ActiveEventScreen() {
           userRole="maker"
           onLogout={() => console.log("logout")}
           onMypage={handleMypage}
-          // activePage prop 제거
-        ></HamburgerButton>
-
-        <HeaderLogo></HeaderLogo>
+        />
+        <HeaderLogo />
       </View>
-
-      {/* 진행중인 이벤트 클릭 버튼 */}
-      {!selectedEvent && (
-        <View
-          style={{
-            paddingLeft: width * 0.06,
-            paddingTop: height * 0.038,
-            paddingBottom: height * 0.03,
-          }}
-        >
-          <TouchableOpacity
-            style={[
-              styles.activeEventButton,
-              { width: width * 0.36, height: height * 0.04 },
-            ]}
-          >
-            <Text style={styles.activeEventText}>진행중인 이벤트</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* 진행중인 이벤트 불러오기 (전체 / 상세) */}
-      {/* 전체보기 */}
       <FlatList
         data={activeEvents}
         keyExtractor={(item) => item.id}
@@ -175,9 +158,25 @@ export default function ActiveEventScreen() {
             index={index}
             totalLength={activeEvents.length}
             onPress={() => setSelectedEvent(item)}
-          ></GridComponent>
+          />
         )}
-      ></FlatList>
+      />
+      {/* 이벤트 포스터 생성하기 버튼 */}
+      {!selectedEvent && (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.createEventButton}
+            onPress={handleCreateEventPoster}
+            activeOpacity={0.8}
+          >
+            <View style={styles.buttonContent}>
+              <Text style={styles.createEventButtonText}>
+                이벤트 포스터 생성하기
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -188,17 +187,42 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
 
-  activeEventButton: {
+  // 새로운 버튼 스타일
+  buttonContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  } as ViewStyle,
+
+  createEventButton: {
     backgroundColor: "#fec566",
-    borderRadius: 8,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: "#fec566",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  } as ViewStyle,
+
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
   } as ViewStyle,
 
-  activeEventText: {
+  buttonIcon: {
+    marginRight: 8,
+  },
+
+  createEventButtonText: {
     color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
     textAlign: "center",
   } as TextStyle,
 
+  // 기존 스타일들
   goBackButton: {
     position: "absolute",
   },
