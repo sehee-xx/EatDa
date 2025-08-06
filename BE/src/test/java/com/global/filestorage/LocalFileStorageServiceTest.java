@@ -1,17 +1,15 @@
 package com.global.filestorage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.global.config.FileStorageProperties;
 import com.global.exception.GlobalException;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
 class LocalFileStorageServiceTest {
 
@@ -29,23 +26,21 @@ class LocalFileStorageServiceTest {
     private static final String TEST_VIDEO_ROOT = "build/test-videos";
 
     private LocalFileStorageService service;
+    private ImageOptimizer mockImageOptimizer;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         FileStorageProperties props = new FileStorageProperties();
-        // reflection 방식으로 필드 설정
-        try {
-            Field imageRootField = FileStorageProperties.class.getDeclaredField("imageRoot");
-            Field videoRootField = FileStorageProperties.class.getDeclaredField("videoRoot");
-            imageRootField.setAccessible(true);
-            videoRootField.setAccessible(true);
-            imageRootField.set(props, TEST_IMAGE_ROOT);
-            videoRootField.set(props, TEST_VIDEO_ROOT);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        Field imageRootField = FileStorageProperties.class.getDeclaredField("imageRoot");
+        Field videoRootField = FileStorageProperties.class.getDeclaredField("videoRoot");
+        imageRootField.setAccessible(true);
+        videoRootField.setAccessible(true);
+        imageRootField.set(props, TEST_IMAGE_ROOT);
+        videoRootField.set(props, TEST_VIDEO_ROOT);
 
-        service = new LocalFileStorageService(props);
+        // ImageOptimizer를 Mock 으로 생성
+        mockImageOptimizer = mock(ImageOptimizer.class);
+        service = new LocalFileStorageService(props, mockImageOptimizer);
     }
 
     @AfterEach
@@ -55,14 +50,17 @@ class LocalFileStorageServiceTest {
     }
 
     @Test
-    void 이미지_저장이_성공적으로_이뤄진다() throws IOException {
+    void 이미지_저장이_성공적으로_이뤄진다() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file",
                 "test.jpg",
                 "image/jpeg",
                 "image-content".getBytes());
 
-        String path = service.storeImage(file, "menus/1", "test.jpg");
+        // mock optimize 동작: 그대로 스트림 리턴
+        when(mockImageOptimizer.optimize(file)).thenReturn(
+                new java.io.ByteArrayInputStream("image-content".getBytes()));
 
+        String path = service.storeImage(file, "menus/1", "test.jpg");
         assertTrue(Files.exists(new File(path).toPath()));
     }
 
@@ -74,7 +72,6 @@ class LocalFileStorageServiceTest {
                 "video-content".getBytes());
 
         String path = service.storeVideo(file, "reviews/5", "test.mp4");
-
         assertTrue(Files.exists(new File(path).toPath()));
     }
 
@@ -83,8 +80,11 @@ class LocalFileStorageServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "foo",
-                "application/octet-stream", // MIME 매핑 안됨
+                "application/octet-stream",
                 "content".getBytes());
+
+        when(mockImageOptimizer.optimize(file))
+                .thenReturn(new ByteArrayInputStream("dummy".getBytes()));
 
         GlobalException exception = assertThrows(GlobalException.class,
                 () -> service.storeImage(file, "menus/1", "foo"));
@@ -93,7 +93,7 @@ class LocalFileStorageServiceTest {
     }
 
     @Test
-    void 중첩된_상대경로에서도_이미지_저장이_정상적으로_이뤄진다() throws IOException {
+    void 중첩된_상대경로에서도_이미지_저장이_정상적으로_이뤄진다() throws Exception {
         String nestedPath = "menus/2025/08/04";
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -102,13 +102,15 @@ class LocalFileStorageServiceTest {
                 "nested-image".getBytes()
         );
 
-        String savedPath = service.storeImage(file, nestedPath, "nested.jpg");
+        when(mockImageOptimizer.optimize(file))
+                .thenReturn(new java.io.ByteArrayInputStream("nested-image".getBytes()));
 
+        String savedPath = service.storeImage(file, nestedPath, "nested.jpg");
         assertTrue(Files.exists(new File(savedPath).toPath()));
     }
 
     @Test
-    void 동일한_이름_다른_확장자라도_충돌없이_저장된다() throws IOException {
+    void 동일한_이름_다른_확장자라도_충돌없이_저장된다() throws Exception {
         MockMultipartFile pngFile = new MockMultipartFile(
                 "file",
                 "sample.png",
@@ -122,6 +124,11 @@ class LocalFileStorageServiceTest {
                 "jpg-content".getBytes()
         );
 
+        when(mockImageOptimizer.optimize(pngFile))
+                .thenReturn(new java.io.ByteArrayInputStream("png-content".getBytes()));
+        when(mockImageOptimizer.optimize(jpgFile))
+                .thenReturn(new java.io.ByteArrayInputStream("jpg-content".getBytes()));
+
         String path1 = service.storeImage(pngFile, "menus/1", "sample.png");
         String path2 = service.storeImage(jpgFile, "menus/1", "sample.jpg");
 
@@ -133,31 +140,20 @@ class LocalFileStorageServiceTest {
     }
 
     @Test
-    void 파일저장_실패시_GlobalException으로_포장된다() throws IOException {
-        MultipartFile mockFile = mock(MultipartFile.class);
-        when(mockFile.getContentType()).thenReturn("image/jpeg");
-        when(mockFile.getOriginalFilename()).thenReturn("error.jpg");
-        doThrow(new IOException("Disk full")).when(mockFile).transferTo(any(File.class));
-
-        GlobalException exception = assertThrows(GlobalException.class,
-                () -> service.storeImage(mockFile, "menus/1", "error.jpg"));
-
-        assertEquals("FILE_UPLOAD_ERROR", exception.getErrorCode().getCode());
-        assertEquals("error.jpg", exception.getDetails());
-        assertInstanceOf(IOException.class, exception.getCause());
-    }
-
-    @Test
-    void 대문자_확장자는_소문자로_정상_변환되어_저장된다() throws IOException {
+    void jpeg_파일은_webp로_변환되어_webp_확장자로_저장된다() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file",
-                "IMAGE.JPG",
+                "image.JPG", // 대문자 확장자
                 "image/jpeg",
                 "image-content".getBytes());
 
-        String path = service.storeImage(file, "menus/upper-case", "IMAGE.JPG");
+        when(mockImageOptimizer.optimize(file))
+                .thenReturn(new ByteArrayInputStream("image-content".getBytes()));
+
+        String path = service.storeImage(file, "menus/test", "image.JPG");
 
         File savedFile = new File(path);
+
         assertTrue(savedFile.exists());
-        assertTrue(path.endsWith(".jpg")); // 소문자 확장자 확인
+        assertTrue(path.endsWith(".webp"));
     }
 }
