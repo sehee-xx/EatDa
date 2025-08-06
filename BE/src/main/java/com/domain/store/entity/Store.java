@@ -39,6 +39,9 @@ public class Store extends BaseEntity {
     @Column(length = 255)
     private String address;
 
+    @Column(columnDefinition = "TEXT")
+    private String licenseUrl;
+
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "maker_id")
@@ -48,8 +51,10 @@ public class Store extends BaseEntity {
     private List<Menu> menus;
 
     @Builder
-    public Store(final String name, final String address) {
+    public Store(final String name, final String address, final String licenseUrl, final User maker) {
         this.name = name;
         this.address = address;
+        this.licenseUrl = licenseUrl;
+        this.maker = maker;
     }
 }
