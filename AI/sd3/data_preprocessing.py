@@ -54,7 +54,7 @@ for annotation in data['annotations']:
         # 이미지 파일이 실제로 존재하는지 확인
         if os.path.exists(original_image_path):
             try:
-                # 이미지 복사 (Optional: Resize/Pad to 1024x1024 if necessary)
+                # 이미지 복사 (Resize to 1024x1024)
                 # SD3 학습에 최적화된 1024x1024 해상도로 이미지를 리사이징/패딩하는 코드
                 import shutil
                 shutil.copy(original_image_path, output_image_path)
