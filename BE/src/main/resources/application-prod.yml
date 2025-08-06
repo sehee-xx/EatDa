@@ -9,6 +9,6 @@ spring:
       ddl-auto: validate
     show-sql: false
 
-server:
-  servlet:
-    context-path: /prod
+springdoc:
+  swagger-ui:
+    config-url: /prod/v3/api-docs/swagger-config
