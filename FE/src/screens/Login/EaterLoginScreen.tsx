@@ -46,7 +46,7 @@ export default function EaterLoginScreen(props?: Props) {
   };
 
   const handleLoginSuccess = () => {
-    navigation.navigate("MapScreen"); // 또는 메인 화면
+    navigation.navigate("ReviewTabScreen"); // 또는 메인 화면
   };
 
   const handleLoginFailure = (message: string) => {

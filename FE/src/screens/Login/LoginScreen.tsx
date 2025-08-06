@@ -63,8 +63,7 @@ export default function LoginScreen() {
     setShowModal(false);
     if (modalType === "success") {
       // Navigation을 사용해서 메인 화면으로 이동
-      // 여기서는 예시로 "Main" 스크린으로 이동한다고 가정
-      navigation.navigate("Main" as any); // 또는 실제 메인 화면 이름
+      navigation.navigate("ReviewTabScreen" as any);
     }
   };
 
