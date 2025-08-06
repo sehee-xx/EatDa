@@ -26,7 +26,7 @@ import StoreMenuScreen from "./StoreMenuScreen";
 import StoreEventScreen from "./StoreEventScreen";
 import StoreReviewScreen from "./StoreReviewScreen";
 import ReviewWriteScreen from "./Review/ReviewWriteScreen";
-import MapScreen2 from "./Map/MapScreen2";
+import MapScreen from "./Map/MapScreen";
 // import MapScreen from "./Map/MapScreen";
 import MenuCustomScreen from "./Menu/MenuCustomScreen";
 
@@ -65,7 +65,7 @@ export default function StoreScreen({ onGoBack }: StoreProps) {
       case "review":
         return <ReviewWriteScreen onClose={handleCloseBottomScreen} />;
       case "map":
-        return <MapScreen2 onClose={handleCloseBottomScreen} />;
+        return <MapScreen onClose={handleCloseBottomScreen} />;
       case "menu":
         return <MenuCustomScreen onClose={handleCloseBottomScreen} />;
       default:
