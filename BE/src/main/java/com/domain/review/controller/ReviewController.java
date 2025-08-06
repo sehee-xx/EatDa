@@ -1,5 +1,6 @@
 package com.domain.review.controller;
 
+import com.domain.review.dto.response.ReviewDetailResponse;
 import com.domain.review.dto.response.ReviewFeedResponse;
 import com.domain.review.dto.response.ReviewFeedResult;
 import com.domain.review.service.ReviewService;
@@ -60,5 +61,37 @@ public class ReviewController {
                     )
             );
         }
+    }
+
+    /**
+     * 리뷰 상세 조회
+     * 리뷰 클릭 시 가게 페이지로 이동을 위한 상세 정보 제공
+     */
+    @GetMapping("/{reviewId}")
+    public ResponseEntity<SuccessResponse<ReviewDetailResponse>> getReviewDetail(
+            @PathVariable @NotNull Long reviewId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        log.info("Review detail request - reviewId: {}, userId: {}",
+                reviewId, userDetails != null ? userDetails.getUsername() : "anonymous");
+
+        // 로그인한 사용자 ID 추출 (스크랩 여부 확인용)
+        Long userId = null;
+        if (userDetails != null) {
+            userId = Long.parseLong(userDetails.getUsername()); // 또는 적절한 방식으로 추출
+        }
+
+        // 서비스 호출
+        ReviewDetailResponse reviewDetail = reviewService.getReviewDetail(reviewId, userId);
+
+        // 응답 생성
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        SuccessCode.REVIEW_DETAIL_FETCHED.getCode(),
+                        SuccessCode.REVIEW_DETAIL_FETCHED.getMessage(),
+                        HttpStatus.OK.value(),
+                        reviewDetail
+                )
+        );
     }
 }

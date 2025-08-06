@@ -1,16 +1,27 @@
 package com.domain.review.service;
 
+import com.domain.review.dto.response.ReviewDetailResponse;
 import com.domain.review.dto.response.ReviewFeedResponse;
 import com.domain.review.dto.response.ReviewFeedResult;
 import com.domain.review.dto.response.StoreDistanceResult;
 import com.domain.review.entity.Poi;
 import com.domain.review.entity.Review;
+import com.domain.review.entity.Store;
 import com.domain.review.repository.ReviewRepository;
+import com.global.constants.ErrorCode;
+import com.global.constants.SuccessCode;
+import com.global.dto.response.SuccessResponse;
+import com.global.exception.GlobalException;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 import java.util.Map;
@@ -84,6 +95,43 @@ public class ReviewService {
             log.warn("No POI found near ({}, {}), returning all reviews", latitude, longitude);
             return getFallbackFeed(lastReviewId);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewDetailResponse getReviewDetail(Long reviewId, Long currentUserId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.BAD_REQUEST));
+
+        Store store = review.getStore();
+
+        int scrapCount = 0;
+        boolean isScrapped = false;
+
+        UserInfo userInfo = UserInfo.builder()
+                .userId(1L) // 임시
+                .nickname("테스트유저") // 임시
+                .build();
+
+        return ReviewDetailResponse.builder()
+                .reviewId(review.getId())
+                .store(StoreInfo.builder()
+                        .storeId(store.getId())
+                        .storeName(store.getName())
+                        .address("서울시 강남구") // Store 엔티티에 address 필드 없음
+                        .latitude(store.getLatitude())
+                        .longitude(store.getLongitude())
+                        .build())
+                .user(userInfo)
+                .description(review.getDescription())
+                .menuNames(List.of()) // Review 엔티티에 menuNames 없음
+                .asset(AssetInfo.builder()
+                        .type("IMAGE")
+                        .assetUrl(null) // Review 엔티티에 assetUrl 없음
+                        .build())
+                .scrapCount(scrapCount)
+                .isScrapped(isScrapped)
+                .createdAt(review.getCreatedAt())
+                .build();
     }
 
     private ReviewFeedResult getFallbackFeed(Long lastReviewId) {
