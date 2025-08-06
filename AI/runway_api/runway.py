@@ -16,7 +16,7 @@ client = AsyncRunwayML(
 )
 
 # RunwayML 작업을 실행할 비동기 함수 정의
-async def run_runway_task():
+async def run_runway():
     user_initial_prompt = input("초기 프롬프트를 입력하세요-테스트용: ")
     await asyncio.sleep(3) # 3초 대기합니다. (비동기 작업을 위해 asyncio 사용)
     
@@ -67,7 +67,7 @@ async def run_runway_task():
     video_url = task.output[0]
     print("영상 다운로드 중...")
     response = requests.get(video_url, stream=True)
-    response.raise_for_status() # HTTP 요청이 실패했을 때 오류를 발생시킵니다. (선택 사항이지만 권장)
+    response.raise_for_status() # HTTP 요청이 실패했을 때 오류를 발생시킵니다. (선택 사항이지만 넣으면 좋다고 한다..?왜지?)
 
     with open(f'{task.id}.mp4', 'wb') as file:
         file.write(response.content)
@@ -79,4 +79,4 @@ async def run_runway_task():
 
 # 비동기 함수 실행
 if __name__ == "__main__":
-    asyncio.run(run_runway_task())
+    asyncio.run(run_runway())

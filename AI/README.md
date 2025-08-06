@@ -7,7 +7,7 @@
 
 - 사용방법
 1. 최상단 루트에서 가상환경 설정 (python -m venv venv) + 패키지 다운로드 (pip install -r requirements.txt)
-2. ~/making_shorts 루트에서 python -m luma_api.main1
+2. ~/making_shorts 루트에서 python -m luma_api.luma
    ~/making_shorts 루트에서 python -m runway_api.runway
 
 3. 프롬프트 작성 후 기다리기

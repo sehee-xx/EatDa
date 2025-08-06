@@ -14,7 +14,7 @@ client = AsyncLumaAI(
 )
 
 # 영상 생성 요청
-async def main():
+async def run_luma():
     user_initial_prompt = input("초기 프롬프트를 입력하세요-테스트용: ")
     await asyncio.sleep(3) # 3초 대기합니다. (비동기 작업을 위해 asyncio 사용)
     
@@ -90,4 +90,4 @@ async def main():
 
 # main 함수 실행
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_luma())

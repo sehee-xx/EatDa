@@ -1,0 +1,14 @@
+# 이 파일을 복사해서 .env 파일을 만드세요!
+
+# Luma AI API Key
+LUMAAI_API_KEY=your_luma_ai_api_key_here
+
+# GMS (GPT) API Key - SSAFY 환경용  
+GMS_API_KEY=your_gms_api_key_here
+
+# FastAPI 설정
+HOST=0.0.0.0
+PORT=8000
+
+# 환경 설정
+ENVIRONMENT=development
