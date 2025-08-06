@@ -83,22 +83,24 @@ export default function StoreScreen(props?: StoreProps) {
     setBottomActiveScreen(null);
   };
 
-  // 하단 버튼 화면이 활성화된 경우 navigation으로 이동
-  if (bottomActiveScreen) {
-    switch (bottomActiveScreen) {
-      case "review":
-        navigation.navigate("ReviewWriteScreen");
-        break;
-      case "map":
-        navigation.navigate("MapScreen");
-        break;
-      case "menu":
-        navigation.navigate("MenuCustomScreen");
-        break;
+  // useEffect로 네비게이션 처리 (렌더링 중이 아닌 사이드 이펙트로 처리)
+  useEffect(() => {
+    if (bottomActiveScreen) {
+      switch (bottomActiveScreen) {
+        case "review":
+          navigation.navigate("ReviewWriteScreen");
+          break;
+        case "map":
+          navigation.navigate("MapScreen");
+          break;
+        case "menu":
+          navigation.navigate("MenuCustomScreen");
+          break;
+      }
+      // 상태 초기화
+      setBottomActiveScreen(null);
     }
-    // 상태 초기화
-    setBottomActiveScreen(null);
-  }
+  }, [bottomActiveScreen, navigation]);
 
   return (
     <SafeAreaView style={[{ backgroundColor: "#F7F8F9", flex: 1 }]}>
