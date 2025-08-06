@@ -60,6 +60,10 @@ dependencies {
     implementation 'com.sksamuel.scrimage:scrimage-webp:4.1.3'                   // WebP 포맷 변환 지원
     implementation 'org.bytedeco:ffmpeg:6.0-1.5.9'                               // 동영상 및 미디어 파일 처리를 위한 라이브러리
 
+    // 매핑 관련 의존성
+    implementation 'org.mapstruct:mapstruct:1.6.3'                              // 객체 간 매핑 자동화
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'               // 객체 간 매핑 자동화
+
     // 모니터링 도구
     implementation 'org.springframework.boot:spring-boot-starter-actuator'      // 애플리케이션의 헬스 체크 및 메트릭 엔드포인트 제공
     implementation 'io.micrometer:micrometer-registry-prometheus'               // Prometheus 형식으로 메트릭 데이터를 노출

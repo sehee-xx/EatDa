@@ -26,7 +26,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     /**
-     * 비즈니스 예외 처리
+     * 전역 비즈니스 예외 처리
+     */
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<BaseResponse> handleApiException(final ApiException e) {
+        return buildErrorResponse(e.getErrorCode(), e.getDetails());
+    }
+
+    /**
+     * 전역 비즈니스 예외 처리
      */
     @ExceptionHandler(GlobalException.class)
     public ResponseEntity<BaseResponse> handleGlobalException(final GlobalException e) {
@@ -95,7 +103,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 필드 유효성 검증 오류 메시지 추출
+     * 필드 유효성 검증 오류 메시지 추출 및 ErrorCode에 해당하는 메시지가 있다면 변환
      */
     private Map<String, String> extractFieldErrors(final MethodArgumentNotValidException e) {
         return e.getBindingResult()
@@ -103,8 +111,13 @@ public class GlobalExceptionHandler {
                 .stream()
                 .collect(Collectors.toMap(
                         FieldError::getField,
-                        error -> Optional.ofNullable(error.getDefaultMessage())
-                                .orElse(INVALID_INPUT.message()),
+                        error -> {
+                            String defaultMessage = Optional.ofNullable(error.getDefaultMessage())
+                                    .orElse(INVALID_INPUT.message());
+                            return ErrorCode.safeValueOf(defaultMessage)
+                                    .map(ErrorCode::getMessage)
+                                    .orElse(defaultMessage);
+                        },
                         (first, second) -> first // 중복 필드는 첫 번째 메시지 유지
                 ));
     }
