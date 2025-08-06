@@ -112,7 +112,7 @@ export default function StoreReviewScreen() {
                 >
                   <CloseBtn></CloseBtn>
                 </TouchableOpacity>
-                <View style={[styles.textOverlay, { bottom: height * 0.25 }]}>
+                <View style={[styles.textOverlay, { bottom: height * 0.33}]}>
                   <Text style={styles.titleText}>#{item.title}</Text>
                   <Text style={styles.descText}>{item.description}</Text>
                 </View>
