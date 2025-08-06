@@ -25,9 +25,9 @@ public class FoodTag {
     private Long id;
 
     @NotNull
-    @Column(length = 50)
+    @Column(length = 50, unique = true)
     private String name;
-    
+
     // 연관관계 매핑 - 태그를 사용하는 사용자 목록
     @OneToMany(mappedBy = "foodTag", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserFoodTag> userFoodTags;
