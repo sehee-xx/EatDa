@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PoiStoreDistanceService {
 
-    private static final List<Integer> SEARCH_DISTANCES = List.of(300, 500, 700, 1000, 2000);
+    private static final List<Integer> SEARCH_DISTANCES = List.of(300, 500, 700, 850, 1000, 2000);
     private static final int MAX_SEARCH_DISTANCE = 2000;
     private static final Duration CACHE_TTL = Duration.ofDays(1);
 
@@ -108,18 +108,18 @@ public class PoiStoreDistanceService {
         Poi poi = poiRepository.findById(poiId)
                 .orElseThrow(() -> new NoSuchElementException("POI not found: " + poiId));
 
-        // 4. H3를 사용해 주변 Store들 검색
-        List<Store> nearbyStores = findNearbyStoresByH3(
+        // 4. H3를 사용해 주변 Store들 검색 (필터링 없이 후보군만 가져옴)
+        List<Store> candidateStores = findCandidateStoresByH3(
                 poi.getLatitude(),
                 poi.getLongitude(),
                 requestedDistance
         );
 
-        // 5. 정확한 거리 계산 및 필터링
+        // 5. 정확한 거리 계산 및 필터링 (한 번만 수행)
         List<StoreDistanceResult> results = calculateAndFilterDistances(
                 poi.getLatitude(),
                 poi.getLongitude(),
-                nearbyStores,
+                candidateStores,
                 requestedDistance
         );
 
@@ -277,17 +277,17 @@ public class PoiStoreDistanceService {
     }
 
     /**
-     * H3를 사용해 POI 주변 Store들 찾기
+     * H3를 사용해 POI 주변 Store 후보군 찾기
      *
      * @param lat 중심점(POI) 위도
      * @param lon 중심점(POI) 경도
      * @param searchDistance 검색 거리 (미터)
-     * @return 거리 내의 Store 목록
+     * @return H3 셀 내의 모든 Store 후보군
      */
-    private List<Store> findNearbyStoresByH3(double lat, double lon, int searchDistance) {
+    private List<Store> findCandidateStoresByH3(double lat, double lon, int searchDistance) {
         // 1. 거리에 따른 H3 검색 전략 결정
         H3SearchStrategy strategy = determineH3Strategy(searchDistance);
-        log.debug("Finding Stores within {}m using H3 strategy: resolution={}, kRing={}",
+        log.debug("Finding Store candidates within {}m using H3 strategy: resolution={}, kRing={}",
                 searchDistance, strategy.resolution(), strategy.kRing());
 
         // 2. 중심점의 H3 인덱스 계산
@@ -295,6 +295,7 @@ public class PoiStoreDistanceService {
 
         // 3. k-ring으로 주변 셀들의 H3 인덱스 가져오기
         List<Long> h3Cells = h3Service.getKRing(centerH3, strategy.kRing());
+        log.debug("H3 cells to search: {} cells", h3Cells.size());
 
         // 4. 해상도에 따라 적절한 컬럼으로 Store 조회
         List<Store> candidateStores = switch (strategy.resolution()) {
@@ -305,18 +306,26 @@ public class PoiStoreDistanceService {
             default -> throw new IllegalArgumentException("Unsupported H3 resolution: " + strategy.resolution());
         };
 
-        log.debug("Found {} candidate Stores from H3 cells", candidateStores.size());
+        // 5. H3 필터링 결과 로깅
+        log.info("======= H3 Filtering Result =======");
+        log.info("Center location: ({}, {})", lat, lon);
+        log.info("Search distance: {}m", searchDistance);
+        log.info("H3 Resolution: {}, K-ring: {}", strategy.resolution(), strategy.kRing());
+        log.info("Total candidate stores found: {}", candidateStores.size());
 
-        // 5. 실제 거리 계산으로 정확한 필터링
-        return candidateStores.stream()
-                .filter(store -> {
-                    int distance = haversineCalculator.calculate(
-                            lat, lon,
-                            store.getLatitude(), store.getLongitude()
-                    );
-                    return distance <= searchDistance;
-                })
-                .collect(Collectors.toList());
+        if (!candidateStores.isEmpty() && log.isDebugEnabled()) {
+            log.debug("Store IDs from H3 filtering: {}",
+                    candidateStores.stream()
+                            .map(Store::getId)
+                            .collect(Collectors.toList()));
+
+            if (candidateStores.size() > 20) {
+                log.debug("... and {} more stores", candidateStores.size() - 20);
+            }
+        }
+        log.info("===================================");
+
+        return candidateStores;
     }
 
     /**
@@ -324,28 +333,24 @@ public class PoiStoreDistanceService {
      */
     private H3SearchStrategy determineH3Strategy(int distanceMeters) {
         if (distanceMeters <= 300) {
-            // Res 10, k=2: 중심에서 약 76m × 2.5 ≈ 190m 커버
-            // 300m를 커버하려면 k=3~4 필요
+            // Res 10: 75.9m, k=4: 75.9m × 4 = 303.6m (300m 커버)
             return new H3SearchStrategy(10, 4);
         } else if (distanceMeters <= 500) {
-            // Res 9, k=2: 중심에서 약 201m × 2.5 ≈ 502m 커버
-            return new H3SearchStrategy(9, 2);
-        } else if (distanceMeters <= 700) {
-            // Res 9, k=3: 중심에서 약 201m × 3.5 ≈ 703m 커버
+            // Res 9: 201m, k=3: 201m × 3 = 603m (500m 충분히 커버)
             return new H3SearchStrategy(9, 3);
+        } else if (distanceMeters <= 700) {
+            // Res 9: 201m, k=4: 201m × 4 = 804m (700m 충분히 커버)
+            return new H3SearchStrategy(9, 4);
         } else if (distanceMeters <= 1000) {
-            // Res 8, k=2: 중심에서 약 531m × 2 ≈ 1062m 커버
-            return new H3SearchStrategy(8, 2);
+            // Res 8: 531m, k=2: 531m × 2 = 1062m (1000m 충분히 커버)
+            // 더 넉넉하게 k=3 사용
+            return new H3SearchStrategy(8, 3);
         } else {
-            // Res 8, k=3: 중심에서 약 531m × 3.5 ≈ 1858m 커버
-            // 또는 Res 7 사용 고려
-            return new H3SearchStrategy(8, 4);   // 2000m까지 안전하게 커버
+            // Res 7: 1406m, k=2: 1406m × 2 = 2812m (2000m 충분히 커버)
+            return new H3SearchStrategy(7, 2);
         }
     }
 
-    /**
-     * 실제 거리 계산 및 필터링
-     */
     /**
      * 실제 거리 계산 및 필터링
      *
@@ -360,7 +365,7 @@ public class PoiStoreDistanceService {
 
         log.debug("Calculating distances for {} stores within {}m", stores.size(), maxDistance);
 
-        return stores.stream()
+        List<StoreDistanceResult> results = stores.stream()
                 // 1. 각 Store와의 거리 계산
                 .map(store -> {
                     int distance = haversineCalculator.calculate(
@@ -379,6 +384,10 @@ public class PoiStoreDistanceService {
                 .sorted(Comparator.comparingInt(StoreDistanceResult::distance))
                 // 4. 결과 수집
                 .collect(Collectors.toList());
+
+        log.info("After distance filtering: {} stores remain (within {}m)", results.size(), maxDistance);
+
+        return results;
     }
 
     /**
