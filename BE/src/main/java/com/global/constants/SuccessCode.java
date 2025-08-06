@@ -20,6 +20,8 @@ public enum SuccessCode {
     OWNER_SIGNUP_STEP2("OWNER_SIGNUP_STEP2", "메뉴가 성공적으로 등록되었습니다.", HttpStatus.CREATED.value()),
     OWNER_SIGNUP_STEP3("OWNER_SIGNUP_STEP3", "사장님 회원가입이 완료되었습니다.", HttpStatus.OK.value()),
 
+    MAKER_SIGNUP("MAKERS_SIGNUP", "사장님 회원가입이 완료되었습니다.", HttpStatus.OK.value()),
+
     // 로그인 / 권한
     SIGN_IN_SUCCESS("SIGN_IN_SUCCESS", "로그인에 성공했습니다.", HttpStatus.OK.value()),
     TOKEN_REFRESHED("TOKEN_REFRESHED", "토큰이 갱신되었습니다.", HttpStatus.OK.value()),
