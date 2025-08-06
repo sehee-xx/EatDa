@@ -6,6 +6,7 @@ import static com.global.filestorage.constants.FileStorageConstants.EMPTY;
 import static com.global.filestorage.constants.FileStorageConstants.HYPHEN;
 import static com.global.filestorage.constants.FileStorageConstants.MIME_TO_EXT;
 import static com.global.filestorage.constants.FileStorageConstants.MIME_TYPE_WEBP;
+import static com.global.filestorage.constants.FileStorageConstants.NULL;
 
 import com.global.config.FileStorageProperties;
 import com.global.exception.GlobalException;
@@ -132,7 +133,7 @@ public class LocalFileStorageService implements FileStorageService {
      */
     private String extractAndValidateMimeType(final MultipartFile file) {
         String mimeType = Optional.ofNullable(file.getContentType())
-                .orElseThrow(() -> new GlobalException(INVALID_FILE_TYPE, "null"));
+                .orElseThrow(() -> new GlobalException(INVALID_FILE_TYPE, NULL));
 
         if (!MIME_TO_EXT.containsKey(mimeType)) {
             throw new GlobalException(INVALID_FILE_TYPE, mimeType);

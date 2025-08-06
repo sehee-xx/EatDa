@@ -1,6 +1,7 @@
 package com.global.filestorage;
 
 import static com.global.constants.ErrorCode.IMAGE_PROCESSING_FAILED;
+import static com.global.filestorage.constants.FileStorageConstants.DEFAULT_IMAGE_WIDTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -45,7 +46,7 @@ class ImageOptimizerTest {
 
         ImmutableImage webpImg = ImmutableImage.loader().fromBytes(webpBytes);
         int imageMaxLength = Math.max(webpImg.width, webpImg.height);
-        assertThat(imageMaxLength).isEqualTo(720);
+        assertThat(imageMaxLength).isEqualTo(DEFAULT_IMAGE_WIDTH);
     }
 
     @Test
@@ -59,7 +60,7 @@ class ImageOptimizerTest {
 
         ImmutableImage webpImage = ImmutableImage.loader().fromBytes(webpBytes);
         int maxLength = Math.max(webpImage.width, webpImage.height);
-        assertThat(maxLength).isLessThanOrEqualTo(720);
+        assertThat(maxLength).isLessThanOrEqualTo(DEFAULT_IMAGE_WIDTH);
     }
 
     @Test

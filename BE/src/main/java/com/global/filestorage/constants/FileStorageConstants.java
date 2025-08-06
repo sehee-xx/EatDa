@@ -22,6 +22,7 @@ public final class FileStorageConstants {
     // ===== 파일명 처리용 문자열 상수 =====
     public static final String EMPTY = ""; // 빈 문자열
     public static final String HYPHEN = "-"; // 하이픈 문자
+    public static final String NULL = "null";
 
     // ===== 이미지 최적화 기본 설정값 =====
     public static final int DEFAULT_IMAGE_WIDTH = 720; // 이미지 리사이징 시 기본 너비
