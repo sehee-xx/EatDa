@@ -12,13 +12,13 @@ public enum SuccessCode {
     EATER_SIGNUP("EATER_SIGNUP", "회원가입이 완료되었습니다.", HttpStatus.CREATED.value()),
 
     // 사장님 회원가입 단계
-    OWNER_SIGNUP_STEP1("OWNER_SIGNUP_STEP1", "기본 정보가 저장되었습니다.", HttpStatus.CREATED.value()),
+    MAKER_SIGNUP_STEP1("MAKER_SIGNUP_STEP1", "기본 정보가 저장되었습니다.", HttpStatus.CREATED.value()),
     MENU_EXTRACTION_RECEIVED("MENU_EXTRACTION_RECEIVED", "메뉴 추출 결과가 수신되었습니다.", HttpStatus.OK.value()),
     MENU_EXTRACTION_SUCCESS("MENU_EXTRACTION_SUCCESS", "메뉴 추출이 성공적으로 완료되었습니다.", HttpStatus.OK.value()),
     MENU_EXTRACTION_PENDING("MENU_EXTRACTION_PENDING", "메뉴 추출이 아직 처리 중입니다.", HttpStatus.OK.value()),
     MENU_EXTRACTION_FAILED("MENU_EXTRACTION_FAILED", "메뉴 추출에 실패했습니다.", HttpStatus.OK.value()),
-    OWNER_SIGNUP_STEP2("OWNER_SIGNUP_STEP2", "메뉴가 성공적으로 등록되었습니다.", HttpStatus.CREATED.value()),
-    OWNER_SIGNUP_STEP3("OWNER_SIGNUP_STEP3", "사장님 회원가입이 완료되었습니다.", HttpStatus.OK.value()),
+    MAKER_SIGNUP_STEP2("MAKER_SIGNUP_STEP2", "메뉴가 성공적으로 등록되었습니다.", HttpStatus.CREATED.value()),
+    MAKER_SIGNUP_STEP3("MAKER_SIGNUP_STEP3", "사장님 회원가입이 완료되었습니다.", HttpStatus.OK.value()),
 
     MAKER_SIGNUP("MAKERS_SIGNUP", "사장님 회원가입이 완료되었습니다.", HttpStatus.OK.value()),
 

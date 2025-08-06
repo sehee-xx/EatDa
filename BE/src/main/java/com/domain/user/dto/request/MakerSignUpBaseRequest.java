@@ -10,7 +10,7 @@ public record MakerSignUpBaseRequest(
 
         @NotBlank(message = "EMAIL_REQUIRED")
         @Email(message = "EMAIL_INVALID_FORMAT")
-        @Schema(description = "이메일 주소", example = "owner@example.com")
+        @Schema(description = "이메일 주소", example = "makers@example.com")
         String email,
 
         @NotBlank(message = "PASSWORD_REQUIRED")
