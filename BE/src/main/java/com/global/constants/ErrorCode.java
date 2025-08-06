@@ -1,5 +1,6 @@
 package com.global.constants;
 
+import java.util.Optional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,17 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED("METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메소드입니다.", HttpStatus.METHOD_NOT_ALLOWED.value()),
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
             HttpStatus.INTERNAL_SERVER_ERROR.value()),
+
+    // 유저 관련
+    EMAIL_REQUIRED("EMAIL_REQUIRED", "이메일은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    EMAIL_DUPLICATED("EMAIL_DUPLICATED", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT.value()),
+    EMAIL_INVALID_FORMAT("EMAIL_INVALID_FORMAT", "유효하지 않은 이메일 형식입니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_REQUIRED("PASSWORD_REQUIRED", "비밀번호는 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    PASSWORD_TOO_SHORT("PASSWORD_TOO_SHORT", "비밀번호는 최소 8자 이상 작성해야 합니다.", HttpStatus.BAD_REQUEST.value()),
+    CONFIRM_PASSWORD_REQUIRED("CONFIRM_PASSWORD_REQUIRED", "비밀번호 확인은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    CONFIRM_PASSWORD_MISMATCH("CONFIRM_PASSWORD_MISMATCH", "비밀번호와 비밀번호 확인이 일치하지 않습니다.", HttpStatus.BAD_REQUEST.value()),
+    NICKNAME_REQUIRED("NICKNAME_REQUIRED", "닉네임은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    NICKNAME_DUPLICATED("NICKNAME_DUPLICATED", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT.value()),
 
     // 인증/인가 관련
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED.value()),
@@ -43,4 +55,15 @@ public enum ErrorCode {
     private final String code;
     private final String message;
     private final int status;
+
+    /**
+     * 주어진 이름으로 ErrorCode를 조회하며, 존재하지 않으면 Optional.empty()를 반환한다.
+     */
+    public static Optional<ErrorCode> safeValueOf(String name) {
+        try {
+            return Optional.of(ErrorCode.valueOf(name));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
 }

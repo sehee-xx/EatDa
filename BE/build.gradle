@@ -54,6 +54,10 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'                               // Lombok 어노테이션 처리
     developmentOnly 'org.springframework.boot:spring-boot-devtools'              // 개발 편의를 위한 도구
 
+    // 매핑 관련 의존성
+    implementation 'org.mapstruct:mapstruct:1.6.3'                              // 객체 간 매핑 자동화
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'               // 객체 간 매핑 자동화
+
     // 모니터링 도구
     implementation 'org.springframework.boot:spring-boot-starter-actuator'      // 애플리케이션의 헬스 체크 및 메트릭 엔드포인트 제공
     implementation 'io.micrometer:micrometer-registry-prometheus'               // Prometheus 형식으로 메트릭 데이터를 노출
