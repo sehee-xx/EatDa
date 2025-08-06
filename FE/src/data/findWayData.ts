@@ -1,103 +1,105 @@
 // 길찾기 페이지용 더미데이터
 // src/data/findWayData.ts
 
-type Section = {
-  type: "WALK" | "BUS" | "SUBWAY";
-  duration: number;
-  lineName?: string;
-  color?: string;
-  start?: string;
-  end?: string;
-  direction?: string;
+export type SubPath = {
+  type: 1 | 2 | 3;
+  startName: string | null;
+  endName: string | null;
+  distance: number;
+  time: number;
+  subwayName: string | null;
+  subwayColor: string | null;
+  busNum: string | null;
+  busColor: string | null;
 };
 
-export const dummyFindWayData = {
-  bus: [
-    {
-      id: "bus-1",
-      totalTime: 28,
-      summary: "간선 271 → 지선 7017",
-      sections: [
-        { type: "WALK", duration: 4 },
-        {
-          type: "BUS",
-          duration: 12,
-          lineName: "271번",
-          color: "#3B80EF",
-          start: "서울역",
-          end: "신촌역",
-          direction: "신촌 방면",
-        },
-        {
-          type: "BUS",
-          duration: 8,
-          lineName: "7017번",
-          color: "#59BE3B",
-          start: "신촌역",
-          end: "마포역",
-          direction: "마포 방면",
-        },
-        { type: "WALK", duration: 4 },
-      ],
-    },
-  ],
-  subway: [
-    {
-      id: "subway-1",
-      totalTime: 32,
-      summary: "2호선 → 6호선",
-      sections: [
-        { type: "WALK", duration: 3 },
-        {
-          type: "SUBWAY",
-          duration: 14,
-          lineName: "2호선",
-          color: "#33CC66",
-          start: "강남역",
-          end: "신당역",
-          direction: "성수 방면",
-        },
-        {
-          type: "SUBWAY",
-          duration: 9,
-          lineName: "6호선",
-          color: "#C55C1D",
-          start: "신당역",
-          end: "한강진역",
-          direction: "응암 방면",
-        },
-        { type: "WALK", duration: 6 },
-      ],
-    },
-  ],
-  busAndSubway: [
-    {
-      id: "mix-1",
-      totalTime: 40,
-      summary: "간선 470 → 9호선 급행",
-      sections: [
-        { type: "WALK", duration: 2 },
-        {
-          type: "BUS",
-          duration: 10,
-          lineName: "470번",
-          color: "#3B80EF",
-          start: "서울대입구역",
-          end: "여의도환승센터",
-          direction: "여의도 방면",
-        },
-        { type: "WALK", duration: 3 },
-        {
-          type: "SUBWAY",
-          duration: 15,
-          lineName: "9호선 급행",
-          color: "#BDB76B",
-          start: "여의도역",
-          end: "김포공항역",
-          direction: "김포공항 방면",
-        },
-        { type: "WALK", duration: 10 },
-      ],
-    },
-  ],
+export type PublicRoute = {
+  price: number;
+  totalTime: number;
+  totalDistance: number;
+  totalWalkTime: number;
+  subPaths: SubPath[];
 };
+
+
+export const FindWayData: PublicRoute[] = [
+  {
+    price: 1250,
+    totalTime: 42,
+    totalDistance: 13200,
+    totalWalkTime: 8,
+    subPaths: [
+      {
+        type: 1,
+        startName: "역삼역",
+        endName: "강남역",
+        distance: 800,
+        time: 12,
+        subwayName: "2호선",
+        subwayColor: "#00B140",
+        busNum: null,
+        busColor: null,
+      },
+      {
+        type: 3,
+        startName: null,
+        endName: null,
+        distance: 100,
+        time: 10,
+        subwayName: null,
+        subwayColor: null,
+        busNum: null,
+        busColor: null,
+      },
+    ],
+  },
+  {
+    price: 1250,
+    totalTime: 35,
+    totalDistance: 8500,
+    totalWalkTime: 5,
+    subPaths: [
+      {
+        type: 2,
+        startName: "서울역버스환승센터",
+        endName: "강남역12번출구",
+        distance: 8000,
+        time: 30,
+        subwayName: null,
+        subwayColor: null,
+        busNum: "140",
+        busColor: "#3B80EF",
+      },
+      {
+        type: 3,
+        startName: null,
+        endName: null,
+        distance: 500,
+        time: 5,
+        subwayName: null,
+        subwayColor: null,
+        busNum: null,
+        busColor: null,
+      },
+    ],
+  },
+  {
+    price: 0,
+    totalTime: 12,
+    totalDistance: 700,
+    totalWalkTime: 12,
+    subPaths: [
+      {
+        type: 3,
+        startName: null,
+        endName: null,
+        distance: 700,
+        time: 12,
+        subwayName: null,
+        subwayColor: null,
+        busNum: null,
+        busColor: null,
+      },
+    ],
+  },
+];
