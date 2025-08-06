@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   goToStoreAndBookMarkContainer: {
     flexDirection: "row",
     position: "absolute",
-    bottom: 180,
+    bottom: 200,
     right: 10,
   },
   goToStore: {},
