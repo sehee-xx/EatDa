@@ -61,6 +61,34 @@ public final class FileStorageConstants {
     public static final String EXCEPTION_DECODING_FAILED = "유효하지 않은 이미지 파일입니다: %s";
     public static final String EXCEPTION_ENCODING_FAILED = "이미지 인코딩 실패 (포맷: %s, 파일명: %s)";
 
+
+    // ===== 비디오 최적화 관련 파일명/확장자 상수 =====
+    public static final String FORMAT_MP4 = "mp4";
+    public static final int DEFAULT_VIDEO_HEIGHT = 720;
+    public static final String VIDEO_CODEC = "libx264";
+    public static final String AUDIO_CODEC = "aac";
+    public static final String FFMPEG_PRESET = "fast";
+    public static final String FFMPEG_CRF = "23";
+    public static final String TEMP_VIDEO_INPUT_PREFIX = "input-";
+    public static final String TEMP_VIDEO_OUTPUT_PREFIX = "output-";
+    public static final String TEMP_FILE_EXTENSION_TMP = ".tmp";
+    public static final String TEMP_FILE_EXTENSION_MP4 = ".mp4";
+
+
+    // ===== 비디오 최적화 로그 메시지 =====
+    public static final String VIDEO_OPTIMIZER_FFMPEG_LOG =
+            "[VideoOptimizer] FFmpeg 로그: {}";
+
+    public static final String VIDEO_OPTIMIZER_UNEXPECTED_ERROR =
+            "[VideoOptimizer] 비디오 최적화 실패 - 파일명: {}, 원인: {}";
+
+    public static final String VIDEO_OPTIMIZER_FFMPEG_FAILED =
+            "[VideoOptimizer] FFmpeg 처리 실패 (exitCode={}): {}";
+
+    // ===== 비디오 최적화 관련 예외 메시지 =====
+    public static final String EXCEPTION_VIDEO_FFMPEG_FAILED =
+            "[VideoOptimizer] FFmpeg 처리 실패 - exit code %d. Output: %s";
+
     // Utility 클래스 생성자 제한
     private FileStorageConstants() {
         throw new UnsupportedOperationException(UTILITY_CLASS_ERROR.message());
