@@ -43,12 +43,12 @@ class ReviewServiceIntegrationTest {
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getReviews()).isNotNull();
+        assertThat(result.reviews()).isNotNull();
         
         // 근처 리뷰가 있거나 전체 리뷰가 반환되어야 함
-        if (result.isNearbyReviewsFound()) {
-            System.out.println("근처 리뷰 발견: " + result.getReviews().size() + "개");
-            result.getReviews().forEach(review -> {
+        if (result.nearbyReviewsFound()) {
+            System.out.println("근처 리뷰 발견: " + result.reviews().size() + "개");
+            result.reviews().forEach(review -> {
                 assertThat(review.reviewId()).isNotNull();
                 assertThat(review.storeName()).isNotNull();
                 assertThat(review.description()).isNotNull();
@@ -58,8 +58,8 @@ class ReviewServiceIntegrationTest {
                                  ", 거리: " + review.distance() + "m");
             });
         } else {
-            System.out.println("전체 리뷰 반환: " + result.getReviews().size() + "개");
-            result.getReviews().forEach(review -> {
+            System.out.println("전체 리뷰 반환: " + result.reviews().size() + "개");
+            result.reviews().forEach(review -> {
                 assertThat(review.reviewId()).isNotNull();
                 assertThat(review.storeName()).isNotNull();
                 assertThat(review.description()).isNotNull();
@@ -84,12 +84,12 @@ class ReviewServiceIntegrationTest {
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getReviews()).isNotNull();
+        assertThat(result.reviews()).isNotNull();
         
         System.out.println("파이넨스센터 근처 검색 결과:");
-        System.out.println("근처 리뷰 발견 여부: " + result.isNearbyReviewsFound());
-        System.out.println("리뷰 개수: " + result.getReviews().size());
-        result.getReviews().forEach(review -> {
+        System.out.println("근처 리뷰 발견 여부: " + result.nearbyReviewsFound());
+        System.out.println("리뷰 개수: " + result.reviews().size());
+        result.reviews().forEach(review -> {
             assertThat(review.reviewId()).isNotNull();
             assertThat(review.storeName()).isNotNull();
             assertThat(review.description()).isNotNull();
@@ -113,16 +113,16 @@ class ReviewServiceIntegrationTest {
         ReviewFeedResult firstPage = reviewService.getReviewFeed(latitude, longitude, distance, null);
         
         // when - 첫 번째 페이지의 마지막 리뷰 ID를 사용해서 다음 페이지 조회
-        if (!firstPage.getReviews().isEmpty()) {
-            Long lastReviewId = firstPage.getReviews().get(firstPage.getReviews().size() - 1).reviewId();
+        if (!firstPage.reviews().isEmpty()) {
+            Long lastReviewId = firstPage.reviews().get(firstPage.reviews().size() - 1).reviewId();
             ReviewFeedResult secondPage = reviewService.getReviewFeed(latitude, longitude, distance, lastReviewId);
             
             // then
             assertThat(secondPage).isNotNull();
-            assertThat(secondPage.getReviews()).isNotNull();
+            assertThat(secondPage.reviews()).isNotNull();
             
-            System.out.println("첫 번째 페이지 리뷰 개수: " + firstPage.getReviews().size());
-            System.out.println("두 번째 페이지 리뷰 개수: " + secondPage.getReviews().size());
+            System.out.println("첫 번째 페이지 리뷰 개수: " + firstPage.reviews().size());
+            System.out.println("두 번째 페이지 리뷰 개수: " + secondPage.reviews().size());
             System.out.println("마지막 리뷰 ID: " + lastReviewId);
         }
     }
@@ -133,8 +133,8 @@ class ReviewServiceIntegrationTest {
         // given - 먼저 존재하는 리뷰를 찾기
         ReviewFeedResult feedResult = reviewService.getReviewFeed(37.5665, 126.9780, 1000, null);
         
-        if (!feedResult.getReviews().isEmpty()) {
-            Long existingReviewId = feedResult.getReviews().get(0).reviewId();
+        if (!feedResult.reviews().isEmpty()) {
+            Long existingReviewId = feedResult.reviews().getFirst().reviewId();
             Long currentUserId = 1L;
 
             // when
@@ -145,18 +145,17 @@ class ReviewServiceIntegrationTest {
             assertThat(result.reviewId()).isEqualTo(existingReviewId);
             assertThat(result.description()).isNotNull();
             assertThat(result.store()).isNotNull();
-            assertThat(result.store().storeId()).isNotNull();
-            assertThat(result.store().storeName()).isNotNull();
-            assertThat(result.store().latitude()).isNotNull();
-            assertThat(result.store().longitude()).isNotNull();
             assertThat(result.user()).isNotNull();
             assertThat(result.createdAt()).isNotNull();
 
-            System.out.println("리뷰 상세 정보:");
+            System.out.println("=== 리뷰 상세 정보 ===");
             System.out.println("리뷰 ID: " + result.reviewId());
             System.out.println("설명: " + result.description());
-            System.out.println("상점명: " + result.store().storeName());
-            System.out.println("위치: " + result.store().latitude() + ", " + result.store().longitude());
+            System.out.println("상점: " + result.store().storeName());
+            System.out.println("주소: " + result.store().address());
+            System.out.println("작성자: " + result.user().nickname());
+            System.out.println("스크랩 수: " + result.scrapCount());
+            System.out.println("내가 스크랩 했나?: " + result.isScrapped());
             System.out.println("작성일: " + result.createdAt());
         }
     }
@@ -182,9 +181,9 @@ class ReviewServiceIntegrationTest {
         Long lastReviewId = null;
 
         // when - 다양한 거리로 검색
-//        ReviewFeedResult result700 = reviewService.getReviewFeed(latitude, longitude, 700, lastReviewId);
-//        ReviewFeedResult result850 = reviewService.getReviewFeed(latitude, longitude, 850, lastReviewId);
-//        ReviewFeedResult result1000 = reviewService.getReviewFeed(latitude, longitude, 1000, lastReviewId);
+        ReviewFeedResult result700 = reviewService.getReviewFeed(latitude, longitude, 700, lastReviewId);
+        ReviewFeedResult result850 = reviewService.getReviewFeed(latitude, longitude, 850, lastReviewId);
+        ReviewFeedResult result1000 = reviewService.getReviewFeed(latitude, longitude, 1000, lastReviewId);
         ReviewFeedResult result2000 = reviewService.getReviewFeed(latitude, longitude, 2000, lastReviewId);
 
         // then
@@ -197,9 +196,9 @@ class ReviewServiceIntegrationTest {
 //                         ", 개수: " + result1000.getReviews().size());
 //        System.out.println("2000m 검색 - 근처 리뷰: " + result2000.isNearbyReviewsFound() +
 //                ", 개수: " + result2000.getReviews().size());
-//        printReviewDetails("700m", result700);
-//        printReviewDetails("850m", result850);
-//        printReviewDetails("1000m", result1000);
+        printReviewDetails("700m", result700);
+        printReviewDetails("850m", result850);
+        printReviewDetails("1000m", result1000);
         printReviewDetails("2000m", result2000);
 
         // 거리가 클수록 더 많은 결과가 나올 가능성이 높음 (근처 리뷰가 있다면)
@@ -210,14 +209,14 @@ class ReviewServiceIntegrationTest {
 
     private void printReviewDetails(String radius, ReviewFeedResult result) {
         System.out.println("\n--- " + radius + " 검색 결과 ---");
-        System.out.println("  총 리뷰 수: " + result.getReviews().size());
+        System.out.println("  총 리뷰 수: " + result.reviews().size());
         System.out.println("  상세 목록:");
 
         // 사용자 좌표 (고정)
         Double userLat = 37.50065600216521;
         Double userLon = 127.03642638316084;
 
-        result.getReviews().forEach(review -> {
+        result.reviews().forEach(review -> {
             // Store 정보 조회해서 실제 좌표 가져오기
             storeRepository.findById(getStoreIdFromReview(review))
                 .ifPresentOrElse(store -> {
