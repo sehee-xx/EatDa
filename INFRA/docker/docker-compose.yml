@@ -86,14 +86,6 @@ services:
     restart: always
     networks:
       - backend
-      
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - /srv/certbot/conf:/etc/letsencrypt
-      - /srv/certbot/www:/var/www/certbot
-    entrypoint: ""
 
 networks:
   backend:
