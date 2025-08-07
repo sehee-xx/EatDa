@@ -37,9 +37,9 @@ public class ReviewScrapService {
         }
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.SCRAP_NOT_FOUND));
         User user = userRepository.findById(userId)
-              .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND));
+              .orElseThrow(() -> new ApiException(ErrorCode.SCRAP_NOT_FOUND));
 
         Optional<ReviewScrap> existingScrap = reviewScrapRepository.findByUserIdAndReviewId(userId, reviewId);
 
