@@ -1,6 +1,7 @@
-from pydantic import BaseModel, HttpUrl, Field, constr
+from pydantic import BaseModel, HttpUrl, Field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Annotated
+import re
 
 # RN to FastAPI model
 class OCRMenuRequest(BaseModel):
@@ -31,13 +32,13 @@ class ExtractedMenu(BaseModel):
 # FastAPI to RN model
 class OCRMenuRespond(BaseModel):
     sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
-    result: constr(regex="^(SUCCESS|FAIL)$") = Field(..., description="생성 결과 (SUCCESS 또는 FAIL)")
+    result: Annotated[str, Field(pattern="^(SUCCESS|FAIL)$", description="생성 결과 (SUCCESS 또는 FAIL)")]
     extractedMenus: List[ExtractedMenu] = Field(..., description="추출된 메뉴 항목 목록")
 
 # OCR 콜백 요청 모델 (FastAPI → Spring 서버) - 수정 필요
 class OCRCallbackRequest(BaseModel):
     sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
-    result: constr(regex="^(SUCCESS|FAIL)$") = Field(..., description="OCR 처리 결과")
+    result: Annotated[str, Field(pattern="^(SUCCESS|FAIL)$", description="OCR 처리 결과")]
     extractedMenus: List[ExtractedMenu] = Field(..., description="추출된 메뉴 항목 목록 (실패시 빈 배열)")
     type: str = Field(default="MENU", description="요청 타입: MENU 고정")
 
