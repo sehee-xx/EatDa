@@ -19,6 +19,9 @@ public class Store {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(nullable = false, length = 100)
+    private String address;
+
     @Column(nullable = false)
     private Double latitude;
 
