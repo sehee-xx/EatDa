@@ -1,44 +1,103 @@
-# AI
+# AI FastAPI 서버 실행 가이드
 
-## shorts - luma_api / runway_api
-- 모델
-   - luma_api : ray-2
-   - runway_api : gen4_turbo
+## 사전 준비사항
 
-- 사용방법
-1. 최상단 루트에서 가상환경 설정 (python -m venv venv) + 패키지 다운로드 (pip install -r requirements.txt)
-2. ~/making_shorts 루트에서 python -m luma_api.luma
-   ~/making_shorts 루트에서 python -m runway_api.runway
+### 1. 환경변수 설정
+`env.example` 파일을 참고하여 `.env` 파일을 생성하고 다음 값들을 설정하세요:
 
-3. 프롬프트 작성 후 기다리기
+```bash
+# .env 파일에 다음 내용 추가
+LUMAAI_API_KEY=여기에_실제_Luma_AI_키_입력
+GMS_API_KEY=여기에_실제_GMS_키_입력
+추가 API_KEY는 버전 관리하면서 추가 될 예정
+```
 
-4. 영상 url 출력 (ctrl + 좌클릭)후 클릭 시 영상 출력
+### 2. Python 패키지 설치
+```bash
+# AI 디렉토리로 이동
+cd AI
 
-5. 코드 내부 주요 사항은 기입 해놨으며, 상세 정보는 
-    https://www.notion.so/ai-Luma-ai-239bb13c7ad580de85b6e7dd7062457b?source=copy_link
-    위 링크 클릭    
+# 가상환경 생성 
+python -m venv venv
 
-## prompt - gms_api
-1. shorts ai 생성에 도움을 주는 ai
-2. SSAFY에서 제공하는 GMS token으로 사용
-3. 모델 : gpt-4o
+# 가상환경 활성화
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
 
-- 사용방법
-   - 자체적으로 사용하지 않고, shorts ai 호출 시 중간에서 자동으로 호출
-   - prompt 관련 엔지니어링은 prompt.txt 참고
+# 패키지 설치
+pip install -r requirements.txt
+```
 
-## ocr - ocr_api
-- Naver CLOVA OCR 기반 3가지 모델 사용
-   1. 사업자 등록증 인식(ocr_license.py) - 특화 모델
-   2. 영수증 인식(ocr_receipt.py) - 특화 모델
-   3. 메뉴판 인식(ocr_menu_board.py) - 일반 모델
-   
-- 특화 모델은 CLOVA 자체 제작 OCR로, 출력되는 json 내부의 field 값이 정해져 있음
+## 🏃‍♂️ 서버 실행
 
-- 사용방법
-   1. 최상단 루트에서 가상환경 설정 (python -m venv venv) + 패키지 다운로드 (pip install -r requirements.txt)
-   2. 사용하고자 하는 모델명 출력 python ocr_~~~~.py
+### 방법 1: 개발 모드 (자동 리로드)
+```bash
+cd AI
+python main.py
+```
 
+### 방법 2: Uvicorn 직접 실행
+```bash
+cd AI
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-### 참고 사항
-- 아직 fast api 서버 구축 전. Backend 개발과 함께 따라갈 예정(v1.0.0) - 25.07.29
+## 📡 API 엔드포인트
+
+서버가 실행되면 다음 URL에서 접근 가능합니다:
+- **API 문서**: https://www.notion.so/API-23abb13c7ad58099b420f9c4296c6bb7?source=copy_link (notion)
+- **상태 확인**: http://localhost:8000/health
+- **영상 생성**: POST http://localhost:8000/generate-video
+
+### 영상 생성 API 사용 예시
+
+```bash
+# curl을 사용한 예시
+curl -X POST "http://localhost:8000/generate-video" \
+     -H "Content-Type: application/json" \
+     -d '{"prompt": "고양이가 공원에서 뛰어노는 모습"}'
+```
+
+또는 Python requests:
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/generate-video",
+    json={
+        "prompt": "고양이가 공원에서 뛰어노는 모습"
+        }
+)
+print(response.json())
+```
+
+## 🔧 문제 해결
+
+### 1. 환경변수 오류
+- `.env` 파일이 `AI` 디렉토리에 있는지 확인
+- API 키가 올바르게 입력되었는지 확인
+
+### 2. 패키지 오류
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
+```
+
+### 3. 포트 충돌
+```bash
+# 다른 포트로 실행
+uvicorn main:app --host 0.0.0.0 --port 8001
+```
+
+## 📁 생성된 파일
+
+영상 생성이 완료되면:
+- `downloads/` 폴더에 `.mp4` 파일이 저장됩니다
+- API 응답에 온라인 URL도 포함됩니다
+
+## ⚠️ 주의사항
+
+1. **CORS 설정**: 운영환경에서는 `ALLOWED_ORIGINS`를 특정 도메인으로 제한하세요
+2. **영상 생성 시간**: Luma AI 영상 생성은 2-4분 정도 소요됩니다(9초 영상 기준)
