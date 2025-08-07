@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.springframework.web.multipart.MultipartFile;
 
 public record MakerSignUpBaseRequest(
 
@@ -28,9 +27,6 @@ public record MakerSignUpBaseRequest(
 
         @NotBlank(message = "ADDRESS_REQUIRED")
         @Schema(description = "가게주소", example = "서울 마포구 양화로 12길 34")
-        String address,
-
-        @Schema(description = "사업자 등록증 이미지 파일", type = "string", format = "binary")
-        MultipartFile license
+        String address
 ) {
 }
