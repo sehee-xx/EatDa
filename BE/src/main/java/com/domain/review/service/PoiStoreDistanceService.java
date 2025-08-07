@@ -1,5 +1,6 @@
 package com.domain.review.service;
 
+import com.domain.review.constants.ReviewConstants;
 import com.domain.review.dto.response.StoreDistanceResult;
 import com.domain.review.entity.Poi;
 import com.domain.review.entity.Store;
@@ -21,10 +22,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PoiStoreDistanceService {
 
-    private static final List<Integer> SEARCH_DISTANCES = List.of(300, 500, 700, 850, 1000, 2000);
-    // 이거 임시입니다 깊게 생각안해봤어요
-    private static final Duration CACHE_TTL = Duration.ofDays(1);
-
     private final H3Service h3Service;
     private final PoiRepository poiRepository;
     private final StoreRepository storeRepository;
@@ -44,9 +41,7 @@ public class PoiStoreDistanceService {
         log.debug("Finding nearest POI for user location: ({}, {})", userLat, userLon);
 
         // 1. 가까운 POI부터 찾기 위해 점진적으로 거리 확대
-        int[] searchRadii = {300, 500, 700, 1000, 2000}; // 미터 단위
-
-        for (int radius : searchRadii) {
+        for (int radius : ReviewConstants.SEARCH_DISTANCES) {
             // H3를 사용해 현재 반경 내 POI들 조회
             List<Poi> nearbyPois = findNearbyPoisByH3(userLat, userLon, radius);
 
@@ -85,9 +80,9 @@ public class PoiStoreDistanceService {
         log.debug("Getting stores near POI {} within {}m", poiId, requestedDistance);
 
         // 1. 요청 거리 검증 (거리 밴드만 허용)
-        if (!SEARCH_DISTANCES.contains(requestedDistance)) {
+        if (!ReviewConstants.SEARCH_DISTANCES.contains(requestedDistance)) {
             throw new IllegalArgumentException(
-                    String.format("Invalid distance: %d. Must be one of %s", requestedDistance, SEARCH_DISTANCES)
+                    String.format("Invalid distance: %d. Must be one of %s", requestedDistance, ReviewConstants.SEARCH_DISTANCES)
             );
         }
 
@@ -296,7 +291,7 @@ public class PoiStoreDistanceService {
                             .map(Store::getId)
                             .collect(Collectors.toList()));
 
-            if (candidateStores.size() > 20) {
+            if (candidateStores.size() > ReviewConstants.DEFAULT_PAGE_SIZE) {
                 log.debug("... and {} more stores", candidateStores.size() - 20);
             }
         }
@@ -465,7 +460,7 @@ public class PoiStoreDistanceService {
         );
 
         // TTL 설정
-        redisTemplate.expire(cacheKey, CACHE_TTL);
+        redisTemplate.expire(cacheKey, Duration.ofHours(ReviewConstants.CACHE_TTL_HOURS));
 
         log.debug("Cached {} stores for POI {} at {}m band", stores.size(), poiId, distanceBand);
     }
