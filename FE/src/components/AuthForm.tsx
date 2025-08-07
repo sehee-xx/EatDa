@@ -75,6 +75,13 @@ export default function AuthForm({
             height: btnHeight,
             paddingHorizontal: width * 0.04,
           }}
+          validation={
+            field.key === "email"
+              ? "올바른 이메일 형식이 아닙니다."
+              : field.key === "password"
+              ? "비밀번호는 8자 이상이어야 합니다."
+              : ""
+          }
         />
       ))}
 

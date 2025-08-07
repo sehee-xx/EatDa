@@ -9,7 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
-  Image, // 추가
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -29,14 +29,65 @@ type Props = {
   onComplete?: () => void;
 };
 
-const eaterFields: AuthField[] = [
-  { key: "nickname", label: "닉네임", placeholder: "닉네임을 입력해주세요" },
-  {
-    key: "email",
-    label: "이메일",
-    placeholder: "이메일을 입력해주세요",
-    keyboardType: "email-address",
-  },
+// API 요청/응답 타입 정의
+interface EaterRegisterRequest {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  nickname: string;
+}
+
+interface EaterRegisterResponse {
+  code: string;
+  message: string;
+  status: number;
+  data: {
+    id: number;
+    email: string;
+    nickname: string;
+  };
+  timestamp: string;
+}
+
+// 중복 검사 API 응답 타입
+interface DuplicateCheckResponse {
+  code: string;
+  message: string;
+  status: number;
+  data: boolean; // true: 중복됨, false: 사용가능
+}
+
+// 폼 데이터 타입
+interface FormData {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  nickname: string;
+}
+
+// 유효성 검사 오류 타입
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+  passwordConfirm?: string;
+  nickname?: string;
+}
+
+// 유효성 검사 타입 (색상 결정용)
+interface ValidationTypes {
+  email?: "error" | "success" | "none";
+  password?: "error" | "success" | "none";
+  passwordConfirm?: "error" | "success" | "none";
+  nickname?: "error" | "success" | "none";
+}
+
+// 중복 검사 상태 타입
+interface DuplicateCheckStates {
+  email: "none" | "checking" | "success" | "duplicate";
+  nickname: "none" | "checking" | "success" | "duplicate";
+}
+
+const passwordFields: AuthField[] = [
   {
     key: "password",
     label: "비밀번호",
@@ -60,6 +111,30 @@ export default function EaterRegisterScreen(props?: Props) {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"success" | "failure">("success");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 폼 데이터 상태
+  const [formData, setFormData] = useState<FormData>({
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    nickname: "",
+  });
+
+  // 유효성 검사 오류 상태
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+
+  // 유효성 검사 타입 상태 (색상 결정용)
+  const [validationTypes, setValidationTypes] = useState<ValidationTypes>({});
+
+  // 중복 검사 상태
+  const [duplicateCheckStates, setDuplicateCheckStates] =
+    useState<DuplicateCheckStates>({
+      email: "none",
+      nickname: "none",
+    });
 
   const handleBack = () => navigation.goBack();
   const handleComplete = () => navigation.navigate("Login");
@@ -67,14 +142,439 @@ export default function EaterRegisterScreen(props?: Props) {
   const goBack = props?.onBack || handleBack;
   const complete = props?.onComplete || handleComplete;
 
-  const handleSubmit = () => {
-    setModalType("success");
-    setModalVisible(true);
+  // 입력값 변경 핸들러
+  const handleInputChange = (key: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+    // 입력 시 해당 필드의 오류 메시지 제거
+    if (validationErrors[key]) {
+      setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
+      setValidationTypes((prev) => ({ ...prev, [key]: "none" }));
+    }
+
+    // 이메일이나 닉네임이 변경되면 중복 검사 상태 초기화
+    if (key === "email" || key === "nickname") {
+      setDuplicateCheckStates((prev) => ({ ...prev, [key]: "none" }));
+    }
+
+    // 실시간 프론트엔드 유효성 검사
+    if (key === "email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(value)) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "올바른 이메일 형식이 아닙니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      }
+    }
+
+    if (key === "password") {
+      if (value && value.length < 8) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          password: "비밀번호는 8자 이상이어야 합니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, password: "error" }));
+      }
+
+      // 비밀번호 확인과 일치성 검사
+      if (formData.passwordConfirm && value !== formData.passwordConfirm) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          passwordConfirm: "비밀번호가 일치하지 않습니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "error" }));
+      } else if (
+        formData.passwordConfirm &&
+        value === formData.passwordConfirm
+      ) {
+        setValidationErrors((prev) => ({ ...prev, passwordConfirm: "" }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "none" }));
+      }
+    }
+
+    if (key === "passwordConfirm") {
+      if (value && formData.password !== value) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          passwordConfirm: "비밀번호가 일치하지 않습니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "error" }));
+      } else if (value && formData.password === value) {
+        setValidationErrors((prev) => ({ ...prev, passwordConfirm: "" }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "none" }));
+      }
+    }
+
+    if (key === "nickname") {
+      if (value && value.includes(" ")) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          nickname: "닉네임에는 공백을 포함할 수 없습니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, nickname: "error" }));
+      }
+    }
+  };
+
+  // 이메일 중복 검사 API 호출
+  const checkEmailDuplicate = async (email: string): Promise<boolean> => {
+    try {
+      console.log(`=== 이메일 중복 검사 API 요청 시작 ===`);
+      console.log("요청 데이터:", { email });
+
+      const response = await fetch(
+        `https://i13a609.p.ssafy.io/test/api/eaters/check-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const responseText = await response.text();
+      console.log(`이메일 중복 검사 응답:`, responseText);
+
+      let responseData: DuplicateCheckResponse;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`서버 응답을 파싱할 수 없습니다: ${responseText}`);
+      }
+
+      // 409는 중복을 의미하는 정상 응답으로 처리
+      if (response.status === 409) {
+        return true; // 중복됨
+      }
+
+      if (!response.ok) {
+        throw responseData;
+      }
+
+      // data가 true면 중복, false면 사용가능
+      return responseData.data;
+    } catch (error) {
+      console.error(`이메일 중복 검사 오류:`, error);
+      throw error;
+    }
+  };
+
+  // 닉네임 중복 검사 API 호출
+  const checkNicknameDuplicate = async (nickname: string): Promise<boolean> => {
+    try {
+      console.log(`=== 닉네임 중복 검사 API 요청 시작 ===`);
+      console.log("요청 데이터:", { nickname });
+
+      const response = await fetch(
+        `https://i13a609.p.ssafy.io/test/api/eaters/check-nickname`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ nickname }),
+        }
+      );
+
+      const responseText = await response.text();
+      console.log(`닉네임 중복 검사 응답:`, responseText);
+
+      let responseData: DuplicateCheckResponse;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`서버 응답을 파싱할 수 없습니다: ${responseText}`);
+      }
+
+      // 409는 중복을 의미하는 정상 응답으로 처리
+      if (response.status === 409) {
+        return true; // 중복됨
+      }
+
+      if (!response.ok) {
+        throw responseData;
+      }
+
+      // data가 true면 중복, false면 사용가능
+      return responseData.data;
+    } catch (error) {
+      console.error(`닉네임 중복 검사 오류:`, error);
+      throw error;
+    }
+  };
+
+  // 이메일 중복 검사 핸들러
+  const handleEmailDuplicateCheck = async () => {
+    if (!formData.email.trim()) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "이메일을 입력해주세요.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      return;
+    }
+
+    // 이메일 형식 검사
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "올바른 이메일 형식이 아닙니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      return;
+    }
+
+    try {
+      setDuplicateCheckStates((prev) => ({ ...prev, email: "checking" }));
+
+      const isDuplicate = await checkEmailDuplicate(formData.email);
+
+      if (isDuplicate) {
+        setDuplicateCheckStates((prev) => ({ ...prev, email: "duplicate" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "이미 사용중인 이메일입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      } else {
+        setDuplicateCheckStates((prev) => ({ ...prev, email: "success" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "사용 가능한 이메일입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "success" }));
+      }
+    } catch (error: any) {
+      setDuplicateCheckStates((prev) => ({ ...prev, email: "none" }));
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "이메일 중복 검사에 실패했습니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+    }
+  };
+
+  // 닉네임 중복 검사 핸들러
+  const handleNicknameDuplicateCheck = async () => {
+    if (!formData.nickname.trim()) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        nickname: "닉네임을 입력해주세요.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, nickname: "error" }));
+      return;
+    }
+
+    if (formData.nickname.includes(" ")) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        nickname: "닉네임에는 공백을 포함할 수 없습니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, nickname: "error" }));
+      return;
+    }
+
+    try {
+      setDuplicateCheckStates((prev) => ({ ...prev, nickname: "checking" }));
+
+      const isDuplicate = await checkNicknameDuplicate(formData.nickname);
+
+      if (isDuplicate) {
+        setDuplicateCheckStates((prev) => ({ ...prev, nickname: "duplicate" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          nickname: "이미 사용중인 닉네임입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, nickname: "error" }));
+      } else {
+        setDuplicateCheckStates((prev) => ({ ...prev, nickname: "success" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          nickname: "사용 가능한 닉네임입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, nickname: "success" }));
+      }
+    } catch (error: any) {
+      setDuplicateCheckStates((prev) => ({ ...prev, nickname: "none" }));
+      setValidationErrors((prev) => ({
+        ...prev,
+        nickname: "닉네임 중복 검사에 실패했습니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, nickname: "error" }));
+    }
+  };
+
+  // Eater 회원가입 API 호출
+  const registerEater = async (
+    data: EaterRegisterRequest
+  ): Promise<EaterRegisterResponse> => {
+    try {
+      console.log("=== API 요청 시작 ===");
+      console.log("요청 URL:", `https://i13a609.p.ssafy.io/test/api/eaters`);
+      console.log("요청 데이터:", JSON.stringify(data, null, 2));
+
+      const response = await fetch(
+        `https://i13a609.p.ssafy.io/test/api/eaters`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      console.log("=== API 응답 ===");
+      console.log("응답 상태:", response.status);
+
+      const responseText = await response.text();
+      console.log("응답 본문:", responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`서버 응답을 파싱할 수 없습니다: ${responseText}`);
+      }
+
+      if (!response.ok) {
+        throw responseData;
+      }
+
+      return responseData;
+    } catch (error) {
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Network request failed")
+      ) {
+        throw new Error("네트워크 연결을 확인해주세요.");
+      }
+      throw error;
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+
+      // 빈 값 체크
+      const emptyFields = Object.entries(formData).filter(
+        ([key, value]) => !value.trim()
+      );
+      if (emptyFields.length > 0) {
+        Alert.alert("알림", "모든 필드를 입력해주세요.");
+        return;
+      }
+
+      // 프론트엔드 유효성 검사
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        Alert.alert("알림", "올바른 이메일 형식이 아닙니다.");
+        return;
+      }
+
+      if (formData.password.length < 8) {
+        Alert.alert("알림", "비밀번호는 8자 이상이어야 합니다.");
+        return;
+      }
+
+      if (formData.password !== formData.passwordConfirm) {
+        Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      if (formData.nickname.includes(" ")) {
+        Alert.alert("알림", "닉네임에는 공백을 포함할 수 없습니다.");
+        return;
+      }
+
+      // 중복 검사 완료 확인
+      if (duplicateCheckStates.email !== "success") {
+        Alert.alert("알림", "이메일 중복 검사를 완료해주세요.");
+        return;
+      }
+
+      if (duplicateCheckStates.nickname !== "success") {
+        Alert.alert("알림", "닉네임 중복 검사를 완료해주세요.");
+        return;
+      }
+
+      // API 요청 데이터 준비
+      const requestData: EaterRegisterRequest = {
+        email: formData.email.trim(),
+        password: formData.password,
+        passwordConfirm: formData.passwordConfirm,
+        nickname: formData.nickname.trim(),
+      };
+
+      // 회원가입 API 호출
+      const response = await registerEater(requestData);
+
+      console.log("회원가입 성공:", response);
+      setModalType("success");
+      setModalVisible(true);
+    } catch (error: any) {
+      console.error("회원가입 실패:", error);
+      setModalType("failure");
+      setModalVisible(true);
+
+      let errorMessage = "회원가입에 실패했습니다.";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("오류", errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleModalClose = () => {
     setModalVisible(false);
-    complete();
+    if (modalType === "success") {
+      complete();
+    }
+  };
+
+  // 가입하기 버튼 활성화 여부 체크
+  const isFormValid = () => {
+    // 모든 필드가 입력되었는지 확인
+    const allFieldsFilled = Object.values(formData).every(
+      (value) => value.trim().length > 0
+    );
+
+    // 중복 검사가 모두 성공했는지 확인
+    const duplicateChecksPassed =
+      duplicateCheckStates.email === "success" &&
+      duplicateCheckStates.nickname === "success";
+
+    // 프론트엔드 유효성 검사 통과 여부 확인
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailValid = emailRegex.test(formData.email);
+    const passwordValid = formData.password.length >= 8;
+    const passwordMatch = formData.password === formData.passwordConfirm;
+    const nicknameValid = !formData.nickname.includes(" ");
+
+    // 에러 타입이 'error'인 유효성 검사 오류만 확인 (성공 메시지는 제외)
+    const noValidationErrors =
+      validationTypes.email !== "error" &&
+      validationTypes.password !== "error" &&
+      validationTypes.passwordConfirm !== "error" &&
+      validationTypes.nickname !== "error";
+
+    return (
+      allFieldsFilled &&
+      duplicateChecksPassed &&
+      emailValid &&
+      passwordValid &&
+      passwordMatch &&
+      nicknameValid &&
+      noValidationErrors
+    );
   };
 
   return (
@@ -107,17 +607,72 @@ export default function EaterRegisterScreen(props?: Props) {
           >
             {/* Form Fields */}
             <View>
-              {eaterFields.map((field) => (
+              {/* 닉네임 입력 */}
+              <InputGroup
+                label="닉네임"
+                placeholder="닉네임을 입력해주세요"
+                value={formData.nickname}
+                onChangeText={(value) => handleInputChange("nickname", value)}
+                validation={validationErrors.nickname || ""}
+                validationType={validationTypes.nickname}
+                showDuplicateCheck={true}
+                duplicateCheckDisabled={
+                  duplicateCheckStates.nickname === "success"
+                }
+                duplicateCheckLoading={
+                  duplicateCheckStates.nickname === "checking"
+                }
+                onDuplicateCheck={handleNicknameDuplicateCheck}
+                style={{
+                  height: btnHeight,
+                  paddingHorizontal: width * 0.04,
+                }}
+              />
+
+              {/* 이메일 입력 */}
+              <InputGroup
+                label="이메일"
+                placeholder="이메일을 입력해주세요"
+                keyboardType="email-address"
+                value={formData.email}
+                onChangeText={(value) => handleInputChange("email", value)}
+                validation={validationErrors.email || ""}
+                validationType={validationTypes.email}
+                showDuplicateCheck={true}
+                duplicateCheckDisabled={
+                  duplicateCheckStates.email === "success"
+                }
+                duplicateCheckLoading={
+                  duplicateCheckStates.email === "checking"
+                }
+                onDuplicateCheck={handleEmailDuplicateCheck}
+                style={{
+                  height: btnHeight,
+                  paddingHorizontal: width * 0.04,
+                }}
+              />
+
+              {/* 비밀번호 필드들 */}
+              {passwordFields.map((field) => (
                 <InputGroup
                   key={field.key}
                   label={field.label}
                   placeholder={field.placeholder}
                   secureTextEntry={field.secureTextEntry}
                   keyboardType={field.keyboardType}
+                  value={formData[field.key as keyof FormData]}
+                  onChangeText={(value) =>
+                    handleInputChange(field.key as keyof FormData, value)
+                  }
+                  validation={
+                    validationErrors[field.key as keyof ValidationErrors] || ""
+                  }
+                  validationType={
+                    validationTypes[field.key as keyof ValidationTypes]
+                  }
                   style={{
                     height: btnHeight,
                     paddingHorizontal: width * 0.04,
-                    marginBottom: height * 0.01,
                   }}
                 />
               ))}
@@ -128,14 +683,28 @@ export default function EaterRegisterScreen(props?: Props) {
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  { backgroundColor: secondaryColor, height: btnHeight },
+                  {
+                    backgroundColor: isLoading
+                      ? "#ccc"
+                      : isFormValid()
+                      ? secondaryColor
+                      : "#ccc",
+                    height: btnHeight,
+                  },
                 ]}
                 onPress={handleSubmit}
+                disabled={isLoading || !isFormValid()}
               >
                 <Text
-                  style={[styles.submitButtonText, { fontSize: width * 0.04 }]}
+                  style={[
+                    styles.submitButtonText,
+                    {
+                      fontSize: width * 0.04,
+                      color: isFormValid() ? "#fff" : "#999",
+                    },
+                  ]}
                 >
-                  가입하기
+                  {isLoading ? "가입 중..." : "가입하기"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -144,7 +713,11 @@ export default function EaterRegisterScreen(props?: Props) {
           <ResultModal
             visible={modalVisible}
             type={modalType}
-            message="로그인 화면으로 이동합니다!"
+            message={
+              modalType === "success"
+                ? "회원가입이 완료되었습니다!"
+                : "회원가입에 실패했습니다. 다시 시도해주세요."
+            }
             onClose={handleModalClose}
           />
         </SafeAreaView>
