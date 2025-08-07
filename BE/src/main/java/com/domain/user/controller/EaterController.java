@@ -28,7 +28,7 @@ public class EaterController {
             summary = "Eater 회원가입",
             description = "Eater의 회원가입을 진행합니다."
     )
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<BaseResponse> signUp(@Valid @RequestBody final EaterSignUpRequest request) {
         User user = eaterService.registerEater(request);
         return ApiResponseFactory.success(SuccessCode.EATERS_SIGNUP, eaterMapper.toResponse(user));
