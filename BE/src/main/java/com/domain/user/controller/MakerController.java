@@ -1,5 +1,6 @@
 package com.domain.user.controller;
 
+import com.domain.user.dto.request.MakerCheckEmailRequest;
 import com.domain.user.dto.request.MakerSignUpBaseRequest;
 import com.domain.user.dto.request.MakerSignUpMenuRequest;
 import com.domain.user.entity.User;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +34,7 @@ public class MakerController {
             summary = "Maker 회원가입",
             description = "Maker의 회원가입을 진행합니다."
     )
-    @PostMapping(value = "/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse> signup(
             @Valid @RequestPart("base") MakerSignUpBaseRequest baseRequest,
             @Valid @RequestPart(value = "menus", required = false) List<MakerSignUpMenuRequest> menuRequests,
@@ -40,5 +42,15 @@ public class MakerController {
             @RequestPart(value = "images", required = false) List<MultipartFile> menuImageRequests) {
         User maker = makerService.registerMaker(baseRequest, menuRequests, licenseImageRequest, menuImageRequests);
         return ApiResponseFactory.success(SuccessCode.MAKER_SIGNUP, makerMapper.toResponse(maker));
+    }
+
+    @Operation(
+            summary = "Eater 회원가입 - 이메일 중복 확인",
+            description = "Eater의 회원가입을 진행합니다."
+    )
+    @PostMapping("/check-email")
+    public ResponseEntity<BaseResponse> checkEmail(@Valid @RequestBody final MakerCheckEmailRequest request) {
+        makerService.validateEmailAvailable(request);
+        return ApiResponseFactory.success(SuccessCode.EMAIL_AVAILABLE);
     }
 }
