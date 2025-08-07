@@ -4,24 +4,17 @@ import com.domain.review.dto.response.ReviewDetailResponse;
 import com.domain.review.dto.response.ReviewFeedResponse;
 import com.domain.review.dto.response.ReviewFeedResult;
 import com.domain.review.dto.response.StoreDistanceResult;
-import com.domain.review.entity.Poi;
-import com.domain.review.entity.Review;
-import com.domain.review.entity.Store;
+import com.domain.review.entity.*;
 import com.domain.review.repository.ReviewRepository;
 import com.global.constants.ErrorCode;
-import com.global.constants.SuccessCode;
-import com.global.dto.response.SuccessResponse;
 import com.global.exception.GlobalException;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+
 
 import java.util.List;
 import java.util.Map;
@@ -50,37 +43,42 @@ public class ReviewService {
                 List<Long> storeIds = nearbyStores.stream()
                         .map(StoreDistanceResult::storeId).toList();
 
-                List<Review> reviews = reviewRepository.findByStoreIdInOrderByCreatedAtDesc(
-                        storeIds, lastReviewId, PageRequest.of(0, 20)
+                Pageable limit21 = PageRequest.of(0, 21);
+                List<Review> reviews = reviewRepository.findByStoreIdInOrderByIdDesc(
+                        storeIds, lastReviewId, limit21
                 );
 
                 if (!reviews.isEmpty()) {
+                    boolean hasNext = reviews.size() > 20;
+                    List<Review> content = hasNext ? reviews.subList(0, 20) : reviews;
+
                     Map<Long, Integer> storeDistanceMap = nearbyStores.stream()
                             .collect(Collectors.toMap(
                                     StoreDistanceResult::storeId,
                                     StoreDistanceResult::distance
                             ));
 
-                    List<ReviewFeedResponse> feedResponses = reviews.stream()
+                    List<ReviewFeedResponse> feedResponses = content.stream()
                             .map(review -> ReviewFeedResponse.builder()
                                     .reviewId(review.getId())
                                     .storeName(review.getStore().getName())
                                     .description(review.getDescription())
-//                                    .menuNames(List.of()) // 현재 엔티티에 없음
-//                                    .assetUrl(null) // 현재 엔티티에 없음
                                     .distance(storeDistanceMap.get(review.getStore().getId()))
                                     .build())
                             .collect(Collectors.toList());
 
-                    return ReviewFeedResult.nearbyReviews(feedResponses);
+                    return ReviewFeedResult.nearbyReviews(feedResponses, hasNext);
                 }
             }
 
-            List<Review> allReviews = reviewRepository.findAllOrderByCreatedAtDesc(
-                    lastReviewId, PageRequest.of(0, 20)
+            Pageable limit21 = PageRequest.of(0, 21);
+            List<Review> allReviews = reviewRepository.findAllOrderByIdDesc(
+                    lastReviewId, limit21
             );
+            boolean hasNext = allReviews.size() > 20;
+            List<Review> content = hasNext ? allReviews.subList(0, 20) : allReviews;
 
-            List<ReviewFeedResponse> feedResponses = allReviews.stream()
+            List<ReviewFeedResponse> feedResponses = content.stream()
                     .map(review -> ReviewFeedResponse.builder()
                             .reviewId(review.getId())
                             .storeName(review.getStore().getName())
@@ -90,9 +88,9 @@ public class ReviewService {
 //                            .distance(null) // 전체 피드는 거리 정보 없음
                             .build()).toList();
 
-            return ReviewFeedResult.fallbackReviews(feedResponses);
+            return ReviewFeedResult.fallbackReviews(feedResponses, hasNext);
         } catch (NoSuchElementException e) {
-            // POI를 찾을 수 없는 경우 전체 피드 제공
+            // POI를 찾을 수 없는 경우 전체 피드 제공, 근데 그럴 일 없지 않을까....
             log.warn("No POI found near ({}, {}), returning all reviews", latitude, longitude);
             return getFallbackFeed(lastReviewId);
         }
@@ -100,57 +98,74 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     public ReviewDetailResponse getReviewDetail(Long reviewId, Long currentUserId) {
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByIdWithDetails(reviewId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.BAD_REQUEST));
 
         Store store = review.getStore();
+        if (store == null) {
+            throw new GlobalException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
 
-        int scrapCount = 0;
-        boolean isScrapped = false;
+        User user = review.getUser();
+        if (user == null) {
+            throw new GlobalException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
 
+        List<ReviewScrap> scraps = review.getScraps();
+        int scrapCount = scraps.size();
+
+        boolean isScrapped = currentUserId != null && scraps.stream()
+                .anyMatch(scrap -> scrap.getUser().getId().equals(currentUserId));
+
+        // 4. Store 정보 빌드
+        ReviewDetailResponse.StoreInfo storeInfo = ReviewDetailResponse.StoreInfo.builder()
+                .storeId(store.getId())
+                .storeName(store.getName())
+                .latitude(store.getLatitude())
+                .longitude(store.getLongitude())
+                .address(store.getAddress())
+                .build();
+
+        // 5. User 정보 빌드
         ReviewDetailResponse.UserInfo userInfo = ReviewDetailResponse.UserInfo.builder()
-                .userId(1L) // 임시
-                .nickname("테스트유저") // 임시
+                .userId(user.getId())
+                .nickname(user.getNickName())
                 .build();
 
         return ReviewDetailResponse.builder()
                 .reviewId(review.getId())
-                .store(ReviewDetailResponse.StoreInfo.builder()
-                        .storeId(store.getId())
-                        .storeName(store.getName())
-                        .address("서울시 강남구") // Store 엔티티에 address 필드 없음
-                        .latitude(store.getLatitude())
-                        .longitude(store.getLongitude())
-                        .build())
+                .store(storeInfo)
                 .user(userInfo)
                 .description(review.getDescription())
-//                .menuNames(List.of()) // Review 엔티티에 menuNames 없음
-//                .asset(AssetInfo.builder()
-//                        .type("IMAGE")
-//                        .assetUrl(null) // Review 엔티티에 assetUrl 없음
-//                        .build())
-//                .scrapCount(scrapCount)
-//                .isScrapped(isScrapped)
                 .createdAt(review.getCreatedAt())
+                .scrapCount(scrapCount)
+                .isScrapped(isScrapped)
+                // TODO: 아래 필드들은 엔티티에 추가 시 활성화
+                // .menuNames(review.getMenuNames())
+                // .asset(buildAssetInfo(review))
+                // .viewCount(review.getViewCount())
+                // .reportCount(review.getReportCount())
                 .build();
     }
 
     private ReviewFeedResult getFallbackFeed(Long lastReviewId) {
-        List<Review> allReviews = reviewRepository.findAllOrderByCreatedAtDesc(
-                lastReviewId, PageRequest.of(0, 20)
+        Pageable limit21 = PageRequest.of(0, 21);
+        List<Review> allReviews = reviewRepository.findAllOrderByIdDesc(
+                lastReviewId, limit21
         );
+        boolean hasNext = allReviews.size() > 20;
+        List<Review> content = hasNext ? allReviews.subList(0, 20) : allReviews;
 
-        List<ReviewFeedResponse> feedResponses = allReviews.stream()
+        List<ReviewFeedResponse> feedResponses = content.stream()
                 .map(review -> ReviewFeedResponse.builder()
                         .reviewId(review.getId())
                         .storeName(review.getStore().getName())
                         .description(review.getDescription())
                         .menuNames(List.of())
-                        .assetUrl(null)
-                        .distance(null)
-                        .build())
-                .collect(Collectors.toList());
+//                            .assetUrl(null)
+//                            .distance(null) // 전체 피드는 거리 정보 없음
+                        .build()).toList();
 
-        return ReviewFeedResult.fallbackReviews(feedResponses);
+        return ReviewFeedResult.fallbackReviews(feedResponses, hasNext);
     }
 }
