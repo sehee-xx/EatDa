@@ -8,7 +8,9 @@ import time
 from typing import Dict, Any
 from lumaai import AsyncLumaAI
 from typing import List
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class LumaService:
     def __init__(self):
