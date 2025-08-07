@@ -17,8 +17,8 @@ public enum Status {
         }
     }
 
-    public boolean isNotPending() {
-        return this != PENDING;
+    public boolean isPending() {
+        return this == PENDING;
     }
 
     public boolean isSuccess() {

@@ -54,14 +54,13 @@ public enum ErrorCode {
     REVIEW_ASSET_URL_INVALID_FORMAT("REVIEW_ASSET_URL_INVALID_FORMAT", "에셋 URL 형식이 유효하지 않습니다.",
             HttpStatus.BAD_REQUEST.value()),
     REVIEW_NOT_FOUND("REVIEW_NOT_FOUND", "리뷰가 존재하지 않습니다.", HttpStatus.NOT_FOUND.value()),
-    REVIEW_NOT_PENDING("REVIEW_NOT_PENDING", "해당 리뷰는 대기 상태가 아닙니다.", HttpStatus.BAD_REQUEST.value()),
+    REVIEW_NOT_SUCCESS("REVIEW_NOT_SUCCESS", "해당 리뷰는 성공 상태가 아닙니다.", HttpStatus.BAD_REQUEST.value()),
     REVIEW_DESCRIPTION_TOO_SHORT("REVIEW_DESCRIPTION_TOO_SHORT", "리뷰 설명은 최소 30자 이상이어야 합니다.",
             HttpStatus.BAD_REQUEST.value()),
     REVIEW_INVALID_STATUS("REVIEW_INVALID_STATUS", "유효하지 않은 리뷰 상태입니다.", HttpStatus.BAD_REQUEST.value()),
     REVIEW_ASSET_NOT_READY("REVIEW_ASSET_NOT_READY", "리뷰 에셋이 아직 준비되지 않았습니다.", HttpStatus.BAD_REQUEST.value()),
     REVIEW_ASSET_TYPE_MISMATCH("REVIEW_ASSET_TYPE_MISMATCH", "요청한 리뷰 에셋 타입이 일치하지 않습니다.",
             HttpStatus.BAD_REQUEST.value()),
-    REVIEW_ASSET_ALREADY_LINKED("REVIEW_ASSET_ALREADY_LINKED", "이미 리뷰에 연결된 리뷰 에셋입니다.", HttpStatus.BAD_REQUEST.value()),
 
     // 리소스 관련
     NOT_FOUND("NOT_FOUND", "요청한 파일이 존재하지 않습니다.", HttpStatus.NOT_FOUND.value()),
