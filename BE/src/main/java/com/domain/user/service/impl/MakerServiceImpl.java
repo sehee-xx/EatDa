@@ -62,7 +62,8 @@ public class MakerServiceImpl implements MakerService {
 
     @Override
     public void validateEmailAvailable(final MakerCheckEmailRequest request) {
-
+        UserValidator.validateEmail(request.email());
+        validateDuplicateEmail(request.email());
     }
 
     private String storeLicenseImage(MultipartFile licenseImageRequest) {
