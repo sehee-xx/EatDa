@@ -8,6 +8,8 @@ services:
     volumes:
       - /srv/nginx/front/default.conf:/etc/nginx/conf.d/default.conf
       - /srv/nginx/front:/srv/nginx/front
+      - /srv/certbot/conf:/etc/letsencrypt
+      - /srv/certbot/www:/var/www/certbot
     restart: always
     networks:
       - backend
@@ -84,6 +86,14 @@ services:
     restart: always
     networks:
       - backend
+      
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /srv/certbot/conf:/etc/letsencrypt
+      - /srv/certbot/www:/var/www/certbot
+    entrypoint: ""
 
 networks:
   backend:
