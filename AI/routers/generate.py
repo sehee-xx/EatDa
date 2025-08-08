@@ -7,11 +7,12 @@ import time
 from fastapi import APIRouter, HTTPException
 from models.request_models import GenerateRequest, CallbackRequest, SpringResponse
 from services import luma_service, gpt_service, callback_service
+from utils.logger import default_logger as logger
 
 
 # 라우터 생성
 router = APIRouter(
-    prefix="/api/reviews/assests",
+    prefix="/api",
     tags=["generation"]
 )
 
@@ -19,31 +20,34 @@ router = APIRouter(
 generations = {}
 
 
-@router.post("/api/reviews/assests/generate", response_model=SpringResponse)
+@router.post("/reviews/assets/generate", response_model=SpringResponse)
 async def generate_video(request: GenerateRequest):
     """
     영상 생성 요청 - luma.py의 로직의 FastAPI
     1. 사용자 프롬프트를 gpt.py(Gpt-4o)로 개선
     2. 개선된 프롬프트로 Luma AI 영상 생성 요청
+    generate 흐름의 각 단계에 체크포인트 로그 설정.(logger.info)
     """
     try:
+        logger.info("STEP1: start generate")
         if not luma_service.is_available():
             raise HTTPException(
                 status_code=500, 
-                detail="Luma AI 클라이언트가 초기화되지 않았습니다. API 키를 확인하세요."
+                detail="Luma AI 클라이언트가 초기화되지 않았습니다. 환경변수 LUMAAI_API_KEY를 설정(.env) 후 서버를 재시작하세요."
             )
         
         # print(f"Original prompt: {request.prompt}")
 
         # 1단계: GPT로 프롬프트 개선
         detailed_prompt = await gpt_service.enhance_prompt(request.prompt)
+        logger.info("STEP2: after GPT")
         # print(f"Enhanced prompt: {detailed_prompt}")
         
         # 2단계: Luma AI로 영상 생성 요청
-        # print(" Sending video generation request to Luma AI…")
         generation_result = await luma_service.generate_video(detailed_prompt, request.referenceImages)
-        
-        # 메모리에 생성 정보 저장 - 코드 잔류 여부 논의 필요
+        logger.info(f"STEP3: after Luma create id={generation_result['id']}")
+
+        # 메모리 기록
         generations[generation_result["id"]] = {
             "state": generation_result["state"],          # Optional[Literal["queued", "dreaming", "completed", "failed"]] = None
             "original_prompt": request.prompt,
@@ -54,17 +58,17 @@ async def generate_video(request: GenerateRequest):
             "storeId": request.storeId,
             "userId": request.userId
         }
-        
-        # print(f"영상 생성 요청 완료 ID: {generation_result['id']}")
-        
-        # Luma AI 완료까지 대기 (실제로는 폴링하지만 여기서는 생성 완료로 가정)
-        # TODO: 웹훅이나 폴링으로 완료 상태 확인 필요 여부 논의 필요 -> 성공 시 알림을 띄울거라면...
-        
-        # 성공 시 콜백 데이터 생성 및 스프링 서버 전송
+
+        # 3단계: 생성 완료까지 폴링하여 실제 성공/실패 확인
+        logger.info("STEP4: enter polling")
+        wait = await luma_service.wait_for_generation_completion(generation_result["id"])
+        logger.info(f"STEP5: polling done state={wait['state']} url={wait.get('asset_url')}")
+
+        is_success = wait["state"] == "completed" and bool(wait.get("asset_url"))
         callback_data = {
             "reviewAssetId": request.reviewAssetId,
-            "result": "SUCCESS",  # 일단 성공으로 가정
-            "assetUrl": f"https://example.com/video/{generation_result['id']}.mp4",  # 임시 URL
+            "result": "SUCCESS" if is_success else "FAIL",
+            "assetUrl": wait.get("asset_url"),
             "type": request.type
         }
         
@@ -88,5 +92,5 @@ async def generate_video(request: GenerateRequest):
         # 2) 콜백 전송까지 완료했으면, 클라이언트엔 에러로 응답
         raise HTTPException(
             status_code=500,
-            detail=f"영상 생성 실패 및 콜백 전송 완료: {e}"
+            detail=f"영상 생성 실패 및 콜백 전송 완료: {e}. 환경변수 확인: LUMAAI_API_KEY, GMS_API_KEY, SPRING_CALLBACK_URL"
         )
