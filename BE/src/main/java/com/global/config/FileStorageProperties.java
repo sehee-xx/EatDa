@@ -1,6 +1,5 @@
 package com.global.config;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import lombok.Getter;
 import lombok.Setter;
