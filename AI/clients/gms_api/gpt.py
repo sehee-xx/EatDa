@@ -6,9 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# GMS KEY를 입력하는 단계입니다. 실제 서비스에서는 환경변수나 KMS를 활용하세요!
+# 서버 환경에서는 인터랙티브 입력을 사용하지 않습니다.
+# GMS_API_KEY가 없으면 즉시 오류를 발생시켜 호출자가 처리하도록 합니다.
 if not os.environ.get("GMS_API_KEY"):
-  os.environ["GMS_API_KEY"] = getpass.getpass("GMS KEY를 입력하세요: ")
+  raise RuntimeError("GMS_API_KEY 환경변수가 설정되어 있지 않습니다. .env 또는 실행 환경에 키를 설정하세요.")
 
 # GMS API 클라이언트를 초기화합니다.
 # base_url은 GMS API의 엔드포인트로, 실제 서비스에 맞게 설정해야 합니다.
