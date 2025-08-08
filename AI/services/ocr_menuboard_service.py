@@ -59,9 +59,23 @@ class OCRMenuBoardService:
         Returns:
             dict: OCR API 응답 결과
         """
+        # 지원되는 확장자 검증 및 정규화
+        normalized_format = (image_format or "").strip().lower()
+        # 확장자 정규화 맵
+        normalization_map = {
+            "jpeg": "jpg",
+            "tif": "tiff",
+        }
+        normalized_format = normalization_map.get(normalized_format, normalized_format)
+        allowed_formats = {"jpg", "png", "pdf", "tiff"}
+        if normalized_format not in allowed_formats:
+            raise ValueError(
+                f"지원하지 않는 이미지 형식입니다: {image_format}. 지원 형식: {sorted(list(allowed_formats))}"
+            )
+        
         # OCR 요청 데이터 구성
         request_payload = ClovaOCRRequest(
-            images=[ClovaImageSpec(format=image_format, name="menu_board")],
+            images=[ClovaImageSpec(format=normalized_format, name="menu_board")],
             requestId=str(uuid.uuid4()),
             version="V2",
             timestamp=int(time.time() * 1000)
