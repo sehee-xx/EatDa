@@ -6,6 +6,7 @@ import com.domain.review.entity.ReviewScrap;
 import com.domain.review.repository.ReviewRepository;
 import com.domain.review.repository.ReviewScrapRepository;
 import com.domain.review.repository.UserRepository;
+import com.domain.user.entity.User;
 import com.global.constants.ErrorCode;
 import com.global.exception.ApiException;
 import java.util.Optional;

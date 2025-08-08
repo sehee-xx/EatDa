@@ -5,6 +5,7 @@ import com.domain.review.dto.response.StoreDistanceResult;
 import com.domain.review.entity.Poi;
 import com.domain.review.repository.PoiRepository;
 import com.domain.review.repository.StoreRepository;
+import com.domain.store.entity.Store;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
