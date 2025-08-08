@@ -12,7 +12,7 @@ AI/
 │   ├── gpt_service.py       👈 GPT 프롬프트 생성 함수
 │   └── callback_service.py  👈 스프링 콜백 함수
 ├── models/
-│   └── request_models.py    👈 Pydantic 요청/응답 모델들
+│   └── shorts_ray2_models.py    👈 Pydantic 요청/응답 모델들
 ├── utils/
 │   └── logger.py            👈 로깅 유틸 함수들
 ├── .env
