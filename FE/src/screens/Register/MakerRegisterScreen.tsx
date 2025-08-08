@@ -336,7 +336,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const getButtonText = () =>
     currentStep < totalSteps ? "다음 단계" : "가입하기";
 
-  // ===== 단계별 최종 방어(알럿) =====
   const validateStep1 = () => {
     if (
       !formData.email.trim() ||
@@ -345,9 +344,11 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       !formData.storeName.trim() ||
       !formData.storeLocation.trim()
     ) {
+      // 빈 값 체크
       Alert.alert("알림", "모든 필드를 입력해주세요.");
       return false;
     }
+    // 프론트 유효성 검사
     if (!emailRegex.test(formData.email)) {
       Alert.alert("알림", "올바른 이메일 형식이 아닙니다.");
       return false;
@@ -360,6 +361,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
       return false;
     }
+    // 중복검사 확인
     if (duplicateCheckStates.email !== "success") {
       Alert.alert("알림", "이메일 중복 검사를 완료해주세요.");
       return false;
@@ -804,6 +806,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             <InputGroup
               {...fieldProps}
               value={formData[key as keyof typeof formData]}
+              userRole="maker"
               onChangeText={
                 (text: string) => handleInputChange(key as keyof FormData, text) // ✅ 실시간 검증 사용
               }
