@@ -4,8 +4,12 @@ package com.domain.review.service;
 import com.domain.review.dto.request.ReviewAssetCallbackRequest;
 import com.domain.review.dto.request.ReviewAssetCreateRequest;
 import com.domain.review.dto.request.ReviewFinalizeRequest;
+import com.domain.review.dto.response.MyReviewResponse;
 import com.domain.review.dto.response.ReviewAssetRequestResponse;
 import com.domain.review.dto.response.ReviewAssetResultResponse;
+import com.domain.review.dto.response.ReviewDetailResponse;
+import com.domain.review.dto.response.ReviewFeedResponse;
+import com.domain.review.dto.response.ReviewFeedResult;
 import com.domain.review.dto.response.ReviewFinalizeResponse;
 
 public interface ReviewService {
@@ -29,4 +33,12 @@ public interface ReviewService {
      * 4단계 - 리뷰 최종 등록
      */
     ReviewFinalizeResponse finalizeReview(ReviewFinalizeRequest request);
+
+    ReviewFeedResult<ReviewFeedResponse> getReviewFeed(Double latitude, Double longitude, Integer distance, Long lastReviewId);
+
+    ReviewDetailResponse getReviewDetail(Long reviewId, Long currentUserId);
+
+    ReviewFeedResult<MyReviewResponse> getMyReviews(Long userId, Long lastReviewId, int pageSize);
+
+    void removeReview(Long reviewId, Long currentUserId);
 }
