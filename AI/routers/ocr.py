@@ -4,7 +4,7 @@ OCR 관련 API 라우터
 """
 
 import httpx
-from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Form
 from models.ocr_menuboard_models import OCRMenuRequest, OCRMenuRespond, OCRCallbackRequest
 from services import ocr_menuboard_service, callback_service
 
@@ -18,7 +18,7 @@ router = APIRouter(
 ocr_requests = {}
 
 
-@router.post("/api/reviews/menu-extraction", response_model=dict)
+@router.post("/reviews/menu-extraction", response_model=dict)
 async def receive_ocr_request(request: OCRMenuRequest, background_tasks: BackgroundTasks):
     """
     1단계: RN → FastAPI
@@ -70,10 +70,9 @@ async def process_ocr_async(request: OCRMenuRequest):
         # 이미지 포맷 추출 (URL 확장자 기반)
         image_format = "jpg"  # 기본값
         url_path = str(request.imageUrl).lower()
-        if url_path.endswith(('.png', '.webp')):
+        if any(url_path.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.pdf', '.tif', '.tiff')):
             image_format = url_path.split('.')[-1]
-        elif url_path.endswith('.jpeg'):
-            image_format = "jpg"
+        # 정규화는 서비스 내부에서 처리됨 (jpeg->jpg, tif->tiff)
 
         # 2단계: OCR 처리
         extracted_menus = await ocr_menuboard_service.extract_menus_from_image(
@@ -133,7 +132,9 @@ async def send_ocr_callback(callback_data: OCRCallbackRequest):
     OCR 처리 결과를 지정된 콜백 엔드포인트로 전송합니다.
     """
     try:
-        # 고정된 콜백 URL (url 추후 수정 필요)
+        # TODO[SPRING]: 스프링 서버 도메인/포트로 변경
+        #   예) http://spring.mycompany.com:8080/api/reviews/menu-extraction/callback
+        #   로컬에서 스프링을 9090으로 띄운다면: http://localhost:9090/api/reviews/menu-extraction/callback
         callback_url = "http://localhost:8080/api/reviews/menu-extraction/callback"
         
         async with httpx.AsyncClient() as client:
@@ -156,12 +157,18 @@ async def send_ocr_callback(callback_data: OCRCallbackRequest):
 
 @router.post("/ocr/menu-board/upload", response_model=OCRMenuRespond)
 async def process_menu_board_upload(
-    sourceId: int,
+    sourceId: int = Form(...),
     file: UploadFile = File(...)
 ):
     """
     테스트용 엔드포인트: 파일 업로드를 통한 메뉴보드 이미지 OCR 처리
     개발 및 디버깅 용도로만 사용
+    
+    postman test method : post
+    url : http://localhost:8000/api/ocr/menu-board/upload
+    body : form-data
+    - sourceId: 123
+    - file: [이미지 파일 선택]
     """
     try:
         if not ocr_menuboard_service.is_available():
@@ -180,12 +187,22 @@ async def process_menu_board_upload(
         # 이미지 데이터 읽기
         image_data = await file.read()
         
-        # 이미지 포맷 추출
+        # 이미지 포맷 추출 (Content-Type 및 파일명 기반)
         image_format = "jpg"  # 기본값
-        if file.content_type == "image/png":
+        ct = (file.content_type or "").lower()
+        if ct in ("image/jpeg", "image/jpg"):
+            image_format = "jpg"
+        elif ct == "image/png":
             image_format = "png"
-        elif file.content_type == "image/webp":
-            image_format = "webp"
+        elif ct in ("image/tiff", "image/tif"):
+            image_format = "tiff"
+        elif ct == "application/pdf":
+            image_format = "pdf"
+        else:
+            # Content-Type에서 판별되지 않으면 파일명 확장자 사용
+            filename = (file.filename or "").lower()
+            if any(filename.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.pdf', '.tif', '.tiff')):
+                image_format = filename.split('.')[-1]
 
         # OCR 처리
         extracted_menus = await ocr_menuboard_service.extract_menus_from_image(
