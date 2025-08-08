@@ -175,3 +175,21 @@ uvicorn main:app --host 0.0.0.0 --port 8081
 $ python --version
 Python 3.11.9
 (venv) 
+
+### 메뉴판 인식 샘플
+
+RN 플로우 엔드포인트(백그라운드 처리)
+Method: POST
+URL: http://localhost:8080/api/reviews/menu-extraction
+Body: raw(JSON)
+
+{
+"sourceId": 123,
+"storeId": 456,
+"userId": 789,
+"imageUrl": "https://example.com/menu.png",
+"type": "MENU",
+"requestedAt": "2025-01-27T10:00:00Z",
+"expireAt": "2025-01-27T11:00:00Z",
+"retryCount": 0
+}
