@@ -1,13 +1,14 @@
 package com.domain.event.dto.request;
 
 import com.global.annotation.ExcludeFromLogging;
+import com.global.constants.AssetType;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public record EventAssetCreateRequest(
@@ -16,6 +17,10 @@ public record EventAssetCreateRequest(
 
         @NotBlank(message = "EVENT_TITLE_REQUIRED")
         String title,
+
+        @NotBlank
+        @Enumerated(EnumType.STRING)
+        AssetType type,
 
         @NotBlank(message = "EVENT_START_DATE_REQUIRED")
         String startDate,
@@ -30,4 +35,10 @@ public record EventAssetCreateRequest(
         @ExcludeFromLogging
         List<@NotNull MultipartFile> image
 ) {
+    public EventAssetCreateRequest {
+        // compact constructor에서 기본값 설정
+        if (type == null) {
+            type = AssetType.IMAGE;
+        }
+    }
 }
