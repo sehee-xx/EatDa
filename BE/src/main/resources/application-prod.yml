@@ -8,3 +8,11 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+
+springdoc:
+  swagger-ui:
+    config-url: /prod/v3/api-docs/swagger-config
+    url: /prod/v3/api-docs
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
