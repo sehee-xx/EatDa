@@ -13,6 +13,7 @@ interface Props extends TextInputProps {
   duplicateCheckDisabled?: boolean;
   onDuplicateCheck?: () => void;
   duplicateCheckLoading?: boolean;
+  userRole?: "eater" | "maker";
 }
 
 export default function InputGroup({ 
@@ -24,10 +25,11 @@ export default function InputGroup({
   duplicateCheckDisabled = false,
   onDuplicateCheck,
   duplicateCheckLoading = false,
+  userRole,
   ...inputProps 
 }: Props) {
   const { hp, wp } = useResponsive();
-  
+  const duplicateCheckColor = userRole === "eater" ? COLORS.secondaryEater : COLORS.secondaryMaker;
   return (
     <View style={{ marginBottom: hp(0.02) }}>
       {label ? (
@@ -58,6 +60,7 @@ export default function InputGroup({
           <TouchableOpacity
             style={[
               styles.duplicateButton,
+              {backgroundColor: duplicateCheckColor},
               duplicateCheckDisabled && styles.duplicateButtonDisabled
             ]}
             onPress={onDuplicateCheck}
@@ -93,7 +96,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   duplicateButton: {
-    backgroundColor: COLORS.secondaryEater,
+    // backgroundColor: COLORS.secondaryEater,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,

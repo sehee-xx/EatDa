@@ -1,3 +1,4 @@
+// src/screens/Register/MakerRegisterScreen.tsx
 import React, { useState, useRef } from "react";
 import {
   SafeAreaView,
@@ -69,10 +70,48 @@ const makerStep1Fields: AuthField[] = [
   },
 ];
 
-// OCR API 설정 - 실제 사용 시 환경변수나 설정 파일에서 관리
-const GOOGLE_VISION_API_KEY = API_KEYS.GOOGLE_VISION; // 실제 API 키로 교체
-const NAVER_CLOVA_API_KEY = ""; // 사용하지 않으므로 빈 문자열
-const NAVER_CLOVA_SECRET = ""; // 사용하지 않으므로 빈 문자열
+// OCR API 설정
+const GOOGLE_VISION_API_KEY = API_KEYS.GOOGLE_VISION;
+const NAVER_CLOVA_API_KEY = "";
+const NAVER_CLOVA_SECRET = "";
+
+// 이메일 중복검사용
+interface DuplicateCheckResponse {
+  code: string;
+  message: string;
+  status: number;
+  data: boolean;
+}
+
+// 폼 데이터 타입
+interface FormData {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  storeName: string;
+  storeLocation: string;
+}
+
+// 유효성 검사 오류 타입
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+  passwordConfirm?: string;
+  storeName?: string;
+  storeLocation?: string;
+}
+
+// 유효성 검사 타입 (색상 결정용)
+interface ValidationTypes {
+  email?: "error" | "success" | "none";
+  password?: "error" | "success" | "none";
+  passwordConfirm?: "error" | "success" | "none";
+}
+
+// 중복 검사 상태 타입
+interface DuplicateCheckStates {
+  email: "none" | "checking" | "success" | "duplicate";
+}
 
 export default function MakerRegisterScreen({ navigation }: Props) {
   const { width, height } = useWindowDimensions();
@@ -82,13 +121,24 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const btnHeight = height * 0.055;
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
     passwordConfirm: "",
     storeName: "",
     storeLocation: "",
   });
+
+  // Step1 유효성 검사 상태
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [validationTypes, setValidationTypes] = useState<ValidationTypes>({});
+  const [duplicateCheckStates, setDuplicateCheckStates] =
+    useState<DuplicateCheckStates>({
+      email: "none",
+    });
+
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const [businessLicenseUri, setBusinessLicenseUri] = useState<string | null>(
     null
@@ -103,6 +153,177 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"success" | "failure">("success");
 
+  // Step1 이메일 유효성 검사
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const handleInputChange = (key: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+    // 기존 에러 메시지 제거
+    if (validationErrors[key]) {
+      setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+    if (validationTypes[key]) {
+      setValidationTypes((prev) => ({ ...prev, [key]: "none" }));
+    }
+
+    // 이메일 형식 검사, 리셋
+    if (key === "email") {
+      setDuplicateCheckStates((prev) => ({ ...prev, email: "none" }));
+      if (value && !emailRegex.test(value)) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "올바른 이메일 형식이 아닙니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      }
+    }
+
+    // 비밀번호 길이 검사 및 confirm 값 일치 불일치 검사
+    if (key === "password") {
+      if (value && value.length < 8) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          password: "비밀번호는 8자 이상이어야 합니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, password: "error" }));
+      }
+      if (formData.passwordConfirm && value !== formData.passwordConfirm) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          passwordConfirm: "비밀번호가 일치하지 않습니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "error" }));
+      } else if (
+        formData.passwordConfirm &&
+        value === formData.passwordConfirm
+      ) {
+        setValidationErrors((prev) => ({ ...prev, passwordConfirm: "" }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "none" }));
+      }
+    }
+
+    // 비밀번호 확인: 일치 검사
+    if (key === "passwordConfirm") {
+      if (value && formData.password !== value) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          passwordConfirm: "비밀번호가 일치하지 않습니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "error" }));
+      } else if (value && formData.password === value) {
+        setValidationErrors((prev) => ({ ...prev, passwordConfirm: "" }));
+        setValidationTypes((prev) => ({ ...prev, passwordConfirm: "none" }));
+      }
+    }
+  };
+
+  // Step1 다음버튼 활성화 조건
+  const isStep1NextEnabled = () => {
+    const allFilled =
+      formData.email.trim().length > 0 &&
+      formData.password.trim().length > 0 &&
+      formData.passwordConfirm.trim().length > 0 &&
+      formData.storeName.trim().length > 0 &&
+      formData.storeLocation.trim().length > 0;
+
+    const emailValid = emailRegex.test(formData.email);
+    const pwValid = formData.password.length >= 8;
+    const pwMatch = formData.password === formData.passwordConfirm;
+    const noErrors =
+      validationTypes.email !== "error" &&
+      validationTypes.password !== "error" &&
+      validationTypes.passwordConfirm !== "error";
+
+    const dupOk = duplicateCheckStates.email === "success";
+
+    return allFilled && emailValid && pwValid && pwMatch && noErrors && dupOk;
+  };
+
+  // 이메일 중복검사 API
+  const checkEmailDuplicate = async (email: string): Promise<boolean> => {
+    try {
+      console.log(`=== 이메일 중복 검사 API 요청 시작 ===`);
+      console.log("요청 데이터:", { email });
+
+      const response = await fetch(
+        `https://i13a609.p.ssafy.io/test/api/makers/check-email`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const responseText = await response.text();
+      console.log(`이메일 중복 검사 응답:`, responseText);
+
+      let responseData: DuplicateCheckResponse;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        throw new Error(`서버 응답 파싱 실패: ${responseText}`);
+      }
+
+      if (response.status === 409) return true; // 중복
+      if (!response.ok) throw responseData;
+
+      return responseData.data; // true면 중복
+    } catch (error) {
+      console.error(`이메일 중복 검사 오류:`, error);
+      throw error;
+    }
+  };
+
+  // 이메일 중복확인 핸들러
+  const handleEmailDuplicateCheck = async () => {
+    if (!formData.email.trim()) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "이메일을 입력해주세요.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      return;
+    }
+
+    if (!emailRegex.test(formData.email)) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "올바른 이메일 형식이 아닙니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      return;
+    }
+
+    try {
+      setDuplicateCheckStates((prev) => ({ ...prev, email: "checking" }));
+      const isDuplicate = await checkEmailDuplicate(formData.email);
+
+      if (isDuplicate) {
+        setDuplicateCheckStates((prev) => ({ ...prev, email: "duplicate" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "이미 사용중인 이메일입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "error" }));
+      } else {
+        setDuplicateCheckStates((prev) => ({ ...prev, email: "success" }));
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "사용 가능한 이메일입니다.",
+        }));
+        setValidationTypes((prev) => ({ ...prev, email: "success" }));
+      }
+    } catch {
+      setDuplicateCheckStates((prev) => ({ ...prev, email: "none" }));
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "이메일 중복 검사에 실패했습니다.",
+      }));
+      setValidationTypes((prev) => ({ ...prev, email: "error" }));
+    }
+  };
+
   // Step titles & buttons
   const getCurrentTitle = () => {
     if (currentStep === 1) return "기본 정보 입력";
@@ -115,40 +336,41 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const getButtonText = () =>
     currentStep < totalSteps ? "다음 단계" : "가입하기";
 
-  // Form validation
   const validateStep1 = () => {
-    // if (
-    //   !formData.email ||
-    //   !formData.password ||
-    //   !formData.passwordConfirm ||
-    //   !formData.storeName ||
-    //   !formData.storeLocation
-    // ) {
-    //   Alert.alert("알림", "모든 필드를 입력해주세요.");
-    //   return false;
-    // }
-    // if (formData.password !== formData.passwordConfirm) {
-    //   Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
-    //   return false;
-    // }
+    if (
+      !formData.email.trim() ||
+      !formData.password.trim() ||
+      !formData.passwordConfirm.trim() ||
+      !formData.storeName.trim() ||
+      !formData.storeLocation.trim()
+    ) {
+      // 빈 값 체크
+      Alert.alert("알림", "모든 필드를 입력해주세요.");
+      return false;
+    }
+    // 프론트 유효성 검사
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert("알림", "올바른 이메일 형식이 아닙니다.");
+      return false;
+    }
+    if (formData.password.length < 8) {
+      Alert.alert("알림", "비밀번호는 8자 이상이어야 합니다.");
+      return false;
+    }
+    if (formData.password !== formData.passwordConfirm) {
+      Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+    // 중복검사 확인
+    if (duplicateCheckStates.email !== "success") {
+      Alert.alert("알림", "이메일 중복 검사를 완료해주세요.");
+      return false;
+    }
     return true;
   };
 
-  const validateStep2 = () => {
-    // if (!businessLicenseUri) {
-    //   Alert.alert("알림", "사업자 등록증을 업로드해주세요.");
-    //   return false;
-    // }
-    return true;
-  };
-
-  const validateStep3 = () => {
-    // if (menuItems.length === 0) {
-    //   Alert.alert("알림", "최소 1개 이상의 메뉴를 등록해주세요.");
-    //   return false;
-    // }
-    return true;
-  };
+  const validateStep2 = () => true;
+  const validateStep3 = () => true;
 
   // Navigation
   const handleSubmit = () => {
@@ -202,16 +424,14 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
   const handleModalClose = () => {
     setModalVisible(false);
-    // 회원가입 완료 후 로그인 화면으로 이동하거나 다른 적절한 화면으로 이동
-    navigation.navigate("Login"); // 또는 적절한 화면으로
+    navigation.navigate("Login");
   };
 
-  // Form data update
+  // (다른 단계에서 쓸 수 있으니 남겨둠)
   const updateFormData = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 키보드 닫기 함수
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
@@ -250,21 +470,12 @@ export default function MakerRegisterScreen({ navigation }: Props) {
         `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             requests: [
               {
-                image: {
-                  content: base64Image,
-                },
-                features: [
-                  {
-                    type: "TEXT_DETECTION",
-                    maxResults: 10,
-                  },
-                ],
+                image: { content: base64Image },
+                features: [{ type: "TEXT_DETECTION", maxResults: 10 }],
               },
             ],
           }),
@@ -305,12 +516,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
           version: "V2",
           requestId: "menu-ocr-" + Date.now(),
           timestamp: Date.now(),
-          images: [
-            {
-              format: "jpg",
-              name: "menu",
-            },
-          ],
+          images: [{ format: "jpg", name: "menu" }],
         })
       );
 
@@ -359,7 +565,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
           const menuName = parts[1].trim();
           const price = parts[2].trim();
 
-          // 메뉴명이 너무 짧거나 의미없는 텍스트 제외
           if (menuName.length >= 2 && !menuName.match(/^[0-9\s]+$/)) {
             menuItems.push({
               id: Date.now().toString() + "_" + index,
@@ -379,7 +584,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
         const currentLine = lines[i].trim();
         const nextLine = lines[i + 1].trim();
 
-        // 현재 라인이 메뉴명, 다음 라인이 가격인 경우
         if (
           currentLine.length >= 2 &&
           !currentLine.match(/^[0-9\s,원]+$/) &&
@@ -468,14 +672,12 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   // 메뉴 이미지 OCR 처리
   const processMenuImage = async (imageUri: string) => {
     try {
-      // OCR API 선택 (우선순위: Google Vision > Naver Clova)
       let extractedMenuItems: MenuItemType[] = [];
 
       if (
         GOOGLE_VISION_API_KEY &&
         GOOGLE_VISION_API_KEY !== API_KEYS.GOOGLE_VISION
       ) {
-        // Google Vision API 사용
         const base64Image = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -484,10 +686,8 @@ export default function MakerRegisterScreen({ navigation }: Props) {
         NAVER_CLOVA_API_KEY &&
         NAVER_CLOVA_API_KEY !== "YOUR_NAVER_CLOVA_API_KEY"
       ) {
-        // 네이버 클로바 OCR 사용
         extractedMenuItems = await processWithNaverClova(imageUri);
       } else {
-        // API 키가 설정되지 않은 경우, 테스트용 더미 데이터
         console.warn(
           "OCR API 키가 설정되지 않았습니다. 테스트용 더미 데이터를 사용합니다."
         );
@@ -606,12 +806,19 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             <InputGroup
               {...fieldProps}
               value={formData[key as keyof typeof formData]}
-              onChangeText={(text: string) => updateFormData(key, text)}
+              userRole="maker"
+              onChangeText={
+                (text: string) => handleInputChange(key as keyof FormData, text) // ✅ 실시간 검증 사용
+              }
               style={{
                 height: btnHeight,
                 paddingHorizontal: width * 0.04,
                 marginBottom: height * 0.015,
               }}
+              validation={validationErrors[key as keyof ValidationErrors] || ""}
+              validationType={
+                validationTypes[key as keyof ValidationTypes] || "none"
+              }
               onFocus={() => {
                 // 입력 필드가 포커스될 때 해당 필드로 스크롤
                 setTimeout(() => {
@@ -621,12 +828,18 @@ export default function MakerRegisterScreen({ navigation }: Props) {
                   });
                 }, 300);
               }}
+              {...(key === "email" && {
+                showDuplicateCheck: true,
+                duplicateCheckDisabled:
+                  duplicateCheckStates.email === "success",
+                duplicateCheckLoading:
+                  duplicateCheckStates.email === "checking",
+                onDuplicateCheck: handleEmailDuplicateCheck,
+              })}
             />
           </View>
         );
       })}
-      {/* Step 1에 추가 여백 제공 */}
-      {/* <View style={{ height: height * 0.3 }} /> */}
     </View>
   );
 
@@ -1108,18 +1321,32 @@ export default function MakerRegisterScreen({ navigation }: Props) {
 
   const renderButtons = () =>
     currentStep === 1 ? (
-      <TouchableOpacity
-        style={[
-          styles.submitButton,
-          styles.fullWidthButton,
-          { backgroundColor: secondaryColor, height: btnHeight },
-        ]}
-        onPress={handleSubmit}
-      >
-        <Text style={[styles.submitButtonText, { fontSize: width * 0.04 }]}>
-          {getButtonText()}
-        </Text>
-      </TouchableOpacity>
+      (() => {
+        const step1Ready = isStep1NextEnabled();
+        return (
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              styles.fullWidthButton,
+              {
+                backgroundColor: step1Ready ? secondaryColor : "#ccc",
+                height: btnHeight,
+              },
+            ]}
+            onPress={handleSubmit}
+            disabled={!step1Ready}
+          >
+            <Text
+              style={[
+                styles.submitButtonText,
+                { fontSize: width * 0.04, color: step1Ready ? "#fff" : "#999" },
+              ]}
+            >
+              {getButtonText()}
+            </Text>
+          </TouchableOpacity>
+        );
+      })()
     ) : (
       <>
         <TouchableOpacity

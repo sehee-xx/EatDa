@@ -623,6 +623,7 @@ export default function EaterRegisterScreen(props?: Props) {
                   duplicateCheckStates.nickname === "checking"
                 }
                 onDuplicateCheck={handleNicknameDuplicateCheck}
+                userRole="eater"
                 style={{
                   height: btnHeight,
                   paddingHorizontal: width * 0.04,
@@ -646,6 +647,7 @@ export default function EaterRegisterScreen(props?: Props) {
                   duplicateCheckStates.email === "checking"
                 }
                 onDuplicateCheck={handleEmailDuplicateCheck}
+                userRole="eater"
                 style={{
                   height: btnHeight,
                   paddingHorizontal: width * 0.04,
@@ -670,6 +672,7 @@ export default function EaterRegisterScreen(props?: Props) {
                   validationType={
                     validationTypes[field.key as keyof ValidationTypes]
                   }
+                  userRole="eater"
                   style={{
                     height: btnHeight,
                     paddingHorizontal: width * 0.04,
