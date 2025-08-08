@@ -10,6 +10,7 @@ services:
       - /srv/nginx/front:/srv/nginx/front
       - /srv/certbot/conf:/etc/letsencrypt
       - /srv/certbot/www:/var/www/certbot
+      - /home/ubuntu/eatda:/home/ubuntu/eatda:ro
     restart: always
     networks:
       - backend
