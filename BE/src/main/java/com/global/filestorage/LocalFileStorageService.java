@@ -102,26 +102,13 @@ public class LocalFileStorageService implements FileStorageService {
      * @param relativePath 루트 기준 상대 경로
      * @return 저장된 파일의 전체 경로
      */
-    private String storeOptimizedImage(final InputStream inputStream, final String mimeType,
-                                       final String imageRoot, final String relativePath) throws IOException {
+    private String storeOptimizedImage(final InputStream inputStream, final String mimeType, final String imageRoot,
+                                       final String relativePath) throws IOException {
         String extension = resolveExtensionFromMimeType(mimeType);
 
-        Path root = Paths.get(imageRoot).toAbsolutePath().normalize();
-        Path fullPath = root.resolve(sanitize(relativePath))  // 아래 sanitize 참고
-                .resolve(UUID.randomUUID().toString().replace(HYPHEN, EMPTY) + extension)
-                .normalize();
+        Path fullPath = generateFullPath(imageRoot, relativePath, extension);
 
-        // 방어: 루트 밖으로 나가지 못하게
-        if (!fullPath.startsWith(root)) {
-            throw new SecurityException("Invalid path: " + fullPath);
-        }
-
-        System.out.printf("[FileStorage] root=%s, rel=%s, FULL=%s, user.home=%s, active=%s%n",
-                root, relativePath, fullPath,
-                System.getProperty("user.home"),
-                System.getProperty("spring.profiles.active"));
-
-        Files.createDirectories(fullPath.getParent());
+        // 스트림을 디스크에 저장
         Files.copy(inputStream, fullPath);
         return fullPath.toString();
     }
