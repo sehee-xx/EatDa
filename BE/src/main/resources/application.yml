@@ -21,5 +21,4 @@ management: # Spring-Actuator 설정
         enabled: true   # prometheus 엔드포인트 활성화 여부 *default = true
 
 filestorage: # 파일 저장소 설정
-  base-dir: ${user.home}/eatda
-  env: ${spring.profiles.active} # local, test, prod
+  base-dir: ${user.home}/eatda/${spring.profiles.active} # local, test, prod
