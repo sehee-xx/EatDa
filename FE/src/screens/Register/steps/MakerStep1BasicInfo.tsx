@@ -1,9 +1,9 @@
-// src/screens/Register/steps/MakerStep1BasicInfo.tsx
 import React from "react";
 import { View, Text, StyleSheet, useWindowDimensions } from "react-native";
 import InputGroup from "../../../components/InputGroup";
 import { COLORS } from "../../../constants/theme";
 
+// 타입은 type-only import 권장
 import type {
   MakerFormData,
   ValidationErrors,

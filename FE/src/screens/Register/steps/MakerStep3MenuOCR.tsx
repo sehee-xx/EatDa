@@ -1,4 +1,3 @@
-// src/screens/Register/steps/MakerStep3MenuOCR.tsx
 import React from "react";
 import {
   View,

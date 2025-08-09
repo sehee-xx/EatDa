@@ -1,4 +1,3 @@
-// src/screens/Register/steps/MakerStep4Agreements.tsx
 import React from "react";
 import {
   View,

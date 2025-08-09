@@ -51,6 +51,13 @@ import {
 
 type Props = NativeStackScreenProps<AuthStackParamList, "MakerRegisterScreen">;
 
+// FastAPI 응답을 로컬 타입으로 넉넉히 받아서 storeId까지 안전하게 접근
+type OCRResult = {
+  status: "PENDING" | "SUCCESS" | "FAILED";
+  extractedMenus?: Array<{ name: string; price: number | null }>;
+  storeId?: number;
+};
+
 export default function MakerRegisterScreen({ navigation }: Props) {
   const { width, height } = useWindowDimensions();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -250,20 +257,14 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
 
   // Step2: 사업자등록증 업로드해야 다음 단계 가능
-  const isStep2NextEnabled = () => {
-    return !!businessLicenseUri;
-  };
+  const isStep2NextEnabled = () => !!businessLicenseUri;
 
-  // Step3: 메뉴 OCR로 최소 1개 이상 메뉴가 생겨야 다음 단계 가능
-  // 폴링 중에는 다음 단계 비활성화
-  const isStep3NextEnabled = () => {
-    return menuItems.length > 0 && !isPolling;
-  };
+  // Step3: 메뉴 OCR로 최소 1개 이상 메뉴가 생겨야 다음 단계 가능 (폴링 중 비활)
+  const isStep3NextEnabled = () => menuItems.length > 0 && !isPolling;
 
   // Step4: 약관 2개 모두 체크해야 가입하기 버튼 활성화
-  const isStep4NextEnabled = () => {
-    return agreementsState.terms && agreementsState.marketing;
-  };
+  const isStep4NextEnabled = () =>
+    agreementsState.terms && agreementsState.marketing;
 
   /** 이메일 중복검사 */
   const checkEmailDuplicate = async (email: string): Promise<boolean> => {
@@ -359,7 +360,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     }
   };
 
-  /** ====== Step3: OCR (FastAPI 호출) ====== */
+  /** ====== Step3: OCR (FastAPI 호출; 로그인 불필요) ====== */
   const handleMenuScan = async () => {
     setIsScanning(true);
     try {
@@ -429,7 +430,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     const poll = async (): Promise<void> => {
       try {
         attempts++;
-        const result = await getOCRResult(assetId);
+        const result = (await getOCRResult(assetId)) as OCRResult;
 
         if (result.status === "SUCCESS") {
           const extracted = result.extractedMenus || [];
@@ -449,7 +450,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             setSignupState((prev) => ({
               ...prev,
               assetId,
-              storeId: result.storeId ?? prev.storeId,
+              storeId: result.storeId ?? prev.storeId, // ⬅️ FastAPI 결과에서 storeId 보관
               step3Complete: true,
             }));
 
@@ -753,17 +754,12 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     // 현재 단계에 따른 준비 여부 계산
     let isReady = true;
 
-    if (currentStep === 1) {
-      isReady = isStep1NextEnabled();
-    } else if (currentStep === 2) {
-      isReady = isStep2NextEnabled();
-    } else if (currentStep === 3) {
-      isReady = isStep3NextEnabled();
-    } else if (currentStep === 4) {
-      isReady = isStep4NextEnabled();
-    }
+    if (currentStep === 1) isReady = isStep1NextEnabled();
+    else if (currentStep === 2) isReady = isStep2NextEnabled();
+    else if (currentStep === 3) isReady = isStep3NextEnabled();
+    else if (currentStep === 4) isReady = isStep4NextEnabled();
 
-    // 3단계에서 OCR 폴링 중에는 '이전 단계'도 눌러서 빠지는 걸 막고 싶다면 true 유지
+    // 3단계 폴링 중에는 이전 단계 이동 제한
     const isPrevDisabled = currentStep === 3 && isPolling;
 
     if (currentStep === 1) {
@@ -827,6 +823,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       </>
     );
   };
+
   return (
     <View style={styles.container}>
       <ImageBackground

@@ -1,4 +1,3 @@
-// src/screens/Register/steps/MakerStep2BusinessLicense.tsx
 import React from "react";
 import {
   View,

@@ -1,4 +1,3 @@
-// src/screens/Register/services/geocoding.ts
 import { API_KEYS } from "../../../../config/apiKeys";
 
 export interface GeocodingResult {
@@ -24,8 +23,6 @@ export const getCoordinatesFromAddress = async (
       console.warn(
         "Google Maps API 키가 설정되지 않았습니다. 더미 데이터 반환"
       );
-
-      // 더미 데이터 반환 (테스트용)
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return {
         latitude: 37.5666805 + (Math.random() - 0.5) * 0.01,
@@ -80,8 +77,6 @@ export const getCoordinatesFromAddressNaver = async (
       NAVER_CLIENT_SECRET === "YOUR_NAVER_CLIENT_SECRET"
     ) {
       console.warn("Naver API 키가 설정되지 않았습니다. 더미 데이터 반환");
-
-      // 더미 데이터 반환 (테스트용)
       await new Promise((resolve) => setTimeout(resolve, 1200));
       return {
         latitude: 37.498095 + (Math.random() - 0.5) * 0.01,
