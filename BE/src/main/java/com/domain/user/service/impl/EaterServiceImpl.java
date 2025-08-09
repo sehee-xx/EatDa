@@ -67,7 +67,7 @@ public class EaterServiceImpl implements EaterService {
     // @formatter:on
     private void validateSignUpRequest(final EaterSignUpRequest request) {
         UserValidator.validateEmail(request.email());
-        UserValidator.validatePassword(request.password(), request.passwordConfirm());
+        UserValidator.validateConfirmPassword(request.password(), request.passwordConfirm());
         UserValidator.validateNickname(request.nickname());
 
         validateDuplicateEmail(request.email());

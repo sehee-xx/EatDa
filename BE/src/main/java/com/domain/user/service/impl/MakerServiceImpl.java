@@ -88,7 +88,7 @@ public class MakerServiceImpl implements MakerService {
                                        final MultipartFile licenseImageRequest,
                                        final List<MultipartFile> imageRequests) {
         UserValidator.validateEmail(request.email());
-        UserValidator.validatePassword(request.password(), request.passwordConfirm());
+        UserValidator.validateConfirmPassword(request.password(), request.passwordConfirm());
 
         UserValidator.validateLicenseImage(licenseImageRequest);
         validateDuplicateEmail(request.email());
