@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+
 @Configuration
 @ConfigurationProperties(prefix = "filestorage")
 @Getter
@@ -16,7 +17,7 @@ public class FileStorageProperties {
     private static final String IMAGES_PATH = "images";
     private static final String VIDEOS_PATH = "videos";
 
-    private String baseDir; // 예: ~/eatda/test
+    private String baseDir;
 
     public String getImageRoot() {
         return Paths.get(baseDir, DATA_PATH, IMAGES_PATH)
