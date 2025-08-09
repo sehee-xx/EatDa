@@ -1,10 +1,11 @@
-package com.global.exception;
+package com.a609.eatda.global.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.global.constants.ErrorCode;
 import com.global.dto.response.BaseResponse;
 import com.global.dto.response.ErrorResponse;
+import com.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
