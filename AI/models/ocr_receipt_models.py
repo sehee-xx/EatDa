@@ -11,7 +11,7 @@ OCR 영수증 인증 요청 모델 (Redis Stream 용)
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Literal
+from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -44,8 +44,22 @@ class OCRReceiptVerificationMessage(BaseModel):
         # 모든 값을 str로 캐스팅 (Redis 필드는 바이트/문자열이어야 함)
         return {k: str(v) for k, v in data.items()}
 
+# Spring 콜백으로 전송할 모델 (POST /api/reviews/ocr-verification/callback)
+class OCRReceiptCallbackRequest(BaseModel):
+    """
+    - result: SUCCESS | FAIL
+    - extractedAddress: null 허용 (실패시)
+    """
+
+    sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
+    result: Literal["SUCCESS", "FAIL"] = Field(..., description="생성 결과")
+    extractedAddress: Optional[str] = Field(
+        None, description="OCR로 추출된 주소 문자열 (실패시 null)"
+    )
+
 
 __all__ = [
     "STREAM_KEY_OCR_RECEIPT_REQUEST",
     "OCRReceiptVerificationMessage",
+    "OCRReceiptCallbackRequest",
 ]
