@@ -4,6 +4,7 @@ import com.domain.review.entity.ReviewScrap;
 import com.domain.store.entity.Store;
 import com.domain.user.constants.Provider;
 import com.domain.user.constants.Role;
+import com.global.annotation.Sensitive;
 import com.global.entity.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -39,6 +40,7 @@ public class User extends BaseEntity {
 
     @NotNull
     @Column(length = 255)
+    @Sensitive
     private String password;
 
     @NotNull

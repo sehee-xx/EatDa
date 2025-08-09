@@ -1,5 +1,6 @@
 package com.domain.user.dto.request;
 
+import com.global.annotation.Sensitive;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,11 +15,13 @@ public record MakerSignUpBaseRequest(
 
         @NotBlank(message = "PASSWORD_REQUIRED")
         @Size(min = 8, message = "PASSWORD_TOO_SHORT")
+        @Sensitive
         @Schema(description = "비밀번호", example = "Abcdefg1!")
         String password,
 
         @NotBlank(message = "PASSWORD_CONFIRM_REQUIRED")
         @Schema(description = "비밀번호 확인", example = "Abcdefg1!")
+        @Sensitive
         String passwordConfirm,
 
         @NotBlank(message = "STORE_NAME_REQUIRED")
