@@ -5,7 +5,7 @@
 
 import time
 from fastapi import APIRouter, HTTPException
-from models.shorts_ray2_models import GenerateRequest, CallbackRequest, SpringResponse
+from models.shorts_models import GenerateRequest, CallbackRequest, SpringResponse
 from services import luma_service, gpt_service, callback_service
 from utils.logger import default_logger as logger
 
@@ -43,8 +43,19 @@ async def generate_video(request: GenerateRequest):
         logger.info("STEP2: after GPT")
         # print(f"Enhanced prompt: {detailed_prompt}")
         
-        # 2단계: Luma AI로 영상 생성 요청
-        generation_result = await luma_service.generate_video(detailed_prompt, request.referenceImages)
+        # 2단계: Luma AI로 영상 생성 요청 (type에 따라 모델 분기)
+        # type 규칙 예시
+        #  - SHORTS_RAY2  -> Luma ray-2
+        #  - SHORTS_GEN_4 -> (미구현: 추후 Runway 등)
+        #  - IMAGE        -> (미구현: 추후 이미지 생성 모델)
+        model_name = "ray-2" if request.type.upper() == "SHORTS_RAY2" else "ray-2"
+        # TODO: 향후 다른 type 추가 시 위 분기 확장
+
+        generation_result = await luma_service.generate_video(
+            detailed_prompt,
+            request.referenceImages,
+            model_name=model_name,
+        )
         logger.info(f"STEP3: after Luma create id={generation_result['id']}")
 
         # 메모리 기록
