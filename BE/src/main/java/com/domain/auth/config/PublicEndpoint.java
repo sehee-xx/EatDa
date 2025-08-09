@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum PublicEndpoint {
 
+    // H2
+    H2_CONSOLE("/h2-console/**"),
+
     // SWAGGER
     SWAGGER_UI("/swagger-ui/**"),
     SWAGGER_DOCS("/v3/api-docs/**"),
