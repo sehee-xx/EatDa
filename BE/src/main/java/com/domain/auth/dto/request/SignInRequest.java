@@ -21,11 +21,4 @@ public record SignInRequest(
         @Schema(description = "역할", example = "EATER")
         Role role
 ) {
-    public boolean isEater() {
-        return Role.EATER.equals(this.role);
-    }
-
-    public boolean isMaker() {
-        return Role.MAKER.equals(this.role);
-    }
 }
