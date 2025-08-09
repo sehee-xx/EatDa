@@ -29,7 +29,6 @@ class LocalFileStorageServiceTest {
     void setUp() {
         FileStorageProperties props = new FileStorageProperties();
         props.setBaseDir("build");      // 테스트용 베이스 디렉토리
-        props.setEnv("test-images");    // 테스트 환경 이름 (디렉토리 분기용)
 
         service = new LocalFileStorageService(props);
     }
