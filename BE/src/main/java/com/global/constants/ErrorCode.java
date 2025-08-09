@@ -72,7 +72,7 @@ public enum ErrorCode {
 
     // 이벤트 관련
     INVALID_EVENT_DATE_RANGE("INVALID_EVENT_DATE_RANGE", "시작일은 종료일보다 이전이어야 합니다.", HttpStatus.BAD_REQUEST.value()),
-    REQUIRED_EVENT_FIELDS_MISSING("REQUIRED_EVENT_FIELDS_MISSING", "assetId, type, storeId, userId, title, startDate, endDate는 필수입니다.", HttpStatus.BAD_REQUEST.value()),
+    REQUIRED_EVENT_FIELDS_MISSING("REQUIRED_EVENT_FIELDS_MISSING", "assetId, type, prompt, storeId, userId, title, startDate, endDate는 필수입니다.", HttpStatus.BAD_REQUEST.value()),
 
     // 비즈니스 로직 관련
     DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "이미 존재하는 리소스입니다.", HttpStatus.CONFLICT.value()),
