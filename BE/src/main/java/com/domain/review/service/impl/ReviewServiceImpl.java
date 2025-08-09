@@ -58,6 +58,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
 
+    private static final String IMAGE_BASE_PATH = "reviews/";
+
     // === Repository 및 의존성 주입 ===
     private final ReviewRepository reviewRepository;
     private final ReviewAssetRepository reviewAssetRepository;
@@ -93,7 +95,8 @@ public class ReviewServiceImpl implements ReviewService {
         // 타입에 따라 WebP 변환 여부 결정
         boolean convertToWebp = shouldConvertToWebp(request.type());
         // 변환 여부를 넘겨서 업로드
-        List<String> uploadedImageUrls = uploadImages(request.image(), convertToWebp);
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + user.getEmail(),
+                convertToWebp);
 
         publishReviewAssetMessage(reviewAsset, request, store, uploadedImageUrls); // Redis 메시지 발행
 
@@ -520,11 +523,12 @@ public class ReviewServiceImpl implements ReviewService {
     /**
      * 이미지 파일들을 로컬에 업로드하고 URL 반환
      */
-    private List<String> uploadImages(final List<MultipartFile> images, final boolean convertToWebp) {
+    private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
+                                      final boolean convertToWebp) {
         return images.stream()
                 .map(file -> fileStorageService.storeImage(
                         file,
-                        "reviews",
+                        relativeBase,
                         file.getOriginalFilename(),
                         convertToWebp
                 ))
