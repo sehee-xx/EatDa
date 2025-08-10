@@ -1,7 +1,7 @@
 from pydantic import BaseModel, HttpUrl, Field
 from datetime import datetime
 from typing import List, Optional, Annotated
-import re
+
 
 # RN to FastAPI model
 class OCRMenuRequest(BaseModel):
@@ -14,20 +14,24 @@ class OCRMenuRequest(BaseModel):
     expireAt: datetime = Field(..., description="만료 시각 (ISO8601)")
     retryCount: int = Field(default=0, description="재시도 횟수 (기본 0)")
 
+
 class ClovaImageSpec(BaseModel):
     format: str = Field(..., description="jpg/png 등")
-    name:   str = Field(..., description="이미지 식별 이름")
+    name: str = Field(..., description="이미지 식별 이름")
+
 
 # FastAPI to OCR API model
 class ClovaOCRRequest(BaseModel):
-    images:    List[ClovaImageSpec]
+    images: List[ClovaImageSpec]
     requestId: str
-    version:   str
+    version: str
     timestamp: int
+
 
 class ExtractedMenu(BaseModel):
     name: str = Field(..., description="메뉴 이름")
     price: Optional[int] = Field(None, description="메뉴 가격 (null 허용)")
+
 
 # FastAPI to RN model
 class OCRMenuRespond(BaseModel):
@@ -35,7 +39,8 @@ class OCRMenuRespond(BaseModel):
     result: Annotated[str, Field(pattern="^(SUCCESS|FAIL)$", description="생성 결과 (SUCCESS 또는 FAIL)")]
     extractedMenus: List[ExtractedMenu] = Field(..., description="추출된 메뉴 항목 목록")
 
-# OCR 콜백 요청 모델 (FastAPI → Spring 서버) - 수정 필요
+
+# OCR 콜백 요청 모델 (FastAPI → Spring 서버)
 class OCRCallbackRequest(BaseModel):
     sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
     result: Annotated[str, Field(pattern="^(SUCCESS|FAIL)$", description="OCR 처리 결과")]
