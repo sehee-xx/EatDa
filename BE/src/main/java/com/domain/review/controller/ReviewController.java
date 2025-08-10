@@ -15,6 +15,7 @@ import com.domain.review.dto.response.ReviewScrapResult;
 import com.domain.review.service.ReviewScrapService;
 import com.domain.review.service.ReviewService;
 import com.domain.review.validator.SeoulLocation;
+import com.global.annotation.ExcludeFromLogging;
 import com.global.config.swagger.annotation.ApiInternalServerError;
 import com.global.config.swagger.annotation.ApiUnauthorizedError;
 import com.global.constants.ErrorCode;
@@ -180,7 +181,8 @@ public class ReviewController {
     @ApiUnauthorizedError
     @ApiInternalServerError
     @GetMapping("/assets/{reviewAssetId}/result")
-    public ResponseEntity<BaseResponse> getReviewAssetResult(@PathVariable final Long reviewAssetId) {
+    public ResponseEntity<BaseResponse> getReviewAssetResult(
+            @PathVariable @ExcludeFromLogging final Long reviewAssetId) {
         ReviewAssetResultResponse response = reviewService.getReviewAssetResult(reviewAssetId);
         return ApiResponseFactory.success(SuccessCode.REVIEW_ASSET_GENERATION_SUCCESS, response);
     }

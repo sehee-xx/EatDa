@@ -28,7 +28,11 @@ public enum PublicEndpoint {
     // AUTH
     AUTH_SIGNIN("/api/auth/sign-in"),
     AUTH_SIGNOUT("/api/auth/sign-out"),
-    AUTH_TOKEN("/api/auth/token");
+    AUTH_TOKEN("/api/auth/token"),
+
+    // REVIEW
+    REVIEW_ASSET_CALLBACK("/api/reviews/assets/callback"),
+    REVIEW_ASSET_POLLING("/api/reviews/asset/*/result");
 
     private final String path;
 
