@@ -29,7 +29,7 @@ class OCRReceiptService:
         # Spring 콜백 URL (영수증 검증)
         self.callback_url = os.getenv(
             "SPRING_OCR_RECEIPT_CALLBACK_URL",
-            "http://localhost:8000/api/reviews/ocr-verification/callback",
+            "https://i13a609.p.ssafy.io/ai/api/reviews/ocr-verification/callback",
         )
 
     def is_available(self) -> bool:
