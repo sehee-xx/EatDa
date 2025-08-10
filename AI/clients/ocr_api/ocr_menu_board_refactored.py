@@ -6,8 +6,8 @@ menuboard_ocr_models.py의 모델을 사용하도록 수정된 버전
 import json
 from dotenv import load_dotenv
 import os
-from services.ocr_menuboard_service import ocr_menuboard_service
-from models.ocr_menuboard_models import OCRMenuRespond, ExtractedMenu
+from services.menuboard_ocr_service import menuboard_ocr_service
+from models.menuboard_ocr_models import OCRMenuRespond, ExtractedMenu
 import asyncio
 
 # 환경 변수 로드
@@ -29,7 +29,7 @@ async def process_menu_board_with_models():
             image_data = img_file.read()
         
         # 2) OCR 서비스를 통해 메뉴 추출
-        extracted_menus = await ocr_menuboard_service.extract_menus_from_image(
+        extracted_menus = await menuboard_ocr_service.extract_menus_from_image(
             image_data, "jpg"
         )
         
