@@ -354,6 +354,9 @@ public class ReviewController {
      * @param eaterEmail 현재 로그인한 사용자 이메일 (필수)
      * @return 스크랩 결과 (스크랩 여부, 현재 스크랩 수)
      */
+    @ApiUnauthorizedError
+    @ApiInternalServerError
+    @PreAuthorize("hasAuthority('EATER')")
     @PostMapping("/{reviewId}/scrap/toggle")
     public ResponseEntity<BaseResponse> toggleReviewScrap(
             @PathVariable
