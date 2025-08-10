@@ -36,6 +36,7 @@ import com.domain.store.entity.Store;
 import com.domain.store.repository.StoreRepository;
 import com.domain.user.entity.User;
 import com.domain.user.repository.EaterRepository;
+import com.domain.user.repository.MakerRepository;
 import com.global.constants.ErrorCode;
 import com.global.constants.Status;
 import com.global.exception.ApiException;
@@ -64,13 +65,14 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final ReviewAssetRepository reviewAssetRepository;
     private final ReviewMenuRepository reviewMenuRepository;
+    private final EaterRepository eaterRepository;
+    private final MakerRepository makerRepository;
     private final MenuRepository menuRepository;
     private final StoreRepository storeRepository;
     private final ReviewMapper reviewMapper;
     private final ReviewAssetRedisPublisher reviewAssetRedisPublisher;
     private final FileStorageService fileStorageService;
     private final PoiStoreDistanceService poiStoreDistanceService;
-    private final EaterRepository eaterRepository;
 
     // @formatter:off
     /**
@@ -82,20 +84,20 @@ public class ReviewServiceImpl implements ReviewService {
     // @formatter:on
     @Override
     @Transactional
-    public ReviewAssetRequestResponse requestReviewAsset(final ReviewAssetCreateRequest request, final Long userId) {
+    public ReviewAssetRequestResponse requestReviewAsset(final ReviewAssetCreateRequest request,
+                                                         final String eaterEmail) {
+        User eater = findEaterByEmail(eaterEmail);
         Store store = storeRepository.findById(request.storeId())
                 .orElseThrow(() -> new ApiException(STORE_NOT_FOUND));
-        User user = eaterRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(FORBIDDEN));
         ReviewValidator.validateCreateRequest(request);
 
-        Review review = createPendingReview(store, user);
+        Review review = createPendingReview(store, eater);
         ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
 
         // 타입에 따라 WebP 변환 여부 결정
         boolean convertToWebp = shouldConvertToWebp(request.type());
         // 변환 여부를 넘겨서 업로드
-        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + user.getEmail(),
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
                 convertToWebp);
 
         publishReviewAssetMessage(reviewAsset, request, store, uploadedImageUrls); // Redis 메시지 발행
@@ -145,20 +147,18 @@ public class ReviewServiceImpl implements ReviewService {
      */
     @Override
     @Transactional
-    public ReviewFinalizeResponse finalizeReview(final ReviewFinalizeRequest request) {
-        // 리뷰 조회 및 상태 검증
+    public ReviewFinalizeResponse finalizeReview(final ReviewFinalizeRequest request, final String eaterEmail) {
+        // 조회
+        User eater = findEaterByEmail(eaterEmail);
         Review review = reviewRepository.findById(request.reviewId())
                 .orElseThrow(() -> new ApiException(ErrorCode.REVIEW_NOT_FOUND, request.reviewId()));
-        if (!review.getStatus().isSuccess()) {
-            throw new ApiException(ErrorCode.REVIEW_NOT_SUCCESS, review.getId());
-        }
-
-        // 에셋 조회 및 상태 검증
         ReviewAsset asset = reviewAssetRepository.findById(request.reviewAssetId())
                 .orElseThrow(() -> new ApiException(ErrorCode.REVIEW_ASSET_NOT_FOUND, request.reviewAssetId()));
-        if (!Objects.equals(asset.getType(), request.type())) {
-            throw new ApiException(ErrorCode.REVIEW_ASSET_TYPE_MISMATCH, asset.getType().name());
-        }
+
+        // 검증
+        ReviewValidator.checkOwner(eater, review);
+        ReviewValidator.checkReviewAssetReady(asset);
+        ReviewValidator.checkAssetMatches(asset, request);
 
         // 도메인 업데이트
         review.updateDescription(request.description());
@@ -174,8 +174,11 @@ public class ReviewServiceImpl implements ReviewService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ReviewFeedResult<ReviewFeedResponse> getReviewFeed(Double latitude, Double longitude,
-                                                              Integer distance, Long lastReviewId) {
+    public ReviewFeedResult<ReviewFeedResponse> getReviewFeed(final Double latitude, final Double longitude,
+                                                              final Integer distance, final Long lastReviewId,
+                                                              final String email) {
+        validatedToken(email);
+
         // 1. 파라미터 검증
         validateLocationParameters(latitude, longitude, distance);
 
@@ -214,7 +217,9 @@ public class ReviewServiceImpl implements ReviewService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ReviewDetailResponse getReviewDetail(Long reviewId, Long currentUserId) {
+    public ReviewDetailResponse getReviewDetail(final Long reviewId, final String email) {
+        validatedToken(email);
+
         // 1. 리뷰 조회 (연관 엔티티 포함)
         Review review = reviewRepository.findByIdWithDetails(reviewId)
                 .orElseThrow(() -> new ApiException(ErrorCode.REVIEW_NOT_FOUND));
@@ -225,8 +230,8 @@ public class ReviewServiceImpl implements ReviewService {
         // 3. 스크랩 정보 계산
         List<ReviewScrap> scraps = review.getScraps();
         int scrapCount = scraps.size();
-        boolean isScrapped = currentUserId != null && scraps.stream()
-                .anyMatch(scrap -> scrap.getUser().getId().equals(currentUserId));
+        boolean isScrapped = scraps.stream()
+                .anyMatch(scrap -> scrap.getUser().getEmail().equals(email));
 
         // 4. 응답 생성
         return buildReviewDetailResponse(review, scrapCount, isScrapped);
@@ -237,10 +242,9 @@ public class ReviewServiceImpl implements ReviewService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ReviewFeedResult<MyReviewResponse> getMyReviews(Long userId, Long lastReviewId, int pageSize) {
-        if (userId == null) {
-            throw new ApiException(ErrorCode.VALIDATION_ERROR);
-        }
+    public ReviewFeedResult<MyReviewResponse> getMyReviews(final Long lastReviewId, final int pageSize,
+                                                           final String eaterEmail) {
+        User eater = findEaterByEmail(eaterEmail);
 
         if (pageSize <= 0 || pageSize > ReviewConstants.MAX_PAGE_SIZE) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
@@ -249,7 +253,7 @@ public class ReviewServiceImpl implements ReviewService {
         try {
             // 요청된 사이즈보다 1개 더 가져와서 hasNext 판단
             Pageable pageable = PageRequest.of(0, pageSize + 1);
-            List<Review> reviews = reviewRepository.findMyReviews(userId, lastReviewId, pageable);
+            List<Review> reviews = reviewRepository.findMyReviews(eater.getId(), lastReviewId, pageable);
 
             // hasNext 판단 및 응답 생성
             boolean hasNext = reviews.size() > pageSize;
@@ -269,17 +273,19 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public void removeReview(Long reviewId, Long currentUserId) {
+    public void removeReview(final Long reviewId, final String eaterEmail) {
         try {
+            User eater = findEaterByEmail(eaterEmail);
+
             Review review = reviewRepository.findById(reviewId)
                     .orElseThrow(() -> new ApiException(ErrorCode.REVIEW_NOT_FOUND));
 
-            if (!review.getUser().getId().equals(currentUserId)) {
+            if (!review.getUser().getId().equals(eater.getId())) {
                 throw new ApiException(FORBIDDEN);
             }
 
             reviewRepository.deleteById(reviewId);
-            log.info("Review ID {} successfully deleted by User ID {}", reviewId, currentUserId);
+            log.info("Review ID {} successfully deleted by User ID {}", reviewId, eater.getId());
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -451,6 +457,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .reviewId(review.getId())
                 .storeName(review.getStore().getName())
                 .description(review.getDescription())
+                .assetUrl(review.getReviewAsset().getAssetUrl())
                 .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
                 .build();
     }
@@ -466,7 +473,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .storeName(review.getStore().getName())
                 .description(review.getDescription())
                 .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
-                .assetUrl(null) // TODO: 에셋 연결 시 수정
+                .assetUrl(review.getReviewAsset().getAssetUrl())
                 .createdAt(review.getCreatedAt())
                 .build();
     }
@@ -478,6 +485,7 @@ public class ReviewServiceImpl implements ReviewService {
                                                            boolean isScrapped) {
         Store store = review.getStore();
         User user = review.getUser();
+        ReviewAsset reviewAsset = review.getReviewAsset();
 
         ReviewDetailResponse.StoreInfo storeInfo = ReviewDetailResponse.StoreInfo.builder()
                 .storeId(store.getId())
@@ -498,6 +506,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .user(userInfo)
                 .description(review.getDescription())
                 .createdAt(review.getCreatedAt())
+                .asset(ReviewDetailResponse.AssetInfo.builder()
+                        .type(reviewAsset.getType().name())
+                        .assetUrl(reviewAsset.getAssetUrl())
+                        .build())
                 .scrapCount(scrapCount)
                 .isScrapped(isScrapped)
                 .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
@@ -577,5 +589,19 @@ public class ReviewServiceImpl implements ReviewService {
     // IMAGE일 때만 true, SHORTS 계열은 false
     private boolean shouldConvertToWebp(ReviewAssetType type) {
         return type == ReviewAssetType.IMAGE;
+    }
+
+    private void validatedToken(final String email) {
+        boolean isEater = eaterRepository.findByEmailAndDeletedFalse(email).isPresent();
+        boolean isMaker = makerRepository.findByEmailAndDeletedFalse(email).isPresent();
+
+        if (!isEater && !isMaker) {
+            throw new ApiException(FORBIDDEN);
+        }
+    }
+
+    private User findEaterByEmail(final String eaterEmail) {
+        return eaterRepository.findByEmailAndDeletedFalse(eaterEmail)
+                .orElseThrow(() -> new ApiException(FORBIDDEN));
     }
 }
