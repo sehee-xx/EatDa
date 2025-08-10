@@ -70,4 +70,9 @@ public abstract class BaseAssetEntity extends BaseEntity{
             this.updateAssetUrl(assetUrl);
         }
     }
+
+    // 테스트용
+    public void setId(Long id) {
+        this.id = id;
+    }
 }
