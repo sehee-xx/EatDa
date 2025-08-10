@@ -77,8 +77,8 @@ class LumaService:
     async def wait_for_generation_completion(
         self,
         generation_id: str,
-        poll_interval_seconds: float = 2.0,
-        timeout_seconds: float = 120.0,
+        poll_interval_seconds: float = 3.0,
+        timeout_seconds: float = 240.0,
     ) -> Dict[str, Any]:
         """
         생성 완료/실패까지 폴링합니다. 완료되면 가능한 경우 asset URL을 추출해 반환합니다.
