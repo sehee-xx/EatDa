@@ -16,7 +16,7 @@ load_dotenv()
 # FastAPI 애플리케이션 초기화
 app = FastAPI(
     title="AI API",
-    description="AI API 서버 구축 - 테스트 및 쇼츠 생성 ai(luma ai) 연동",
+    description="AI API 서버",
     version="1.0.0"
 )
 
