@@ -10,6 +10,11 @@ spring:
       host: redis
       port: 6379
 
+logging:
+  level:
+    com.global.aop: INFO        # AOP 진입/종료 로그
+    com.global.exception: INFO  # 전역 예외 핸들러
+
 management: # Spring-Actuator 설정
   endpoints:
     web:
