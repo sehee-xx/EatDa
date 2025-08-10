@@ -4,9 +4,12 @@ import com.domain.event.dto.request.EventAssetCreateRequest;
 import com.domain.event.dto.request.EventFinalizeRequest;
 import com.domain.event.dto.response.EventAssetRequestResponse;
 import com.domain.event.dto.response.EventFinalizeResponse;
+import com.domain.event.dto.response.MyEventResponse;
 import com.global.dto.request.AssetCallbackRequest;
 import com.global.dto.response.AssetResultResponse;
 import org.springframework.core.io.Resource;
+
+import java.util.List;
 
 public interface EventService {
 
@@ -15,4 +18,5 @@ public interface EventService {
     AssetResultResponse getEventAssetStatus(final Long assetId, final Long userId);
     EventFinalizeResponse finalizeEvent(final EventFinalizeRequest request);
     Resource downloadEventAsset(final Long assetId, final String makerEmail);
+    List<MyEventResponse> getMyEvents(final Long lastEventId, final String makerEmail);
 }
