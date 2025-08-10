@@ -2,12 +2,13 @@ package com.domain.event.service.impl;
 
 import com.domain.event.dto.redis.EventAssetGenerateMessage;
 import com.domain.event.dto.request.EventAssetCreateRequest;
+import com.domain.event.dto.request.EventFinalizeRequest;
 import com.domain.event.dto.response.EventAssetRequestResponse;
+import com.domain.event.dto.response.EventFinalizeResponse;
 import com.domain.event.entity.Event;
 import com.domain.event.entity.EventAsset;
 import com.domain.event.infrastructure.redis.EventAssetRedisPublisher;
-import com.domain.event.mapper.EventAssetRepository;
-import com.domain.event.mapper.EventMapper;
+import com.domain.event.repository.EventAssetRepository;
 import com.domain.event.repository.EventRepository;
 import com.domain.event.service.EventService;
 import com.domain.store.entity.Store;
@@ -16,6 +17,7 @@ import com.global.constants.AssetType;
 import com.global.constants.ErrorCode;
 import com.global.constants.Status;
 import com.global.dto.request.AssetCallbackRequest;
+import com.global.dto.response.AssetResultResponse;
 import com.global.exception.ApiException;
 import com.global.filestorage.FileStorageService;
 import com.global.redis.constants.RedisStreamKey;
@@ -27,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +38,6 @@ public class EventServiceImpl implements EventService {
     private final StoreRepository storeRepository;
     private final EventRepository eventRepository;
     private final EventAssetRepository eventAssetRepository;
-    private final EventMapper eventMapper;
     private final FileStorageService fileStorageService;
     private final EventAssetRedisPublisher eventAssetRedisPublisher;
 
@@ -68,7 +70,7 @@ public class EventServiceImpl implements EventService {
         );
         eventAssetRedisPublisher.publish(RedisStreamKey.EVENT_ASSET, message);
 
-        return eventMapper.toRequestResponse(eventAsset);
+        return EventAssetRequestResponse.from(eventAsset);
     }
 
     @Override
@@ -82,14 +84,57 @@ public class EventServiceImpl implements EventService {
         asset.processCallback(status, request.assetUrl());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public AssetResultResponse getEventAssetStatus(Long assetId, Long userId) {
+        EventAsset asset = eventAssetRepository.findByIdWithStore(assetId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ASSET_NOT_FOUND, assetId));
+
+        if (!asset.getEvent().getStore().getMaker().getId().equals(userId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+
+        return switch (asset.getStatus()) {
+            case SUCCESS -> new AssetResultResponse(asset.getType(), asset.getAssetUrl());
+            case PENDING -> new AssetResultResponse(asset.getType(), "");
+            case FAIL -> throw new ApiException(ErrorCode.ASSET_URL_REQUIRED, assetId);
+        };
+    }
+
+    @Override
+    @Transactional
+    public EventFinalizeResponse finalizeEvent(final EventFinalizeRequest request) {
+        EventAsset asset = eventAssetRepository.findById(request.eventAssetId())
+                .orElseThrow(() -> new ApiException(ErrorCode.ASSET_NOT_FOUND, request.eventAssetId()));
+
+        if (!asset.getStatus().isSuccess()) {
+            throw new ApiException(ErrorCode.ASSET_NOT_SUCCESS, asset.getId());
+        }
+
+        if (!Objects.equals(request.type(), AssetType.IMAGE)) {
+            throw new ApiException(ErrorCode.ASSET_TYPE_MISMATCH, request.type());
+        }
+
+        Event event = eventRepository.findById(request.eventId())
+                .orElseThrow(() -> new ApiException(ErrorCode.EVENT_NOT_FOUND, request.eventId()));
+
+        if (!event.getStatus().isPending()) {
+            throw new ApiException(ErrorCode.EVENT_NOT_PENDING, event.getId());
+        }
+
+        event.updateDescription(request.description());
+        event.updateStatus(Status.SUCCESS);
+        asset.registerEvent(event);
+
+        return EventFinalizeResponse.from(event);
+    }
 
     private Event createPendingEvent(final Store store, final LocalDate startDate, final LocalDate endDate) {
-        return eventRepository.save(eventMapper.toPendingEvent(store, startDate, endDate));
+        return eventRepository.save(Event.createPending(store, startDate, endDate));
     }
 
     private EventAsset createPendingEventAsset(final Event event, final EventAssetCreateRequest request) {
-        EventAsset asset = eventMapper.toPendingEventAsset(event, AssetType.IMAGE, request);
-        return eventAssetRepository.save(asset);
+        return eventAssetRepository.save(EventAsset.createPending(event, AssetType.IMAGE, request.prompt()));
     }
 
     private List<String> uploadImages(final List<MultipartFile> images) {
