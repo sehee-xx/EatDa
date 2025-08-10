@@ -66,4 +66,9 @@ public class Event extends BaseEntity {
     public void updateDescription(final String description) {
         this.description = description;
     }
+
+    // 테스트용
+    public void setTitle(final String title) {
+        this.title = title;
+    }
 }
