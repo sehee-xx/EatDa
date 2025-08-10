@@ -42,7 +42,7 @@ AI/
 # .env 파일에 다음 내용 추가
 LUMAAI_API_KEY=여기에_실제_Luma_AI_키_입력
 OPENAI_API_KEY=여기에_실제_OpenAI_키_입력
-SPRING_CALLBACK_URL=http://localhost:8000/api/reviews/assets/callback
+SPRING_CALLBACK_URL=https://i13a609.p.ssafy.io/api/reviews/assets/callback
 ```
 
 ### 2. Python 패키지 설치
@@ -180,7 +180,7 @@ Python 3.11.9
 
 RN 플로우 엔드포인트(백그라운드 처리)
 Method: POST
-URL: http://localhost:8000/api/reviews/menu-extraction
+URL: https://i13a609.p.ssafy.io/ai/api/reviews/menu-extraction
 Body: raw(JSON)
 
 {
