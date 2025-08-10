@@ -71,11 +71,16 @@ public enum ErrorCode {
     IMAGE_TOO_LARGE("IMAGE_TOO_LARGE", "이미지 크기는 10MB 이하만 허용됩니다.", HttpStatus.BAD_REQUEST.value()),
 
     // 이벤트 관련
+    EVENT_NOT_FOUND("EVENT_NOT_FOUND", "요청한 이벤트를 찾을 수 없습니다.", HttpStatus.NOT_FOUND.value()),
+    EVENT_NOT_PENDING("EVENT_NOT_PENDING", "해당 이벤트는 보류 상태가 아닙니다.", HttpStatus.BAD_REQUEST.value()),
     INVALID_EVENT_DATE_RANGE("INVALID_EVENT_DATE_RANGE", "시작일은 종료일보다 이전이어야 합니다.", HttpStatus.BAD_REQUEST.value()),
     REQUIRED_EVENT_FIELDS_MISSING("REQUIRED_EVENT_FIELDS_MISSING", "assetId, type, prompt, storeId, userId, title, startDate, endDate는 필수입니다.", HttpStatus.BAD_REQUEST.value()),
 
     // asset 관련
     ASSET_NOT_FOUND("ASSET_NOT_FOUND", "해당 에셋이 존재하지 않습니다.", HttpStatus.NOT_FOUND.value()),
+    ASSET_NOT_SUCCESS("ASSET_NOT_SUCCESS", "해당 에셋은 성공 상태가 아닙니다.", HttpStatus.BAD_REQUEST.value()),
+    ASSET_URL_REQUIRED("ASSET_URL_REQUIRED", "성공 시 에셋 URL은 필수 입력입니다.", HttpStatus.BAD_REQUEST.value()),
+    ASSET_TYPE_MISMATCH("ASSET_TYPE_MISMATCH", "요청한 에셋 타입이 일치하지 않습니다.", HttpStatus.BAD_REQUEST.value()),
 
     // 비즈니스 로직 관련
     DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "이미 존재하는 리소스입니다.", HttpStatus.CONFLICT.value()),
