@@ -485,6 +485,7 @@ public class ReviewServiceImpl implements ReviewService {
                                                            boolean isScrapped) {
         Store store = review.getStore();
         User user = review.getUser();
+        ReviewAsset reviewAsset = review.getReviewAsset();
 
         ReviewDetailResponse.StoreInfo storeInfo = ReviewDetailResponse.StoreInfo.builder()
                 .storeId(store.getId())
@@ -505,6 +506,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .user(userInfo)
                 .description(review.getDescription())
                 .createdAt(review.getCreatedAt())
+                .asset(ReviewDetailResponse.AssetInfo.builder()
+                        .type(reviewAsset.getType().name())
+                        .assetUrl(reviewAsset.getAssetUrl())
+                        .build())
                 .scrapCount(scrapCount)
                 .isScrapped(isScrapped)
                 .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
