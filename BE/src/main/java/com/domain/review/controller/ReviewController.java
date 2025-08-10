@@ -350,8 +350,8 @@ public class ReviewController {
     /**
      * 리뷰 스크랩 토글 (추가/해제)
      *
-     * @param reviewId 스크랩할 리뷰 ID (필수)
-     * @param userId   현재 로그인한 사용자 ID (필수)
+     * @param reviewId   스크랩할 리뷰 ID (필수)
+     * @param eaterEmail 현재 로그인한 사용자 이메일 (필수)
      * @return 스크랩 결과 (스크랩 여부, 현재 스크랩 수)
      */
     @PostMapping("/{reviewId}/scrap/toggle")
@@ -360,20 +360,13 @@ public class ReviewController {
             @NotNull(message = "리뷰 ID는 필수입니다")
             @Positive(message = "리뷰 ID는 양수여야 합니다")
             Long reviewId,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
-            //            @AuthenticationPrincipal Long userId
+            @AuthenticationPrincipal String eaterEmail
     ) {
-        log.info("Scrap toggle request - reviewId: {}, userId: {}", reviewId, userId);
-
-        // 인증 체크
-        if (userId == null) {
-            log.warn("Unauthorized scrap toggle attempt for review: {}", reviewId);
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
-        }
+        log.info("Scrap toggle request - reviewId: {}", reviewId);
 
         try {
             // 서비스 호출
-            ReviewScrapResult result = reviewScrapService.toggleScrap(reviewId, userId);
+            ReviewScrapResult result = reviewScrapService.toggleScrap(reviewId, eaterEmail);
 
             // 응답 메시지 분기
             String message = result.isNewScrap()
@@ -392,8 +385,8 @@ public class ReviewController {
                     responseData
             );
 
-            log.info("Scrap toggle successful - reviewId: {}, userId: {}, isScrapped: {}",
-                    reviewId, userId, result.isNewScrap());
+            log.info("Scrap toggle successful - reviewId: {}, isScrapped: {}",
+                    reviewId, result.isNewScrap());
 
             return ResponseEntity.ok(response);
 
@@ -404,8 +397,8 @@ public class ReviewController {
             throw e;
         } catch (Exception e) {
             // 예상치 못한 예외
-            log.error("Unexpected error during scrap toggle - reviewId: {}, userId: {}",
-                    reviewId, userId, e);
+            log.error("Unexpected error during scrap toggle - reviewId: {}",
+                    reviewId, e);
             throw new ApiException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
