@@ -17,7 +17,8 @@ load_dotenv()
 app = FastAPI(
     title="AI API",
     description="AI API 서버",
-    version="1.0.0"
+    version="1.0.0",
+    root_path="/ai"
 )
 
 # CORS 설정 (프론트엔드에서 접근할 수 있도록) - 개발용(테스트)이라 대부분 허용
