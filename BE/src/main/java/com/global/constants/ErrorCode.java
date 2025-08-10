@@ -86,7 +86,10 @@ public enum ErrorCode {
     DUPLICATE_RESOURCE("DUPLICATE_RESOURCE", "이미 존재하는 리소스입니다.", HttpStatus.CONFLICT.value()),
 
     // 파일 처리 관련
+    FILE_NOT_FOUND("FILE_NOT_FOUND", "해당 파일이 존재하지 않습니다.", HttpStatus.NOT_FOUND.value()),
+    FILE_READ_ERROR("FILE_READ_ERROR", "해당 파일을 읽을 수 없습니다", HttpStatus.INTERNAL_SERVER_ERROR.value()),
     FILE_UPLOAD_ERROR("FILE_UPLOAD_ERROR", "파일 업로드에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()),
+    FILE_DOWNLOAD_ERROR("FILE_DOWNLOAD_ERROR", "파일 다운로드에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()),
     INVALID_FILE_TYPE("INVALID_FILE_TYPE", "지원하지 않는 파일 형식입니다.", HttpStatus.BAD_REQUEST.value()),
     FILE_SIZE_EXCEEDED("FILE_SIZE_EXCEEDED", "파일 크기가 제한을 초과했습니다.", HttpStatus.BAD_REQUEST.value()),
     IMAGE_PROCESSING_FAILED("IMAGE_PROCESSING_FAILED", "이미지 처리에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR.value()),
