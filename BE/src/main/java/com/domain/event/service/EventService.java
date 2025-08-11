@@ -14,9 +14,9 @@ import java.util.List;
 
 public interface EventService {
 
-    EventAssetRequestResponse requestEventAsset(final EventAssetCreateRequest request, final Long userId);
+    EventAssetRequestResponse requestEventAsset(final EventAssetCreateRequest request, final String makerEmail);
     void handleEventAssetCallback(final AssetCallbackRequest<?> request);
-    AssetResultResponse getEventAssetStatus(final Long assetId, final Long userId);
+    AssetResultResponse getEventAssetStatus(final Long assetId, final String makerEmail);
     EventFinalizeResponse finalizeEvent(final EventFinalizeRequest request);
     Resource downloadEventAsset(final Long assetId, final String makerEmail);
     List<MyEventResponse> getMyEvents(final Long lastEventId, final String makerEmail);
