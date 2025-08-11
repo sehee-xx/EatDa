@@ -103,8 +103,7 @@ public class MakerServiceImpl implements MakerService {
     }
 
     private String storeImage(MultipartFile imageRequest, String path) {
-        return fileStorageService.storeImage(imageRequest, path, imageRequest.getOriginalFilename(), false
-        );
+        return fileStorageService.storeImage(imageRequest, path, imageRequest.getOriginalFilename());
     }
 
     // @formatter:off
