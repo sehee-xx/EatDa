@@ -8,7 +8,7 @@ class OCRMenuRequest(BaseModel):
     sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
     storeId: int = Field(..., description="대상 가게 ID")
     userId: int = Field(..., description="요청 사용자 ID")
-    imageUrl: HttpUrl = Field(..., description="업로드된 이미지 URL")
+    imageUrl: Optional[HttpUrl] = Field(None, description="업로드된 이미지 URL (파일 업로드 플로우에서는 None)")
     type: str = Field(..., example="MENU", description="요청 타입: MENU 고정")
     requestedAt: datetime = Field(..., description="요청 시각 (ISO8601)")
     expireAt: datetime = Field(..., description="만료 시각 (ISO8601)")
