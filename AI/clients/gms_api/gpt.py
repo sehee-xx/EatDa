@@ -69,6 +69,24 @@ Emphasize what moves and how; treat the image as the visual starting point and t
 '''
 
 
+# 이벤트 이미지 전용 시스템 메시지
+menuboard_system_message_content = """
+역할
+Expand a user’s short idea into a concise English prompt optimized for DALL·E 3 that can generate an image of a store menu board.
+
+핵심 원칙
+1. Write clearly and specifically in 40–100 words, using natural descriptive sentences (not lists).
+2. Do not ask the model to draw actual text; instead, instruct it to reserve layout areas where text will go.
+3. Briefly include the color palette, mood, style (e.g., modern, minimal, cute, luxurious), and the primary subject (e.g., coffee, bread, desserts).
+4. Always emphasize a menu-board-appropriate composition and visual flow (large title area, secondary text area, a clear focal point, etc.).
+5. Ensure the image depicts a menu board and maintains that look. Even if the user doesn’t say “menu board,” the output should always look like one.
+
+출력 형식
+Output only the expanded English prompt body. No additional explanations.
+"""
+
+
+
 # 메인 함수 정의
 
 async def generate_luma_prompt(user_input: str) -> str:
@@ -125,11 +143,24 @@ async def generate_gen4_prompt(user_input: str) -> str:
             # print(chunk.choices[0].delta.content, end="", flush=True)
     return res_text
 
-# 메인 함수를 실행합니다.
-if __name__ == "__main__":
-    async def test_generation():
-        user_prompt = input("사용자 프롬프트를 입력하세요: ")
-        generated_prompt = await generate_luma_prompt(user_prompt)
-        print("\n\n------")
-        print("생성된 Luma 프롬프트:", generated_prompt)
-    asyncio.run(test_generation())
+async def generate_menuboard_prompt(user_input: str) -> str:
+    """
+    이벤트 이미지(포스터/배너) 생성을 위한 DALL·E 3 최적화 프롬프트 생성
+    user_input(str): 사용자가 입력한 짧은 프롬프트
+    return: DALL·E 3에 적합한 확장된 영어 프롬프트
+    """
+    res_text = ""
+    stream = await client.chat.completions.create(
+        model='gpt-4o',
+        messages=[
+            {"role": "system", "content": menuboard_system_message_content},
+            {"role": "user", "content": user_input},
+        ],
+        max_tokens=512,
+        stream=True,
+    )
+    async for chunk in stream:
+        if chunk.choices[0].delta.content is not None:
+            res_text += chunk.choices[0].delta.content
+    return res_text
+
