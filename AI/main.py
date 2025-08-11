@@ -7,6 +7,7 @@ from fastapi import FastAPI
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import logging
 
 # 라우터 임포트
 from routers import ocr_router, stream_test_router
@@ -17,6 +18,9 @@ from consumers.review_generate_consumer import ReviewGenerateConsumer
 
 # 환경 변수 로드
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # FastAPI 애플리케이션 초기화
 app = FastAPI(
@@ -54,6 +58,7 @@ async def health_check():
 # 서버가 켜지눈 순갑누터 stream 데이터를 비동기 구독하여 즉시 처리
 @app.on_event("startup")
 async def startup_event():
+    logger.info("✅ AI Server started and ready")
     # 이벤트 에셋 (event_image)
     asyncio.create_task(EventImageConsumer().run_forever())
     # 메뉴 포스터 (menuboard_generate)
