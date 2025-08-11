@@ -12,6 +12,9 @@ import static com.global.redis.constants.RedisConstants.STREAM_MESSAGE_BATCH_SIZ
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.global.redis.constants.RedisStreamKey;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -116,11 +119,27 @@ public class RedisStreamCleanerService {
         }
 
         try {
-            if (raw instanceof String s) {
-                // ISO-8601(UTC) 문자열 가정
-                return Instant.parse(s);
+            if (raw instanceof Instant i) {
+                return i;
             }
-            // 기타 타입 안전 변환
+            if (raw instanceof Long epochMillis) {
+                return Instant.ofEpochMilli(epochMillis);
+            }
+            if (raw instanceof LocalDateTime ldt) {
+                // 테스트에서 LocalDateTime을 그대로 쓰는 경우 지원
+                return ldt.atZone(ZoneId.systemDefault()).toInstant();
+            }
+            if (raw instanceof String s) {
+                // 1차: ISO-8601(오프셋/UTC) 시도
+                try {
+                    return Instant.parse(s);
+                } catch (DateTimeParseException ignored) {
+                    // 2차: 오프셋 없는 LocalDateTime 문자열 지원
+                    LocalDateTime ldt = LocalDateTime.parse(s);
+                    return ldt.atZone(ZoneId.systemDefault()).toInstant();
+                }
+            }
+            // 기타 타입은 ObjectMapper에 위임
             return objectMapper.convertValue(raw, Instant.class);
         } catch (Exception e) {
             log.warn(REDIS_STREAM_CLEANER_PARSE_ERROR_MESSAGE, record.getId(), streamKey, e);
