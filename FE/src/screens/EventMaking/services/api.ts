@@ -75,3 +75,37 @@ export const requestEventAsset = async (data: EventAssetRequestData) => {
   // 성공 시 data 객체 반환
   return json?.data;
 };
+
+// 이벤트 asset 결과 조회 API
+export const getEventAssetResult = async (eventAssetId: number) => {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요");
+
+  const res = await fetch(
+    `${BASE_URL}/api/events/assets/${eventAssetId}/result`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const status = res.status;
+  const raw = await res.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {}
+
+  if (!res.ok) {
+    console.error("GET ASSET RESULT ERROR", { status, raw });
+    throw new Error(
+      (json && (json.message || json.error)) || raw || `HTTP ${status}`
+    );
+  }
+
+  return json;
+};
