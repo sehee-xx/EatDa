@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import logging
 
 # 라우터 임포트
-from routers import ocr_router, stream_test_router
+from routers import stream_test_router, menuboard_ocr_router
 from consumers.event_image_consumer import EventImageConsumer
 from consumers.menuboard_generate_consumer import MenuboardGenerateConsumer
 from consumers.receipt_ocr_consumer import ReceiptOCRConsumer
@@ -40,8 +40,8 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(ocr_router)
 app.include_router(stream_test_router)
+app.include_router(menuboard_ocr_router)
 
 # API 서버 상태 확인(루트 페이지)
 @app.get("/609")
@@ -55,7 +55,7 @@ async def health_check():
 
 
 # 백그라운드로 이벤트 에셋 Redis consumer 구동
-# 서버가 켜지눈 순갑누터 stream 데이터를 비동기 구독하여 즉시 처리
+# 서버가 켜지눈 순간부터 stream 데이터를 비동기 구독하여 즉시 처리
 @app.on_event("startup")
 async def startup_event():
     logger.info("✅ AI Server started and ready")
