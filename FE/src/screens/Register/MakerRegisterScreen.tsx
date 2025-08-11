@@ -42,18 +42,19 @@ import {
   getCoordinatesFromAddressNaver,
 } from "./services/geocoding";
 import {
-  requestMenuOCR,
-  getOCRResult,
-  signupMakerAllInOne, // ✅ 원샷 회원가입
+  // 🔁 OCR 전용
+  requestMenuOCR,  // POST /ai/api/menu-extraction (file)
+  getOCRResult,    // GET  /ai/api/menu-extraction/{assetId}/result
+  // ✅ 원샷 회원가입
+  signupMakerAllInOne, // POST /api/makers (모든 데이터 한번에 전송)
 } from "./services/api";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "MakerRegisterScreen">;
 
-// FastAPI 응답을 로컬 타입으로 넉넉히 받아서 storeId까지 안전하게 접근
+// services/api.ts에서 MENUBOARD_* → PENDING/SUCCESS/FAILED 로 매핑해서 돌려준다고 가정
 type OCRResult = {
   status: "PENDING" | "SUCCESS" | "FAILED";
   extractedMenus?: Array<{ name: string; price: number | null }>;
-  storeId?: number;
 };
 
 export default function MakerRegisterScreen({ navigation }: Props) {
@@ -262,7 +263,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const isStep4NextEnabled = () =>
     agreementsState.terms && agreementsState.marketing;
 
-  /** 이메일 중복검사 (간단 구현 그대로 유지) */
+  /** 이메일 중복검사 */
   const checkEmailDuplicate = async (email: string): Promise<boolean> => {
     const response = await fetch(
       `https://i13a609.p.ssafy.io/test/api/makers/check-email`,
@@ -407,7 +408,10 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       setIsScanning(false);
       setIsPolling(true);
 
+      // ⬇️ POST /ai/api/menu-extraction (file 필드) → assetId 수신
       const { assetId } = await requestMenuOCR(imageUri);
+
+      // ⬇️ 1초 간격 폴링 시작
       await pollOCRResult(assetId);
     } catch (e) {
       console.error("OCR Processing error:", e);
@@ -420,12 +424,13 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
 
   const pollOCRResult = async (assetId: number) => {
-    const maxAttempts = 60; // 1초 * 60 = 60초 대기
+    const maxAttempts = 60; // 1초 * 60 = 최대 60초 대기
     let attempts = 0;
 
     const poll = async (): Promise<void> => {
       try {
         attempts++;
+        // ⬇️ GET /ai/api/menu-extraction/{assetId}/result
         const result = (await getOCRResult(assetId)) as OCRResult;
 
         if (result.status === "SUCCESS") {
@@ -445,8 +450,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             setMenuItems(convertedMenus);
             setSignupState((prev) => ({
               ...prev,
-              assetId, // 기록만
-              storeId: result.storeId ?? (prev as any).storeId, // 있으면 저장(없어도 OK)
+              assetId, // OCR 기록
               step3Complete: true,
             }));
 
@@ -643,14 +647,18 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
 
   const handleFinalSubmit = async () => {
-    // ✅ 변경: 원샷 회원가입 (기본정보 + license + 메뉴들 + 이미지)
+    // 회원가입: 모든 데이터 한 번에 전송
     try {
-      await signupMakerAllInOne(formData, businessLicenseUri, menuItems);
+      await signupMakerAllInOne({
+        formData,
+        licenseUri: businessLicenseUri, // 파일
+        menus: menuItems,  // 이름/가격/설명 + (있다면) imageUri         
+      });
 
       setModalType("success");
       setModalVisible(true);
     } catch (e: any) {
-      console.error("Final submission error:", e);
+      console.error("Signup error:", e);
       Alert.alert("오류", e?.message || "회원가입 중 오류가 발생했습니다.");
       setModalType("failure");
       setModalVisible(true);
@@ -732,7 +740,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
 
   const renderButtons = () => {
-    // 현재 단계에 따른 준비 여부 계산
     let isReady = true;
 
     if (currentStep === 1) isReady = isStep1NextEnabled();
@@ -740,7 +747,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     else if (currentStep === 3) isReady = isStep3NextEnabled();
     else if (currentStep === 4) isReady = isStep4NextEnabled();
 
-    // 3단계 폴링 중에는 이전 단계 이동 제한
+    // 3단계 폴링 중에는 이전 단계 비활성화
     const isPrevDisabled = currentStep === 3 && isPolling;
 
     if (currentStep === 1) {
