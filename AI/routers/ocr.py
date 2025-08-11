@@ -4,7 +4,9 @@ OCR 관련 API 라우터
 """
 
 import httpx
-from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks, Form, Body
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from models.menuboard_ocr_models import OCRMenuRequest, OCRMenuRespond, OCRCallbackRequest
 from services.menuboard_ocr_service import menuboard_ocr_service
 
@@ -21,8 +23,10 @@ ocr_requests = {}
 @router.post("/reviews/menu-extraction", response_model=dict)
 async def receive_ocr_request(
     background_tasks: BackgroundTasks,
-    meta: str = Form(...),  # OCRMenuRequest JSON 문자열
-    file: UploadFile = File(...),
+    meta: Optional[str] = Form(None),  # 파일 업로드 시 동봉되는 OCRMenuRequest JSON 문자열
+    file: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),  # RN 호환: 필드명이 image인 경우 지원
+    request: Optional[OCRMenuRequest] = Body(None),  # JSON 바디로 직접 수신 (URL 방식)
 ):
     """
     1단계: RN → FastAPI (파일 업로드 방식)
@@ -36,48 +40,127 @@ async def receive_ocr_request(
                 detail="OCR 서비스가 초기화되지 않았습니다. API 키를 확인하세요."
             )
 
-        # 메타데이터 파싱(OCRMenuRequest 모델 사용)
-        try:
-            request = OCRMenuRequest.model_validate_json(meta)
-        except Exception as parse_err:
-            raise HTTPException(status_code=422, detail=f"meta 파싱 실패: {parse_err}")
+        # 분기 1) JSON 바디(URL 방식)
+        if request is not None and file is None:
+            if not menuboard_ocr_service.is_available():
+                raise HTTPException(status_code=500, detail="OCR 서비스가 초기화되지 않았습니다. API 키를 확인하세요.")
 
-        # 파일 타입 검증
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+            ocr_requests[request.sourceId] = {
+                "status": "PROCESSING",
+                "created_at": request.requestedAt,
+                "storeId": request.storeId,
+                "userId": request.userId,
+                "type": request.type,
+            }
+            background_tasks.add_task(process_ocr_async, request)
+            return {"message": "OCR 요청이 접수되었습니다.", "sourceId": request.sourceId, "status": "PROCESSING"}
 
-        # 이미지 데이터 미리 읽어서 백그라운드 태스크로 전달 (요청 종료 후 파일 핸들 닫힘 방지)
-        image_data = await file.read()
+        # RN 호환: image 필드명을 file로 매핑
+        if file is None and image is not None:
+            file = image
 
-        # 이미지 포맷 추출 (Content-Type 및 파일명 기반)
-        image_format = "jpg"
-        ct = (file.content_type or "").lower()
-        if ct in ("image/jpeg", "image/jpg"):
+        # 분기 2) 파일 업로드(form-data + meta)
+        if file is not None and isinstance(meta, str) and meta:
+            if not menuboard_ocr_service.is_available():
+                raise HTTPException(status_code=500, detail="OCR 서비스가 초기화되지 않았습니다. API 키를 확인하세요.")
+
+            # 메타데이터 파싱(OCRMenuRequest 모델 사용)
+            try:
+                parsed = OCRMenuRequest.model_validate_json(meta)
+            except Exception as parse_err:
+                raise HTTPException(status_code=422, detail=f"meta 파싱 실패: {parse_err}")
+
+            # 파일 타입 검증
+            if not file.content_type or not file.content_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+
+            # 이미지 데이터 미리 읽어서 백그라운드 태스크로 전달 (요청 종료 후 파일 핸들 닫힘 방지)
+            image_data = await file.read()
+
+            # 이미지 포맷 추출 (Content-Type 및 파일명 기반)
             image_format = "jpg"
-        elif ct == "image/png":
-            image_format = "png"
-        elif ct in ("image/tiff", "image/tif"):
-            image_format = "tiff"
-        elif ct == "application/pdf":
-            image_format = "pdf"
-        else:
-            filename = (file.filename or "").lower()
-            if any(filename.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff")):
-                image_format = filename.split(".")[-1]
+            ct = (file.content_type or "").lower()
+            if ct in ("image/jpeg", "image/jpg"):
+                image_format = "jpg"
+            elif ct == "image/png":
+                image_format = "png"
+            elif ct in ("image/tiff", "image/tif"):
+                image_format = "tiff"
+            elif ct == "application/pdf":
+                image_format = "pdf"
+            else:
+                filename = (file.filename or "").lower()
+                if any(filename.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff")):
+                    image_format = filename.split(".")[-1]
 
-        # 요청 정보를 메모리에 저장
-        ocr_requests[request.sourceId] = {
-            "status": "PROCESSING",
-            "created_at": request.requestedAt,
-            "storeId": request.storeId,
-            "userId": request.userId,
-            "type": request.type,
-        }
+            # 요청 정보를 메모리에 저장
+            ocr_requests[parsed.sourceId] = {
+                "status": "PROCESSING",
+                "created_at": parsed.requestedAt,
+                "storeId": parsed.storeId,
+                "userId": parsed.userId,
+                "type": parsed.type,
+            }
 
-        # 백그라운드에서 OCR 처리 시작
-        background_tasks.add_task(process_ocr_async_upload, request, image_data, image_format)
+            # 백그라운드에서 OCR 처리 시작
+            background_tasks.add_task(process_ocr_async_upload, parsed, image_data, image_format)
 
-        return {"message": "OCR 요청이 접수되었습니다.", "sourceId": request.sourceId, "status": "PROCESSING"}
+            return {"message": "OCR 요청이 접수되었습니다.", "sourceId": parsed.sourceId, "assetId": parsed.sourceId, "status": "PROCESSING"}
+
+        # 분기 3) 파일 업로드만 온 경우(image/file) → 최소 메타 자동 생성
+        if file is not None and (meta is None) and (request is None):
+            if not menuboard_ocr_service.is_available():
+                raise HTTPException(status_code=500, detail="OCR 서비스가 초기화되지 않았습니다. API 키를 확인하세요.")
+
+            # 기본 메타 생성 (권장: 클라이언트에서 sourceId 제공)
+            now = datetime.now(timezone.utc)
+            generated_source_id = int(now.timestamp() * 1000)
+            parsed = OCRMenuRequest(
+                sourceId=generated_source_id,
+                storeId=0,
+                userId=0,
+                imageUrl=None,
+                type="MENU",
+                requestedAt=now,
+                expireAt=now + timedelta(minutes=10),
+                retryCount=0,
+            )
+
+            # 파일 타입 검증
+            if not file.content_type or not file.content_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+
+            image_data = await file.read()
+
+            # 이미지 포맷 추출
+            image_format = "jpg"
+            ct = (file.content_type or "").lower()
+            if ct in ("image/jpeg", "image/jpg"):
+                image_format = "jpg"
+            elif ct == "image/png":
+                image_format = "png"
+            elif ct in ("image/tiff", "image/tif"):
+                image_format = "tiff"
+            elif ct == "application/pdf":
+                image_format = "pdf"
+            else:
+                filename = (file.filename or "").lower()
+                if any(filename.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff")):
+                    image_format = filename.split(".")[-1]
+
+            ocr_requests[parsed.sourceId] = {
+                "status": "PROCESSING",
+                "created_at": parsed.requestedAt,
+                "storeId": parsed.storeId,
+                "userId": parsed.userId,
+                "type": parsed.type,
+            }
+
+            background_tasks.add_task(process_ocr_async_upload, parsed, image_data, image_format)
+            return {"message": "OCR 요청이 접수되었습니다.", "sourceId": parsed.sourceId, "assetId": parsed.sourceId, "status": "PROCESSING"}
+
+        # 두 형태 모두 아닌 경우
+        raise HTTPException(status_code=400, detail="요청 형식이 올바르지 않습니다. JSON 바디 또는 (meta+file) form-data를 사용하세요.")
 
     except Exception as e:
         print(f"❌ OCR 요청 접수 실패: {e}")
