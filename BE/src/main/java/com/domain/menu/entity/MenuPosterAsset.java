@@ -40,4 +40,8 @@ public class MenuPosterAsset extends BaseAssetEntity {
                 .status(Status.PENDING)
                 .build();
     }
+
+    public void registerMenuPoster(MenuPoster menuPoster) {
+        this.menuPoster = menuPoster;
+    }
 }
