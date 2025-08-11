@@ -32,46 +32,67 @@ public class FileStorageProperties {
 
     public String toResponsePath(final String absolutePath) {
         if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
-            return absolutePath; // local: 절대경로 그대로
+            // local: 절대경로 그대로
+            return absolutePath;
         }
 
         final Path abs  = Paths.get(absolutePath).toAbsolutePath().normalize();
         final Path base = Paths.get(java.util.Objects.requireNonNull(baseDir, "filestorage.base-dir is null"))
                 .toAbsolutePath().normalize();
-        final Path home = Paths.get(System.getProperty("user.home")).toAbsolutePath().normalize();
 
-        // 1) prefix: home -> baseDir (예: "eatda/test")
-        String prefixStr;
-        try {
-            prefixStr = home.relativize(base).toString().replace("\\", "/");
-        } catch (IllegalArgumentException e) {
-            // 드라이브 다름 등: base에서 마지막 1~2단계만 사용 (eatda/test 보존)
-            Path last = base.getFileName();                   // "test"
-            Path parent = base.getParent() != null ? base.getParent().getFileName() : null; // "eatda"
-            prefixStr = (parent != null ? parent.toString() + "/" : "") +
-                    (last != null ? last.toString() : "");
-            prefixStr = prefixStr.replace("\\", "/");
-        }
+        // 1) prefix: baseDir에서 "eatda"부터 끝까지 → "eatda/test" 또는 "eatda"
+        final String prefix = extractPrefixFromBase(base);
 
-        // 2) tail: baseDir -> abs (예: "data/images/...")  ※ abs가 base 하위임을 전제
-        String tailStr;
-        try {
-            tailStr = base.relativize(abs).toString().replace("\\", "/");
-        } catch (IllegalArgumentException e) {
-            // 폴백: 문자열로 안전 처리
-            String absStr = abs.toString();
-            String baseStr = base.toString();
-            if (absStr.startsWith(baseStr)) {
-                tailStr = absStr.substring(baseStr.length()).replace("\\", "/");
-                if (tailStr.startsWith("/")) tailStr = tailStr.substring(1);
-            } else {
-                // 최후 폴백: 파일명만
-                tailStr = abs.getFileName().toString();
+        // 2) tail: baseDir 이후 경로 → "data/images/..."
+        final String tail   = extractTailFromAbs(abs, base);
+
+        String urlPath = ("/" + prefix + "/" + tail).replaceAll("/+", "/");
+        return trimTrailingSlash(publicBaseUrl) + urlPath;
+    }
+
+    private String extractPrefixFromBase(Path base) {
+        // base에서 "eatda" 위치를 찾음
+        int eatdaIdx = -1;
+        for (int i = 0; i < base.getNameCount(); i++) {
+            if ("eatda".equalsIgnoreCase(base.getName(i).toString())) {
+                eatdaIdx = i;
+                break;
             }
         }
+        Path prefixPath;
+        if (eatdaIdx >= 0) {
+            // ex) "eatda/test"
+            prefixPath = base.subpath(eatdaIdx, base.getNameCount());
+        } else {
+            // 못 찾으면 마지막 두 단계로(예: ".../eatda/test"가 아닐 때) 안전 폴백
+            int n = base.getNameCount();
+            prefixPath = (n >= 2) ? base.subpath(n - 2, n) : base.getFileName();
+        }
+        return prefixPath.toString().replace("\\", "/");
+    }
 
-        String urlPath = "/" + prefixStr + "/" + tailStr;
-        return trimTrailingSlash(publicBaseUrl) + urlPath;
+    private String extractTailFromAbs(Path abs, Path base) {
+        try {
+            if (abs.startsWith(base)) {
+                // 정상 케이스: baseDir 하위
+                return base.relativize(abs).toString().replace("\\", "/");
+            }
+        } catch (IllegalArgumentException ignore) {
+            // 드라이브가 다를 때(윈도우 등) 발생 가능 → 아래 폴백으로
+        }
+        // 폴백1: abs에서 "data" 이후 전부
+        int dataIdx = -1;
+        for (int i = 0; i < abs.getNameCount(); i++) {
+            if ("data".equalsIgnoreCase(abs.getName(i).toString())) {
+                dataIdx = i;
+                break;
+            }
+        }
+        if (dataIdx >= 0) {
+            return abs.subpath(dataIdx, abs.getNameCount()).toString().replace("\\", "/");
+        }
+        // 폴백2: 파일명만
+        return abs.getFileName().toString();
     }
 
     private String trimTrailingSlash(String s) {
