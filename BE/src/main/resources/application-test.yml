@@ -23,9 +23,6 @@ logging:
     com.domain..repository: INFO
     org.hibernate.SQL: OFF
 
-filestorage: # 파일 저장소 설정
-  public-base-url: https://i13a609.p.ssafy.io
-
 springdoc:
   swagger-ui:
     config-url: /test/v3/api-docs/swagger-config
