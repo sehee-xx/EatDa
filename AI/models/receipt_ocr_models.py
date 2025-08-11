@@ -11,9 +11,6 @@ from typing import Dict, Literal, Optional
 from pydantic import BaseModel, Field, HttpUrl
 
 
-STREAM_KEY_OCR_RECEIPT_REQUEST: str = "ocr.verification.request"
-
-
 class OCRReceiptVerificationMessage(BaseModel):
     sourceId: int = Field(..., description="OCR 요청 식별자 (asset_source.id)")
     storeId: int = Field(..., description="인증 대상 가게 ID")

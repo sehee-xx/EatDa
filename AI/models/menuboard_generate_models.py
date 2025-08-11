@@ -9,7 +9,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-STREAM_KEY_MENU_POSTER_GENERATE = "menu.poster.generate"
+
 
 
 class MenuItem(BaseModel):
