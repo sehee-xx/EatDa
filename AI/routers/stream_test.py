@@ -20,7 +20,6 @@ except Exception as e:  # pragma: no cover
 from models.review_generate_models import GenerateRequest
 from models.event_image_models import EventAssetGenerateMessage
 from models.menuboard_generate_models import MenuPosterGenerateMessage
-from models.receipt_ocr_models import OCRReceiptVerificationMessage
 
 
 load_dotenv()
@@ -56,11 +55,5 @@ async def publish_menu_poster(req: MenuPosterGenerateMessage):
     stream_key = os.getenv("MENU_POSTER_STREAM_KEY", "menu.poster.generate")
     return await _xadd_payload(stream_key, req)
 
-
-@router.post("/receipt-ocr")
-async def publish_receipt_ocr(req: OCRReceiptVerificationMessage):
-    stream_key = os.getenv("OCR_RECEIPT_STREAM_KEY", "ocr.verification.request")
-    # receipt 모델은 datetime을 포함하므로 payload JSON으로 통일 발행
-    return await _xadd_payload(stream_key, req)
 
 

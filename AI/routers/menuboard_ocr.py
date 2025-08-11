@@ -38,16 +38,6 @@ async def create_menu_extraction_request(
     if not menuboard_ocr_service.is_available():
         raise HTTPException(status_code=500, detail="OCR 서비스가 초기화되지 않았습니다. API 키를 확인하세요.")
 
-    # 입력값 검증 (파일 필수)
-    if file is None:
-        return OCRMenuRespond(
-            code="MENUBOARD_REQUESTED_FAILED",
-            message="이미지 파일은 필수입니다.",
-            status=400,
-            assetId=None,
-            timestamp=datetime.now(timezone.utc),
-        )
-
     # 12자리 숫자를 생성하는 함수 (항상 12자리, 첫 자리는 1-9)
     def _generate_12_digit_id() -> int:
         # 범위: 100_000_000_000 ~ 999_999_999_999
@@ -155,7 +145,6 @@ async def _process_ocr_from_bytes(asset_id: str, image_bytes: bytes, image_forma
     except Exception as e:
         _requests_state[asset_id]["status"] = "FAIL"
         _requests_state[asset_id]["error"] = str(e)
-
 
 
 async def _process_ocr_from_request(asset_id: str, request: OCRMenuRequest, image_format: str):
