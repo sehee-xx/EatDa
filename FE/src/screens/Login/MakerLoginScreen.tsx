@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 import AuthForm, { AuthField } from "../../components/AuthForm";
 import { signIn, ApiError } from "./services/api";
-import { saveTokens } from "./services/tokenStorage";
+import { saveAuth, getAuth, hasTokens, Role } from "./services/tokenStorage";
 
 type NavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -38,7 +38,6 @@ type Props = {
 
 export default function MakerLoginScreen(props?: Props) {
   const navigation = useNavigation<NavigationProp>();
-
   const [isLoading, setIsLoading] = useState(false);
 
   // 내장 네비게이션 함수들
@@ -66,11 +65,9 @@ export default function MakerLoginScreen(props?: Props) {
     if (item === "회원가입") {
       navigateToRegister();
     } else if (item === "아이디 찾기") {
-      // 아이디 찾기 로직 - 추후 화면 추가시 네비게이션
       console.log("아이디 찾기 화면으로 이동");
       // navigation.navigate('FindIdScreen');
     } else if (item === "비밀번호 찾기") {
-      // 비밀번호 찾기 로직 - 추후 화면 추가시 네비게이션
       console.log("비밀번호 찾기 화면으로 이동");
       // navigation.navigate('FindPasswordScreen');
     }
@@ -90,7 +87,15 @@ export default function MakerLoginScreen(props?: Props) {
 
       console.log(`로그인 성공 [${response.status}]:`, response);
 
-      await saveTokens(response.data);
+      // 토큰 + 역할 동시 저장
+      const role: Role = "MAKER";
+      await saveAuth(response.data, role);
+
+      // 저장 확인 (콘솔)
+      const ok = await hasTokens();
+      const auth = await getAuth();
+      console.log("[MAKER] 저장 확인 ok:", ok, "auth:", auth);
+
       loginSuccess();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -107,23 +112,6 @@ export default function MakerLoginScreen(props?: Props) {
     } finally {
       setIsLoading(false);
     }
-    // 간단한 유효성 검사 Eater와 동일한 이유로 주석처리
-    // if (!formData.email || !formData.password) {
-    //   loginFailure("이메일과 비밀번호를 모두 입력해주세요.");
-    //   return;
-    // }
-
-    // 실제 로그인 API 호출을 시뮬레이션
-
-    // 여기서는 간단한 검증으로 대체 , Eater와 동일한 이유로 주석처리
-    //   setTimeout(() => {
-    //     // 더미 검증: 이메일에 '@'가 있고 비밀번호가 4자 이상이면 성공
-    //     if (formData.email.includes("@") && formData.password.length >= 4) {
-    //       loginSuccess();
-    //     } else {
-    //       loginFailure("이메일 또는 비밀번호가 올바르지 않습니다.");
-    //     }
-    //   }, 1000);
   };
 
   return (
