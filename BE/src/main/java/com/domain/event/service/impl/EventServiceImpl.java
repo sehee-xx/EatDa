@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
 
+    private static final String IMAGE_BASE_PATH = "events/";
+
     private final StoreRepository storeRepository;
     private final EventRepository eventRepository;
     private final EventAssetRepository eventAssetRepository;
@@ -75,7 +77,8 @@ public class EventServiceImpl implements EventService {
         Event event = createPendingEvent(store, startDate, endDate);
         EventAsset eventAsset = createPendingEventAsset(event, request);
 
-        List<String> uploadedImageUrls = uploadImages(request.image());
+        boolean convertToWebp = shouldConvertToWebp(request.type());
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + maker.getEmail(), convertToWebp);
         EventAssetGenerateMessage message = EventAssetGenerateMessage.of(
                 eventAsset.getId(),
                 request.type(),
@@ -267,13 +270,19 @@ public class EventServiceImpl implements EventService {
         return eventAssetRepository.save(EventAsset.createPending(event, AssetType.IMAGE, request.prompt()));
     }
 
-    private List<String> uploadImages(final List<MultipartFile> images) {
+    private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
+                                      final boolean convertToWebp) {
         return images.stream()
                 .map(file -> fileStorageService.storeImage(
                         file,
-                        "events",
-                        file.getOriginalFilename()
+                        relativeBase,
+                        file.getOriginalFilename(),
+                        convertToWebp
                 ))
                 .toList();
+    }
+
+    private boolean shouldConvertToWebp(AssetType type) {
+        return type == AssetType.IMAGE;
     }
 }
