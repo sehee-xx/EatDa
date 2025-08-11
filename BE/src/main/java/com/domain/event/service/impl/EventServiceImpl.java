@@ -55,8 +55,6 @@ public class EventServiceImpl implements EventService {
     private final EventAssetRedisPublisher eventAssetRedisPublisher;
     private final UserRepository userRepository;
 
-    private final EventValidator eventValidator;
-
     @Override
     @Transactional
     public EventAssetRequestResponse requestEventAsset(EventAssetCreateRequest request, final String makerEmail) {
@@ -167,6 +165,8 @@ public class EventServiceImpl implements EventService {
             }
 
             return resource;
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("파일 다운로드 실패: eventAssetId={}, assetUrl={}", assetId, asset.getAssetUrl(), e);
             throw new ApiException(ErrorCode.FILE_DOWNLOAD_ERROR, e.getMessage());
