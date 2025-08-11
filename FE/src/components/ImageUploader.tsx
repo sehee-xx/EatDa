@@ -8,7 +8,9 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 interface ImageUploaderProps {
   images: (string | null)[]; // null을 허용하여 빈 슬롯 표현
@@ -18,27 +20,40 @@ interface ImageUploaderProps {
   accentColor?: string;
 }
 
-// 더미 이미지 URL들
-const DUMMY_IMAGES = [
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&h=400&fit=crop",
-];
-
 export default function ImageUploader({
   images,
   maxImages = 3,
   onAddImage,
   onRemoveImage,
-  accentColor = "#FF69B4",
+  accentColor = "#fec566", // 프로젝트 테마 색상으로 변경
 }: ImageUploaderProps) {
-  // 더미 이미지 추가 함수 - 특정 인덱스에 추가
-  const handleAddImage = (index: number) => {
-    // 랜덤하게 더미 이미지 선택 (또는 인덱스 기반)
-    const dummyImageIndex = index % DUMMY_IMAGES.length;
-    const dummyImageUrl = DUMMY_IMAGES[dummyImageIndex];
+  
+  // 실제 갤러리에서 사진 업로드하기
+  const handleAddImage = async (index: number) => {
+    // 권한 요청
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert(
+        "권한 필요",
+        "이미지를 업로드하려면 사진첩 접근 권한이 필요합니다."
+      );
+      return;
+    }
 
-    onAddImage(index, dummyImageUrl);
+    // 갤러리 열기
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, // 간단한 편집 기능 허용
+      aspect: [1, 1],      // 1:1 비율로 자르기
+      quality: 1,          // 최고 화질
+    });
+
+    // 이미지 선택
+    if (!pickerResult.canceled) {
+      // 선택된 이미지의 로컬 파일 경로(uri)를 부모 컴포넌트로 전달
+      onAddImage(index, pickerResult.assets[0].uri);
+    }
   };
 
   // 각 슬롯을 개별적으로 렌더링
@@ -91,26 +106,22 @@ export default function ImageUploader({
 
 const styles = StyleSheet.create({
   container: {} as ViewStyle,
-
   imageContainer: {
     flexDirection: "row",
     gap: 12,
     justifyContent: "flex-start",
   } as ViewStyle,
-
   imageWrapper: {
     position: "relative",
     width: 100,
     height: 100,
   } as ViewStyle,
-
   uploadedImage: {
     width: 100,
     height: 100,
     borderRadius: 12,
     backgroundColor: "#F5F5F5",
   } as ImageStyle,
-
   removeButton: {
     position: "absolute",
     top: -8,
@@ -126,14 +137,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   } as ViewStyle,
-
   removeButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
     lineHeight: 18,
   } as TextStyle,
-
   addButton: {
     width: 100,
     height: 100,
@@ -144,7 +153,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
   } as ViewStyle,
-
   addIcon: {
     width: 36,
     height: 36,
@@ -152,7 +160,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   } as ViewStyle,
-
   addIconText: {
     color: "white",
     fontSize: 20,
