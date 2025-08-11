@@ -45,7 +45,7 @@ public class EventAssetGenerateMessage extends AbstractRedisStreamMessage {
             LocalDate endDate,
             List<String> referenceImages
     ) {
-        validateRequiredFields(assetId, type, prompt, storeId, userId, title, startDate, endDate);
+        validateRequiredFields(assetId, type, prompt, storeId, userId, title, startDate, endDate, referenceImages);
 
         if (startDate.isAfter(endDate)) {
             throw new ApiException(ErrorCode.INVALID_EVENT_DATE_RANGE);
@@ -79,7 +79,8 @@ public class EventAssetGenerateMessage extends AbstractRedisStreamMessage {
             Long userId,
             String title,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            List<String> referenceImages
     ) {
         if (Objects.isNull(assetId) ||
                 Objects.isNull(type) ||
@@ -88,7 +89,8 @@ public class EventAssetGenerateMessage extends AbstractRedisStreamMessage {
                 Objects.isNull(userId) ||
                 Objects.isNull(title) || title.isBlank() ||
                 Objects.isNull(startDate) ||
-                Objects.isNull(endDate)) {
+                Objects.isNull(endDate) ||
+                Objects.isNull(referenceImages)) {
             throw new ApiException(ErrorCode.REQUIRED_EVENT_FIELDS_MISSING);
         }
     }
