@@ -109,3 +109,40 @@ export const getEventAssetResult = async (eventAssetId: number) => {
 
   return json;
 };
+
+// 사장님별 이벤트 조회 api
+export const getMyEvents = async (lastEventId?: number) => {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요");
+
+  // lastEventId가 있으면 URL에 쿼리 파라미터로 추가
+  const url = lastEventId
+    ? `${BASE_URL}/api/events/my?lastEventId=${lastEventId}`
+    : `${BASE_URL}/api/events/my`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const status = res.status;
+  const raw = await res.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {}
+
+  if (!res.ok) {
+    console.error("GET MY EVENTS ERROR", { status, raw });
+    throw new Error(
+      (json && (json.message || json.error)) || raw || `HTTP ${status}`
+    );
+  }
+
+  // 성공 시, data 배열 반환
+  return json?.data;
+};
