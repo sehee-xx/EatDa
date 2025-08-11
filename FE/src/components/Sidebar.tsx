@@ -8,35 +8,59 @@ import {
   Text,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { AuthStackParamList } from "../navigation/AuthNavigator";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { logOut } from "../auth/logout";
 
 // 사이드바에 사용될 숟가락, 포크 이미지
 import Spoon from "../../assets/sideSpoon.svg";
 import Fork from "../../assets/sideFork.svg";
+import { isLoaded } from "expo-font";
 
 export interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   userRole: "eater" | "maker";
-  onLogout: () => void;
   activePage: string;
   onMypage: () => void; // 팀원이 추가한 마이페이지 prop
 }
 
+type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+
 export default function Sidebar({
   isOpen,
   onClose,
-  onLogout,
   activePage,
   onMypage, // 팀원이 추가한 마이페이지 prop
 }: SidebarProps) {
   const { width, height } = useWindowDimensions();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   // 사이드바 내에서 숟가락, 포크 위치 결정용
   const sidebarWidth = width * 0.8;
 
   const slideAnim = useRef(new Animated.Value(-width * 0.8)).current;
   const [visible, setVisible] = useState(false);
+
+  // 로그아웃 관련
+  const [loading, setLoading] = useState(false);
+
+  async function handlePressLogOut() {
+    if (loading) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await logOut();
+    } finally {
+      setLoading(false);
+      onClose();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -137,7 +161,7 @@ export default function Sidebar({
           </TouchableOpacity>
 
           {/* 로그아웃 */}
-          <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
+          <TouchableOpacity style={styles.menuItem} onPress={handlePressLogOut}>
             <Text style={styles.menuText}>로그아웃</Text>
           </TouchableOpacity>
 
