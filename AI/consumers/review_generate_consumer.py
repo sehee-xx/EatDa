@@ -18,6 +18,7 @@ import json
 import os
 import socket
 from typing import Any, Dict, Tuple
+import logging
 
 from dotenv import load_dotenv
 
@@ -41,6 +42,8 @@ load_dotenv()
 
 class ReviewGenerateConsumer:
     def __init__(self) -> None:
+        # 로거 초기화: 이 컨슈머의 실행/에러/처리 상황을 기록
+        self.logger = logging.getLogger(__name__)
         self.redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.group: str = os.getenv("REDIS_GROUP", "ai-consumers")
         default_consumer = f"ai-{socket.gethostname()}-{os.getpid()}"
@@ -51,11 +54,18 @@ class ReviewGenerateConsumer:
         self.client: redis.Redis = redis.from_url(self.redis_url, decode_responses=True)
 
     async def ensure_consumer_group(self) -> None:
+        # 컨슈머 그룹을 보장: 없으면 생성하고, 있으면 그대로 사용
         try:
             await self.client.xgroup_create(self.stream_key, self.group, id="$", mkstream=True)
+            self.logger.info(
+                f"[리뷰컨슈머] 컨슈머 그룹 생성: stream={self.stream_key}, group={self.group}"
+            )
         except redis.ResponseError as e:
             if "BUSYGROUP" not in str(e):
                 raise
+            self.logger.debug(
+                f"[리뷰컨슈머] 컨슈머 그룹 이미 존재: stream={self.stream_key}, group={self.group}"
+            )
 
     @staticmethod
     def _deserialize_fields(fields: Dict[str, str]) -> Dict[str, Any]:
@@ -118,18 +128,34 @@ class ReviewGenerateConsumer:
 
     async def handle_message(self, message_id: str, fields: Dict[str, str]) -> None:
         try:
+            # 메시지 처리 시작: 필드 키 목록을 함께 기록
+            self.logger.debug(
+                f"[리뷰컨슈머] 메시지 처리 시작: id={message_id}, keys={list(fields.keys())}"
+            )
             req = self.parse_message(fields)
             t = (req.type or "").upper()
 
             if t == "IMAGE":
+                # 이미지 생성 요청 처리 단계
+                self.logger.info(f"[리뷰컨슈머] IMAGE 요청 처리: reviewAssetId={req.reviewAssetId}")
                 result, url = await self.process_image(req)
             elif t == "SHORTS_GEN_4":
+                # Runway(gen4_turbo) 영상 생성 요청 처리 단계
+                self.logger.info(f"[리뷰컨슈머] SHORTS_GEN_4 요청 처리: reviewAssetId={req.reviewAssetId}")
                 result, url = await self.process_runway(req)
             else:
+                # Luma(ray-2) 영상 생성 요청 처리 단계
+                self.logger.info(f"[리뷰컨슈머] SHORTS_RAY2 요청 처리: reviewAssetId={req.reviewAssetId}")
                 result, url = await self.process_luma(req)
 
             await self._send_callback(req.reviewAssetId, result, url, req.type)
+            # 메시지 처리 완료 기록
+            self.logger.info(
+                f"[리뷰컨슈머] 메시지 처리 완료: id={message_id}, 결과={result}, assetUrl={url}"
+            )
         except Exception as e:
+            # 메시지 처리 중 예외 기록 및 데드 스트림으로 이동
+            self.logger.exception(f"[리뷰컨슈머] 메시지 처리 중 오류: id={message_id}, err={e}")
             try:
                 payload = json.dumps({"error": str(e), "fields": fields})
             except Exception:
@@ -144,6 +170,7 @@ class ReviewGenerateConsumer:
         )
         while True:
             try:
+                # Redis Stream에서 메시지를 컨슈머 그룹으로 읽어오기
                 result = await self.client.xreadgroup(
                     groupname=self.group,
                     consumername=self.consumer_id,
@@ -153,15 +180,23 @@ class ReviewGenerateConsumer:
                 )
                 if not result:
                     continue
+                total_messages = sum(len(messages) for _, messages in result)
+                # 읽어온 메시지 개수 기록
+                self.logger.info(
+                    f"[리뷰컨슈머] 스트림 수신: stream='{self.stream_key}', 개수={total_messages}"
+                )
                 for _, messages in result:
                     for message_id, fields in messages:
                         try:
+                            # 메시지 개별 처리 및 ACK
                             await self.handle_message(message_id, fields)
                             await self.client.xack(self.stream_key, self.group, message_id)
+                            self.logger.debug(f"[리뷰컨슈머] 메시지 ACK 완료: id={message_id}")
                         except Exception:
                             await self.client.xack(self.stream_key, self.group, message_id)
             except Exception as loop_err:
-                print(f"[ReviewGenerateConsumer] loop error: {loop_err}")
+                # 메인 루프 예외 기록 후 잠시 대기
+                self.logger.exception(f"[리뷰컨슈머] 루프 오류: {loop_err}")
                 await asyncio.sleep(2)
 
 
