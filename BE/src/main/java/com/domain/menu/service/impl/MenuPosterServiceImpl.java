@@ -118,6 +118,19 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         return MenuPosterFinalizeResponse.from(menuPoster);
     }
 
+    @Override
+    @Transactional
+    public void sendMenuPosterToMaker(Long menuPosterId, String eaterEmail) {
+        User eater = validateEater(eaterEmail);
+
+        MenuPoster menuPoster = validateMenuPoster(menuPosterId);
+        menuValidator.validatePosterOwnership(eater, menuPoster);
+        menuValidator.validateNotSent(menuPoster);
+        menuValidator.validateSuccessStatus(menuPoster);
+
+        menuPoster.markAsSent();
+    }
+
     private User validateEater(final String eaterEmail) {
         return eaterRepository.findByEmailAndDeletedFalse(eaterEmail)
                 .orElseThrow(() -> {
