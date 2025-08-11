@@ -15,7 +15,6 @@ import EaterMypage from "./EaterMypage";
 import MakerMypage from "./MakerMypage";
 import { COLORS } from "../../constants/theme";
 import { useAuth } from "../../contexts/AuthContext";
-type TabKey = "eater" | "maker";
 
 // Navigation Props 타입 정의
 type Props = NativeStackScreenProps<AuthStackParamList, "MypageScreen">;
