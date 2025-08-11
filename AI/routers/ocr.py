@@ -132,7 +132,9 @@ async def send_ocr_callback(callback_data: OCRCallbackRequest):
     OCR 처리 결과를 지정된 콜백 엔드포인트로 전송합니다.
     """
     try:
-        # TODO[SPRING]: RN 서버 도메인/포트로 변경
+        # TODO[SPRING]: 스프링 서버 도메인/포트로 변경
+        #   예) http://spring.mycompany.com:8080/api/reviews/menu-extraction/callback
+        #   로컬에서 스프링을 9090으로 띄운다면: http://localhost:9090/api/reviews/menu-extraction/callback
         callback_url = "https://i13a609.p.ssafy.io/api/reviews/menu-extraction/callback"
         
         async with httpx.AsyncClient() as client:
