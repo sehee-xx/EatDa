@@ -14,7 +14,7 @@ import com.domain.event.repository.EventAssetRepository;
 import com.domain.event.repository.EventRepository;
 import com.domain.event.service.EventService;
 import com.domain.event.validator.EventValidator;
-import com.domain.user.repository.UserRepository;
+import com.domain.user.repository.MakerRepository;
 import com.domain.store.entity.Store;
 import com.domain.store.repository.StoreRepository;
 import com.domain.user.entity.User;
@@ -55,7 +55,7 @@ public class EventServiceImpl implements EventService {
     private final EventAssetRepository eventAssetRepository;
     private final FileStorageService fileStorageService;
     private final EventAssetRedisPublisher eventAssetRedisPublisher;
-    private final UserRepository userRepository;
+    private final MakerRepository makerRepository;
 
     @Override
     @Transactional
@@ -65,7 +65,7 @@ public class EventServiceImpl implements EventService {
                         .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         // 사용자 ROLE 검사
-        User maker = userRepository.findByEmailAndDeletedFalse(makerEmail)
+        User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
                         .orElseThrow(() -> new ApiException(ErrorCode.FORBIDDEN));
 
         AssetValidator.validateImages(request.image(), ErrorCode.IMAGE_TOO_LARGE);
@@ -109,7 +109,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public AssetResultResponse getEventAssetStatus(Long assetId, String makerEmail) {
-        User maker = userRepository.findByEmailAndDeletedFalse(makerEmail)
+        User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
                 .orElseThrow(() -> new ApiException(ErrorCode.FORBIDDEN));
 
         EventAsset asset = eventAssetRepository.findByIdWithStore(assetId)
@@ -147,7 +147,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public Resource downloadEventAsset(Long assetId, String makerEmail) {
-        User maker = userRepository.findByEmailAndDeletedFalse(makerEmail)
+        User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
 
         EventAsset asset = eventAssetRepository.findByIdWithStore(assetId)
@@ -179,7 +179,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(readOnly = true)
     public List<MyEventResponse> getMyEvents(Long lastEventId, String makerEmail) {
-        User maker = userRepository.findByEmailAndDeletedFalse(makerEmail)
+        User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
 
         List<Event> events = eventRepository.findMyEventsWithCursor(
@@ -249,7 +249,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public void deleteEvent(Long eventId, String makerEmail) {
-        User maker = userRepository.findByEmailAndDeletedFalse(makerEmail)
+        User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
 
         Event event = eventRepository.findByIdAndDeletedFalse(eventId)
