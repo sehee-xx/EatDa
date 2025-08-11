@@ -62,14 +62,43 @@ class ReviewCallbackService:
                             "timestamp": datetime.utcnow().isoformat(),
                         }
                     else:
-                        print(f"❌ 예상하지 못한 상태 코드: {response.status}")
+                        # 상세 진단 로그: 상태코드/사유, 요청/응답 메타데이터, 본문 일부를 출력
+                        try:
+                            req_info = response.request_info
+                            req_method = getattr(req_info, "method", "?")
+                            req_url = str(getattr(req_info, "url", self.callback_url))
+                        except Exception:
+                            req_method, req_url = "?", self.callback_url
+
+                        resp_url = str(getattr(response, "url", self.callback_url))
+                        reason = getattr(response, "reason", "")
+                        print(
+                            "\n".join(
+                                [
+                                    "❌ 예상하지 못한 상태 코드 수신", 
+                                    f"- status: {response.status} {reason}",
+                                    f"- request: {req_method} {req_url}",
+                                    f"- response.url: {resp_url}",
+                                    f"- callback_url(env): {self.callback_url}",
+                                    f"- response.headers: {dict(response.headers)}",
+                                    f"- rawBody(first 500B): {raw_text[:500]}",
+                                ]
+                            )
+                        )
                         return response_json or {
                             "code": "UNKNOWN_ERROR",
                             "message": f"예상하지 못한 응답 상태: {response.status}",
                             "status": response.status,
-                            "data": {"rawBody": raw_text[:1000]},
+                            "data": {
+                                "requestMethod": req_method,
+                                "requestUrl": req_url,
+                                "responseUrl": resp_url,
+                                "responseReason": str(reason),
+                                "responseHeaders": dict(response.headers),
+                                "rawBody": raw_text[:1000],
+                                "callbackUrlEnv": self.callback_url,
+                            },
                             "timestamp": datetime.utcnow().isoformat(),
-                            "details": None,
                         }
         except Exception as e:
             print(f"❌ 콜백 전송 중 예외 발생: {e}")
