@@ -3,6 +3,7 @@ package com.a609.eatda.domain.event.service;
 import com.domain.event.dto.redis.EventAssetGenerateMessage;
 import com.domain.event.dto.request.EventAssetCreateRequest;
 import com.domain.event.dto.request.EventFinalizeRequest;
+import com.domain.event.dto.response.ActiveStoreEventResponse;
 import com.domain.event.dto.response.EventAssetRequestResponse;
 import com.domain.event.dto.response.EventFinalizeResponse;
 import com.domain.event.dto.response.MyEventResponse;
@@ -37,6 +38,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -1313,6 +1315,196 @@ class EventServiceImplTest {
         assertThat(capturedPageRequest.getPageSize()).isEqualTo(PagingConstants.DEFAULT_SIZE.value);
     }
 
+    @Test
+    @DisplayName("진행 중인 가게 이벤트 조회 - 성공")
+    void getActiveStoreEvents_Success() {
+        // given
+        Long storeId = 100L;
+        LocalDate today = LocalDate.now();
+
+        Store store = Store.builder()
+                .name("테스트 가게")
+                .build();
+        setFieldValue(store, storeId);
+
+        Event activeEvent1 = Event.builder()
+                .store(store)
+                .startDate(today.minusDays(5))
+                .endDate(today.plusDays(5))
+                .status(Status.SUCCESS)
+                .build();
+        setFieldValue(activeEvent1, 50L);
+        activeEvent1.setTitle("진행중 이벤트 1");
+
+        Event activeEvent2 = Event.builder()
+                .store(store)
+                .startDate(today.minusDays(2))
+                .endDate(today.plusDays(10))
+                .status(Status.SUCCESS)
+                .build();
+        setFieldValue(activeEvent2, 45L);
+        activeEvent2.setTitle("진행중 이벤트 2");
+
+        EventAsset asset1 = EventAsset.builder()
+                .event(activeEvent1)
+                .type(AssetType.IMAGE)
+                .assetUrl("/uploads/event50.webp")
+                .status(Status.SUCCESS)
+                .build();
+
+        List<Event> events = List.of(activeEvent1, activeEvent2);
+
+        given(storeRepository.findById(storeId))
+                .willReturn(Optional.of(store));
+        given(eventRepository.findActiveStoreEvents(eq(storeId), any(LocalDate.class), isNull(), any(Pageable.class)))
+                .willReturn(events);
+        given(eventAssetRepository.findByEventIds(List.of(50L, 45L)))
+                .willReturn(List.of(asset1));  // event2는 에셋 없음
+
+        // when
+        List<ActiveStoreEventResponse> responses = eventService.getActiveStoreEvents(storeId, null);
+
+        // then
+        assertThat(responses).hasSize(2);
+
+        ActiveStoreEventResponse response1 = responses.getFirst();
+        assertThat(response1.eventId()).isEqualTo(50L);
+        assertThat(response1.title()).isNotNull();
+        assertThat(response1.postUrl()).isEqualTo("/uploads/event50.webp");
+        assertThat(response1.startAt()).isNotNull();
+        assertThat(response1.endAt()).isNotNull();
+
+        ActiveStoreEventResponse response2 = responses.get(1);
+        assertThat(response2.eventId()).isEqualTo(45L);
+        assertThat(response2.postUrl()).isNull();  // 에셋 없음
+
+        verify(storeRepository).findById(storeId);
+        verify(eventRepository).findActiveStoreEvents(eq(storeId), any(LocalDate.class), isNull(), any(Pageable.class));
+        verify(eventAssetRepository).findByEventIds(List.of(50L, 45L));
+    }
+
+    @Test
+    @DisplayName("진행 중인 가게 이벤트 조회 - 커서 페이징")
+    void getActiveStoreEvents_WithCursor() {
+        // given
+        Long storeId = 100L;
+        Long lastEventId = 30L;
+        LocalDate today = LocalDate.now();
+
+        Store store = Store.builder()
+                .name("테스트 가게")
+                .build();
+
+        Event event = Event.builder()
+                .store(store)
+                .startDate(today.minusDays(1))
+                .endDate(today.plusDays(1))
+                .status(Status.SUCCESS)
+                .build();
+        setFieldValue(event, 25L);
+
+        given(storeRepository.findById(storeId))
+                .willReturn(Optional.of(store));
+        given(eventRepository.findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId), any(Pageable.class)))
+                .willReturn(List.of(event));
+        given(eventAssetRepository.findByEventIds(any()))
+                .willReturn(Collections.emptyList());
+
+        // when
+        List<ActiveStoreEventResponse> responses = eventService.getActiveStoreEvents(storeId, lastEventId);
+
+        // then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().eventId()).isEqualTo(25L);
+
+        verify(eventRepository).findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("진행 중인 가게 이벤트 조회 - 가게를 찾을 수 없음")
+    void getActiveStoreEvents_StoreNotFound() {
+        // given
+        Long storeId = 999L;
+
+        given(storeRepository.findById(storeId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> eventService.getActiveStoreEvents(storeId, null))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STORE_NOT_FOUND);
+
+        verify(storeRepository).findById(storeId);
+        verifyNoInteractions(eventRepository, eventAssetRepository);
+    }
+
+    @Test
+    @DisplayName("진행 중인 가게 이벤트 조회 - 진행 중인 이벤트 없음")
+    void getActiveStoreEvents_NoActiveEvents() {
+        // given
+        Long storeId = 100L;
+        Store store = Store.builder()
+                .name("테스트 가게")
+                .build();
+
+        given(storeRepository.findById(storeId))
+                .willReturn(Optional.of(store));
+        given(eventRepository.findActiveStoreEvents(any(), any(), any(), any()))
+                .willReturn(Collections.emptyList());
+
+        // when
+        List<ActiveStoreEventResponse> responses = eventService.getActiveStoreEvents(storeId, null);
+
+        // then
+        assertThat(responses).isEmpty();
+
+        verify(storeRepository).findById(storeId);
+        verify(eventRepository).findActiveStoreEvents(any(), any(), any(), any());
+        verify(eventAssetRepository, never()).findByEventIds(any());  // 이벤트가 없으므로 호출 안됨
+    }
+
+    @Test
+    @DisplayName("진행 중인 가게 이벤트 조회 - 종료된 이벤트는 제외")
+    void getActiveStoreEvents_ExcludeExpiredEvents() {
+        // given
+        Long storeId = 100L;
+        LocalDate today = LocalDate.now();
+
+        Store store = Store.builder()
+                .name("테스트 가게")
+                .build();
+
+        // Repository에서 이미 필터링되어 반환되므로, 진행 중인 이벤트만 반환된다고 가정
+        Event activeEvent = Event.builder()
+                .store(store)
+                .startDate(today.minusDays(1))
+                .endDate(today.plusDays(1))
+                .status(Status.SUCCESS)
+                .build();
+        setFieldValue(activeEvent, 100L);
+
+        given(storeRepository.findById(storeId))
+                .willReturn(Optional.of(store));
+        given(eventRepository.findActiveStoreEvents(eq(storeId), any(LocalDate.class), isNull(), any(Pageable.class)))
+                .willReturn(List.of(activeEvent));  // 진행 중인 이벤트만 반환
+        given(eventAssetRepository.findByEventIds(any()))
+                .willReturn(Collections.emptyList());
+
+        // when
+        List<ActiveStoreEventResponse> responses = eventService.getActiveStoreEvents(storeId, null);
+
+        // then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().eventId()).isEqualTo(100L);
+
+        // 날짜 범위 검증
+        LocalDate startAt = responses.getFirst().startAt();
+        LocalDate endAt = responses.getFirst().endAt();
+        LocalDate now = LocalDate.now();
+
+        assertThat(startAt).isBefore(now);
+        assertThat(endAt).isAfter(now);
+    }
 
     // 테스트용 헬퍼 메서드
     private void setFieldValue(Object target, Object value) {
