@@ -81,6 +81,13 @@ public class MenuValidator {
         }
     }
 
+    public void validateStoreOwnership(User maker, Store store) {
+        if (!store.getMaker().getId().equals(maker.getId())) {
+            log.warn("[MenuPosterService] 가게 소유자가 아님");
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+    }
+
     public void validatePosterOwnership(User eater, MenuPoster poster) {
         if (!poster.getUser().getId().equals(eater.getId())) {
             throw new ApiException(ErrorCode.FORBIDDEN);
@@ -123,6 +130,57 @@ public class MenuValidator {
         if (menuPoster.isSent()) {
             log.warn("[MenuValidator] 이미 전송된 포스터 - menuPosterId: {}", menuPoster.getId());
             throw new ApiException(ErrorCode.MENU_POSTER_ALREADY_SENT, menuPoster.getId());
+        }
+    }
+
+    public void validateMenuPosterCount(List<Long> menuPosterIds) {
+        if (menuPosterIds.size() > 5) {
+            log.warn("[MenuValidator] 메뉴 포스터 개수 초과 - count: {}", menuPosterIds.size());
+            throw new ApiException(ErrorCode.MENU_POSTER_EXCEED_LIMIT);
+        }
+    }
+
+    public void validateMenuPostersExist(List<MenuPoster> menuPosters, List<Long> requestedIds) {
+        if (menuPosters.size() != requestedIds.size()) {
+            Set<Long> foundIds = menuPosters.stream()
+                    .map(MenuPoster::getId)
+                    .collect(Collectors.toSet());
+
+            List<Long> notFoundIds = requestedIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+
+            log.warn("[MenuValidator] 존재하지 않는 메뉴 포스터 ID: {}", notFoundIds);
+            throw new ApiException(ErrorCode.MENU_POSTER_NOT_FOUND, notFoundIds);
+        }
+    }
+
+    public void validatePostersBelongToStore(List<MenuPoster> menuPosters, Long storeId) {
+        List<MenuPoster> invalidPosters = menuPosters.stream()
+                .filter(poster -> !poster.getStore().getId().equals(storeId))
+                .toList();
+
+        if (!invalidPosters.isEmpty()) {
+            List<Long> invalidPosterIds = invalidPosters.stream()
+                    .map(MenuPoster::getId)
+                    .toList();
+            log.warn("[MenuValidator] 다른 가게의 메뉴 포스터 - storeId: {}, invalidPosterIds: {}",
+                    storeId, invalidPosterIds);
+            throw new ApiException(ErrorCode.MENU_NOT_BELONG_TO_STORE, invalidPosterIds);
+        }
+    }
+
+    public void validateAllPostersSent(List<MenuPoster> menuPosters) {
+        List<MenuPoster> notSentPosters = menuPosters.stream()
+                .filter(poster -> !poster.isSent())
+                .toList();
+
+        if (!notSentPosters.isEmpty()) {
+            List<Long> notSentPosterIds = notSentPosters.stream()
+                    .map(MenuPoster::getId)
+                    .toList();
+            log.warn("[MenuValidator] 전송되지 않은 메뉴 포스터 - posterIds: {}", notSentPosterIds);
+            throw new ApiException(ErrorCode.MENU_POSTER_NOT_SENT, notSentPosterIds);
         }
     }
 }
