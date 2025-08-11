@@ -15,6 +15,7 @@ import com.domain.event.repository.EventRepository;
 import com.domain.event.service.impl.EventServiceImpl;
 import com.domain.store.entity.Store;
 import com.domain.store.repository.StoreRepository;
+import com.domain.user.constants.Role;
 import com.domain.user.entity.User;
 import com.domain.user.repository.UserRepository;
 import com.global.constants.AssetType;
@@ -72,47 +73,45 @@ class EventServiceImplTest {
     @Mock
     private EventAssetRedisPublisher eventAssetRedisPublisher;
 
+    @Mock
+    private User maker;
+    @Mock
     private Store store;
+    @Mock
     private Event event;
     @Mock
     private EventAsset eventAsset;
+    private final String makerEmail = "maker@example.com";
     private final Long userId = 1L;
     private final Long storeId = 100L;
     private final Long assetId = 300L;
 
     @BeforeEach
     void setUp() {
-        // Store 엔티티
-        store = Store.builder()
-                .name("테스트 가게")
-                .address("서울시 강남구")
-                .latitude(37.5)
-                .longitude(127.0)
-                .build();
-        setFieldValue(store, storeId);
+        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
+                .willReturn(Optional.of(maker));
 
-        // Event 엔티티
-        event = Event.builder()
-                .store(store)
-                .startDate(LocalDate.parse("2024-12-20"))
-                .endDate(LocalDate.parse("2024-12-25"))
-                .status(Status.PENDING)
-                .build();
-        Long eventId = 200L;
-        setFieldValue(event, eventId);
+        given(maker.getId()).willReturn(userId);
+        given(maker.getEmail()).willReturn(makerEmail);
+        given(maker.getRole()).willReturn(Role.MAKER);
 
-        // EventAsset 엔티티 - ID를 설정한 상태로 생성
+        given(store.getId()).willReturn(storeId);
+        given(store.getName()).willReturn("테스트 가게");
+        given(store.getAddress()).willReturn("서울시 강남구");
+        given(store.getLatitude()).willReturn(37.5);
+        given(store.getLongitude()).willReturn(127.0);
+        given(store.getMaker()).willReturn(maker);
+
+        given(event.getStore()).willReturn(store);
+        given(event.getStartDate()).willReturn(LocalDate.parse("2025-12-20"));
+        given(event.getEndDate()).willReturn(LocalDate.parse("2025-12-25"));
+        given(event.getStatus()).willReturn(Status.PENDING);
+
         given(eventAsset.getId()).willReturn(assetId);
         given(eventAsset.getType()).willReturn(AssetType.IMAGE);
         given(eventAsset.getPrompt()).willReturn("크리스마스 특별 할인 이벤트");
         given(eventAsset.getStatus()).willReturn(Status.PENDING);
-//        eventAsset = EventAsset.builder()
-//                .event(event)
-//                .type(AssetType.IMAGE)
-//                .prompt("크리스마스 특별 할인 이벤트")
-//                .status(Status.PENDING)
-//                .build();
-//        eventAsset.setId(assetId);
+        given(eventAsset.getEvent()).willReturn(event);
     }
 
     // Request 생성 헬퍼 메서드
@@ -122,8 +121,8 @@ class EventServiceImplTest {
                 storeId,
                 title,
                 AssetType.IMAGE,
-                "2024-12-20",
-                "2024-12-25",
+                "2025-12-20",
+                "2025-12-25",
                 prompt,
                 files
         );
@@ -150,7 +149,7 @@ class EventServiceImplTest {
                 .willReturn("uploaded/path/image.jpg");
 
         // when
-        EventAssetRequestResponse response = eventService.requestEventAsset(request, userId);
+        EventAssetRequestResponse response = eventService.requestEventAsset(request, makerEmail);
 
         // then
         assertThat(response).isNotNull();
@@ -189,7 +188,7 @@ class EventServiceImplTest {
         given(storeRepository.findById(storeId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> eventService.requestEventAsset(request, userId))
+        assertThatThrownBy(() -> eventService.requestEventAsset(request, makerEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STORE_NOT_FOUND);
 
@@ -214,7 +213,7 @@ class EventServiceImplTest {
         given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
 
         // when & then
-        assertThatThrownBy(() -> eventService.requestEventAsset(request, userId))
+        assertThatThrownBy(() -> eventService.requestEventAsset(request, makerEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.IMAGE_TOO_LARGE);
 
@@ -247,7 +246,7 @@ class EventServiceImplTest {
         given(fileStorageService.storeImage(file2, "events", "image2.jpg"))
                 .willReturn("uploaded/image2.jpg");
         // when
-        EventAssetRequestResponse response = eventService.requestEventAsset(request, userId);
+        EventAssetRequestResponse response = eventService.requestEventAsset(request, makerEmail);
 
         // then
         assertThat(response.eventAssetId()).isEqualTo(assetId);
@@ -269,7 +268,7 @@ class EventServiceImplTest {
                 assetId,
                 "SUCCESS",
                 "https://cdn.example.com/generated-asset.jpg",
-                null
+                AssetType.IMAGE
         );
 
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(eventAsset));
@@ -311,7 +310,7 @@ class EventServiceImplTest {
                 999L,  // 존재하지 않는 ID
                 "SUCCESS",
                 "https://cdn.example.com/asset.jpg",
-                null
+                AssetType.IMAGE
         );
 
         given(eventAssetRepository.findById(999L)).willReturn(Optional.empty());
@@ -332,14 +331,11 @@ class EventServiceImplTest {
         AssetCallbackRequest<AssetType> request = new AssetCallbackRequest<>(
                 assetId,
                 "INVALID_STATUS",  // 잘못된 상태값
-                null,
-                null
+                "https://cdn.example.com/asset.jpg",
+                AssetType.IMAGE
         );
 
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(eventAsset));
-
-        // AssetValidator.validateCallbackRequest가 예외를 던진다고 가정
-        // 실제 구현에 따라 조정 필요
 
         // when & then
         assertThatThrownBy(() -> eventService.handleEventAssetCallback(request))
@@ -352,35 +348,19 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 상태 조회 - SUCCESS 상태")
     void getEventAssetStatus_Success() {
         // given
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);  // maker의 id를 userId로 설정
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(maker)
-                .build();
-
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .type(AssetType.IMAGE)
-                .status(Status.SUCCESS)
-                .assetUrl("https://cdn.example.com/asset.jpg")
-                .build();
-
+        String assetUrl = "https://cdn.example.com/asset.jpg";
+        given(eventAsset.getStatus()).willReturn(Status.SUCCESS);
+        given(eventAsset.getAssetUrl()).willReturn(assetUrl);
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when
-        AssetResultResponse response = eventService.getEventAssetStatus(assetId, userId);
+        AssetResultResponse response = eventService.getEventAssetStatus(assetId, makerEmail);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.type()).isEqualTo(AssetType.IMAGE);
-        assertThat(response.assetUrl()).isEqualTo("https://cdn.example.com/asset.jpg");
+        assertThat(response.assetUrl()).isEqualTo(assetUrl);
 
         verify(eventAssetRepository).findByIdWithStore(assetId);
     }
@@ -389,29 +369,11 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 상태 조회 - PENDING 상태")
     void getEventAssetStatus_Pending() {
         // given
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(maker)
-                .build();
-
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .type(AssetType.IMAGE)
-                .status(Status.PENDING)
-                .build();
-
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when
-        AssetResultResponse response = eventService.getEventAssetStatus(assetId, userId);
+        AssetResultResponse response = eventService.getEventAssetStatus(assetId, makerEmail);
 
         // then
         assertThat(response).isNotNull();
@@ -425,29 +387,12 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 상태 조회 - FAIL 상태")
     void getEventAssetStatus_Fail() {
         // given
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(maker)
-                .build();
-
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .type(AssetType.IMAGE)
-                .status(Status.FAIL)
-                .build();
-
+        given(eventAsset.getStatus()).willReturn(Status.FAIL);
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when & then
-        assertThatThrownBy(() -> eventService.getEventAssetStatus(assetId, userId))
+        assertThatThrownBy(() -> eventService.getEventAssetStatus(assetId, makerEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ASSET_URL_REQUIRED);
 
@@ -462,7 +407,7 @@ class EventServiceImplTest {
                 .willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> eventService.getEventAssetStatus(assetId, userId))
+        assertThatThrownBy(() -> eventService.getEventAssetStatus(assetId, makerEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ASSET_NOT_FOUND);
 
@@ -473,31 +418,18 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 상태 조회 - 권한 없음 (다른 사용자)")
     void getEventAssetStatus_Forbidden() {
         // given
-        Long otherUserId = 999L;
-        User otherMaker = User.builder().build();
-        setFieldValue(otherMaker, otherUserId);  // 다른 사용자 ID
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(otherMaker)
+        String otherEmail = "other@example.com";
+        User requestUser = User.builder()
+                .email(otherEmail)
                 .build();
 
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .type(AssetType.IMAGE)
-                .status(Status.SUCCESS)
-                .assetUrl("https://cdn.example.com/asset.jpg")
-                .build();
-
+        given(userRepository.findByEmailAndDeletedFalse(otherEmail))
+                .willReturn(Optional.of(requestUser));
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when & then
-        assertThatThrownBy(() -> eventService.getEventAssetStatus(assetId, userId))
+        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, otherEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
 
@@ -521,6 +453,7 @@ class EventServiceImplTest {
 
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(mockAsset));
         given(mockAsset.getStatus()).willReturn(Status.SUCCESS);
+        given(mockAsset.getType()).willReturn(AssetType.IMAGE);
         given(mockAsset.getId()).willReturn(assetId);
 
         given(eventRepository.findById(eventId)).willReturn(Optional.of(mockEvent));
@@ -578,6 +511,7 @@ class EventServiceImplTest {
         EventAsset mockAsset = mock(EventAsset.class);
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(mockAsset));
         given(mockAsset.getStatus()).willReturn(Status.PENDING);  // SUCCESS가 아님
+        given(mockAsset.getType()).willReturn(AssetType.IMAGE);
         given(mockAsset.getId()).willReturn(assetId);
 
         // when & then
@@ -605,6 +539,7 @@ class EventServiceImplTest {
         EventAsset mockAsset = mock(EventAsset.class);
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(mockAsset));
         given(mockAsset.getStatus()).willReturn(Status.SUCCESS);
+        given(mockAsset.getType()).willReturn(AssetType.SHORTS_GEN_4);
 
         // when & then
         assertThatThrownBy(() -> eventService.finalizeEvent(request))
@@ -630,6 +565,7 @@ class EventServiceImplTest {
         EventAsset mockAsset = mock(EventAsset.class);
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(mockAsset));
         given(mockAsset.getStatus()).willReturn(Status.SUCCESS);
+        given(mockAsset.getType()).willReturn(AssetType.IMAGE);
 
         given(eventRepository.findById(eventId)).willReturn(Optional.empty());
 
@@ -659,6 +595,7 @@ class EventServiceImplTest {
 
         given(eventAssetRepository.findById(assetId)).willReturn(Optional.of(mockAsset));
         given(mockAsset.getStatus()).willReturn(Status.SUCCESS);
+        given(mockAsset.getType()).willReturn(AssetType.IMAGE);
 
         given(eventRepository.findById(eventId)).willReturn(Optional.of(mockEvent));
         given(mockEvent.getStatus()).willReturn(Status.SUCCESS);  // PENDING이 아님
@@ -707,30 +644,13 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 다운로드 - 성공")
     void downloadEventAsset_Success() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(maker)
-                .build();
-
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .assetUrl("/uploads/events/asset123.webp")
-                .build();
-
         Resource mockResource = mock(Resource.class);
 
+        given(eventAsset.getAssetUrl()).willReturn("/uploads/events/asset123.webp");
         given(userRepository.findByEmailAndDeletedFalse(makerEmail))
                 .willReturn(Optional.of(maker));
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
         given(fileStorageService.loadAsResource("/uploads/events/asset123.webp"))
                 .willReturn(mockResource);
         given(mockResource.exists()).willReturn(true);
@@ -772,9 +692,6 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 다운로드 - 에셋을 찾을 수 없음")
     void downloadEventAsset_AssetNotFound() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-
         given(userRepository.findByEmailAndDeletedFalse(makerEmail))
                 .willReturn(Optional.of(maker));
         given(eventAssetRepository.findByIdWithStore(assetId))
@@ -794,38 +711,22 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 다운로드 - 권한 없음 (다른 사용자)")
     void downloadEventAsset_Forbidden() {
         // given
-        String makerEmail = "maker@example.com";
-        User requestUser = User.builder().build();
-        setFieldValue(requestUser, 999L);  // 다른 사용자 ID
-
-        User assetOwner = User.builder().build();
-        setFieldValue(assetOwner, userId);
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(assetOwner)  // 다른 사용자가 소유
+        String otherEmail = "other@example.com";
+        User requestUser = User.builder()
+                .email(otherEmail)
                 .build();
 
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .assetUrl("/uploads/events/asset123.webp")
-                .build();
-
-        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
+        given(userRepository.findByEmailAndDeletedFalse(otherEmail))
                 .willReturn(Optional.of(requestUser));
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when & then
-        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
+        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, otherEmail))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
 
-        verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
+        verify(userRepository).findByEmailAndDeletedFalse(otherEmail);
         verify(eventAssetRepository).findByIdWithStore(assetId);
         verifyNoInteractions(fileStorageService);
     }
@@ -834,28 +735,11 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 다운로드 - URL이 없음")
     void downloadEventAsset_AssetUrlEmpty() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
-        Store store = Store.builder()
-                .name("테스트 가게")
-                .maker(maker)
-                .build();
-
-        Event event = Event.builder()
-                .store(store)
-                .build();
-
-        EventAsset asset = EventAsset.builder()
-                .event(event)
-                .assetUrl("")  // 빈 문자열
-                .build();
-
+        given(eventAsset.getAssetUrl()).willReturn("");
         given(userRepository.findByEmailAndDeletedFalse(makerEmail))
                 .willReturn(Optional.of(maker));
         given(eventAssetRepository.findByIdWithStore(assetId))
-                .willReturn(Optional.of(asset));
+                .willReturn(Optional.of(eventAsset));
 
         // when & then
         assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
@@ -871,6 +755,52 @@ class EventServiceImplTest {
     @DisplayName("이벤트 에셋 다운로드 - URL이 null")
     void downloadEventAsset_AssetUrlNull() {
         // given
+        given(eventAsset.getAssetUrl()).willReturn(null);
+        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
+                .willReturn(Optional.of(maker));
+        given(eventAssetRepository.findByIdWithStore(assetId))
+                .willReturn(Optional.of(eventAsset));
+
+        // when & then
+        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ASSET_URL_REQUIRED);
+
+        verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
+        verify(eventAssetRepository).findByIdWithStore(assetId);
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @DisplayName("이벤트 에셋 다운로드 - 파일이 존재하지 않음")
+    void downloadEventAsset_FileNotExists() {
+        // given
+        Resource mockResource = mock(Resource.class);
+
+        given(eventAsset.getAssetUrl()).willReturn("/uploads/events/notfound.webp");
+        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
+                .willReturn(Optional.of(maker));
+        given(eventAssetRepository.findByIdWithStore(assetId))
+                .willReturn(Optional.of(eventAsset));
+        given(fileStorageService.loadAsResource("/uploads/events/notfound.webp"))
+                .willReturn(mockResource);
+        given(mockResource.exists()).willReturn(false);  // 파일이 존재하지 않음
+
+        // when & then
+        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
+                .isInstanceOf(ApiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FILE_NOT_FOUND);
+
+        verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
+        verify(eventAssetRepository).findByIdWithStore(assetId);
+        verify(fileStorageService).loadAsResource("/uploads/events/notfound.webp");
+        verify(mockResource).exists();
+    }
+
+    @Test
+    @DisplayName("이벤트 에셋 다운로드 - 파일을 읽을 수 없음")
+    void downloadEventAsset_FileNotReadable() {
+        // given
         String makerEmail = "maker@example.com";
         User maker = User.builder().build();
         setFieldValue(maker, userId);
@@ -886,120 +816,36 @@ class EventServiceImplTest {
 
         EventAsset asset = EventAsset.builder()
                 .event(event)
-                .assetUrl(null)  // null
+                .assetUrl("/uploads/events/unreadable.webp")
                 .build();
+
+        Resource mockResource = mock(Resource.class);
 
         given(userRepository.findByEmailAndDeletedFalse(makerEmail))
                 .willReturn(Optional.of(maker));
         given(eventAssetRepository.findByIdWithStore(assetId))
                 .willReturn(Optional.of(asset));
+        given(fileStorageService.loadAsResource("/uploads/events/unreadable.webp"))
+                .willReturn(mockResource);
+        given(mockResource.exists()).willReturn(true);
+        given(mockResource.isReadable()).willReturn(false);  // 읽을 수 없음
 
         // when & then
         assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
                 .isInstanceOf(ApiException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ASSET_URL_REQUIRED);
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FILE_NOT_FOUND);
 
         verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
         verify(eventAssetRepository).findByIdWithStore(assetId);
-        verifyNoInteractions(fileStorageService);
+        verify(fileStorageService).loadAsResource("/uploads/events/unreadable.webp");
+        verify(mockResource).exists();
+        verify(mockResource).isReadable();
     }
-
-//    @Test
-//    @DisplayName("이벤트 에셋 다운로드 - 파일이 존재하지 않음")
-//    void downloadEventAsset_FileNotExists() {
-//        // given
-//        String makerEmail = "maker@example.com";
-//        User maker = User.builder().build();
-//        setFieldValue(maker, userId);
-//
-//        Store store = Store.builder()
-//                .name("테스트 가게")
-//                .maker(maker)
-//                .build();
-//
-//        Event event = Event.builder()
-//                .store(store)
-//                .build();
-//
-//        EventAsset asset = EventAsset.builder()
-//                .event(event)
-//                .assetUrl("/uploads/events/notfound.webp")
-//                .build();
-//
-//        Resource mockResource = mock(Resource.class);
-//
-//        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
-//                .willReturn(Optional.of(maker));
-//        given(eventAssetRepository.findByIdWithStore(assetId))
-//                .willReturn(Optional.of(asset));
-//        given(fileStorageService.loadAsResource("/uploads/events/notfound.webp"))
-//                .willReturn(mockResource);
-//        given(mockResource.exists()).willReturn(false);  // 파일이 존재하지 않음
-//
-//        // when & then
-//        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
-//                .isInstanceOf(ApiException.class)
-//                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FILE_NOT_FOUND);
-//
-//        verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
-//        verify(eventAssetRepository).findByIdWithStore(assetId);
-//        verify(fileStorageService).loadAsResource("/uploads/events/notfound.webp");
-//        verify(mockResource).exists();
-//    }
-
-//    @Test
-//    @DisplayName("이벤트 에셋 다운로드 - 파일을 읽을 수 없음")
-//    void downloadEventAsset_FileNotReadable() {
-//        // given
-//        String makerEmail = "maker@example.com";
-//        User maker = User.builder().build();
-//        setFieldValue(maker, userId);
-//
-//        Store store = Store.builder()
-//                .name("테스트 가게")
-//                .maker(maker)
-//                .build();
-//
-//        Event event = Event.builder()
-//                .store(store)
-//                .build();
-//
-//        EventAsset asset = EventAsset.builder()
-//                .event(event)
-//                .assetUrl("/uploads/events/unreadable.webp")
-//                .build();
-//
-//        Resource mockResource = mock(Resource.class);
-//
-//        given(userRepository.findByEmailAndDeletedFalse(makerEmail))
-//                .willReturn(Optional.of(maker));
-//        given(eventAssetRepository.findByIdWithStore(assetId))
-//                .willReturn(Optional.of(asset));
-//        given(fileStorageService.loadAsResource("/uploads/events/unreadable.webp"))
-//                .willReturn(mockResource);
-//        given(mockResource.exists()).willReturn(true);
-//        given(mockResource.isReadable()).willReturn(false);  // 읽을 수 없음
-//
-//        // when & then
-//        assertThatThrownBy(() -> eventService.downloadEventAsset(assetId, makerEmail))
-//                .isInstanceOf(ApiException.class)
-//                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FILE_NOT_FOUND);
-//
-//        verify(userRepository).findByEmailAndDeletedFalse(makerEmail);
-//        verify(eventAssetRepository).findByIdWithStore(assetId);
-//        verify(fileStorageService).loadAsResource("/uploads/events/unreadable.webp");
-//        verify(mockResource).exists();
-//        verify(mockResource).isReadable();
-//    }
 
     @Test
     @DisplayName("이벤트 에셋 다운로드 - 파일 로드 중 예외 발생")
     void downloadEventAsset_LoadResourceException() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
         Store store = Store.builder()
                 .name("테스트 가게")
                 .maker(maker)
@@ -1035,10 +881,6 @@ class EventServiceImplTest {
     @DisplayName("내 이벤트 목록 조회 - 성공 (첫 페이지)")
     void getMyEvents_Success_FirstPage() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
         Store store1 = Store.builder()
                 .name("테스트 가게1")
                 .maker(maker)
@@ -1117,10 +959,7 @@ class EventServiceImplTest {
     @DisplayName("내 이벤트 목록 조회 - 커서 기반 페이징")
     void getMyEvents_Success_WithCursor() {
         // given
-        String makerEmail = "maker@example.com";
         Long lastEventId = 50L;
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
 
         Store store = Store.builder()
                 .name("테스트 가게")
@@ -1163,10 +1002,6 @@ class EventServiceImplTest {
     @DisplayName("내 이벤트 목록 조회 - 이벤트는 있지만 에셋이 없는 경우")
     void getMyEvents_Success_NoAssets() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
         Store store = Store.builder()
                 .name("테스트 가게")
                 .maker(maker)
@@ -1242,10 +1077,6 @@ class EventServiceImplTest {
     @DisplayName("내 이벤트 목록 조회 - 여러 이벤트 중 일부만 에셋 있음")
     void getMyEvents_PartialAssets() {
         // given
-        String makerEmail = "maker@example.com";
-        User maker = User.builder().build();
-        setFieldValue(maker, userId);
-
         Store store = Store.builder()
                 .name("테스트 가게")
                 .maker(maker)
