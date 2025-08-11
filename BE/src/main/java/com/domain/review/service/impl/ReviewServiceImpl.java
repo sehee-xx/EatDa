@@ -99,7 +99,7 @@ public class ReviewServiceImpl implements ReviewService {
         // 변환 여부를 넘겨서 업로드
         List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
                 true);
-
+        log.info(uploadedImageUrls.toString());
         publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls); // Redis 메시지 발행
 
         return reviewMapper.toRequestResponse(review, reviewAsset);
