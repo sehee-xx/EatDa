@@ -21,4 +21,5 @@ public interface EventService {
     Resource downloadEventAsset(final Long assetId, final String makerEmail);
     List<MyEventResponse> getMyEvents(final Long lastEventId, final String makerEmail);
     List<ActiveStoreEventResponse> getActiveStoreEvents(final Long storeId, final Long lastEventId);
+    void deleteEvent(final Long eventId, final String makerEmail);
 }
