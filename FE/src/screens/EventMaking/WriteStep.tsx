@@ -1,5 +1,4 @@
-// 4. WriteStep.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,6 +8,7 @@ import {
   TextInput,
   StyleSheet,
   useWindowDimensions,
+  Image, 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
@@ -22,7 +22,7 @@ interface WriteProps {
   onNext: () => void;
   onBack: () => void;
   onClose: () => void;
-  onCancel?: () => void;
+  generatedImageUrl: string | null; // AI가 생성한 이미지 URL
 }
 
 export default function WriteStep({
@@ -33,20 +33,10 @@ export default function WriteStep({
   onNext,
   onBack,
   onClose,
+  generatedImageUrl,
 }: WriteProps) {
   const { width } = useWindowDimensions();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
-
-  // AI 생성이 완료되면 더미 콘텐츠 설정
-  useEffect(() => {
-    if (aiDone && !generatedContent) {
-      // 더미 AI 생성 결과 (햄스터 요리사 영상)
-      setGeneratedContent(
-        "https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=400&h=300&fit=crop"
-      );
-    }
-  }, [aiDone, generatedContent]);
 
   // AI 생성 완료 & 텍스트 리뷰 작성 완료 체크
   const canComplete = aiDone && text.trim().length > 0;
@@ -55,16 +45,6 @@ export default function WriteStep({
     if (canComplete) {
       setShowCompleteModal(true);
     }
-  };
-
-  const handleModalConfirm = () => {
-    setShowCompleteModal(false);
-    onNext(); // 최종 완료
-  };
-
-  const handleModalCancel = () => {
-    setShowCompleteModal(false);
-    // 모달만 닫고 현재 화면 유지
   };
 
   return (
@@ -92,7 +72,6 @@ export default function WriteStep({
                 autoPlay
                 loop
                 style={styles.lottie}
-                duration={5000}
               />
               <Text style={styles.loadingText}>
                 AI 포스터를 생성중입니다...
@@ -103,16 +82,18 @@ export default function WriteStep({
             </View>
           )}
 
-          {aiDone && (
+          {/* 생성 완료 후 완성된 이미지 보여주기 */}
+          {aiDone && generatedImageUrl && (
             <View style={styles.aiCompleteContainer}>
-              <View style={styles.aiCompleteIcon}>
-                <Text style={styles.checkIcon}>✓</Text>
-              </View>
+              <Image
+                source={{ uri: generatedImageUrl }}
+                style={styles.generatedImage}
+              />
               <Text style={styles.aiCompleteText}>
                 AI 포스터 생성이 완료되었습니다!
               </Text>
               <Text style={styles.aiCompleteSubText}>
-                포스터가 완성되면 결과를 확인할 수 있습니다
+                아래에 이벤트 설명을 작성해주세요
               </Text>
             </View>
           )}
@@ -131,7 +112,6 @@ export default function WriteStep({
             onChangeText={onChange}
             maxLength={500}
           />
-
           <View style={styles.textCounter}>
             <Text style={styles.counterText}>{text.length}/500</Text>
           </View>
@@ -163,14 +143,12 @@ export default function WriteStep({
       <CompleteModal
         visible={showCompleteModal}
         onClose={() => setShowCompleteModal(false)}
-        generatedContent={generatedContent}
+        generatedContent={generatedImageUrl} // 모달에 실제 이미지 URL 전달
         onCancel={() => {
-          // "다시 만들기" 버튼 - 부모로 취소 신호 전달
           setShowCompleteModal(false);
-          onBack(); // 또는 별도의 onCancel prop 추가
+          onBack();
         }}
         onConfirm={() => {
-          // "업로드하기" 버튼
           setShowCompleteModal(false);
           onNext();
         }}
@@ -212,13 +190,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   content: {
     flex: 1,
     backgroundColor: "#F7F8F9",
   },
-
-  // AI 섹션
   aiSection: {
     backgroundColor: "#FFFFFF",
     marginBottom: 12,
@@ -229,21 +204,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 10,
+    marginBottom: 20, // 간격 추가
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: "#666666",
-    marginBottom: 20,
-  },
-
   loadingContainer: {
     alignItems: "center",
     paddingVertical: 20,
   },
   lottie: {
-    width: 200,
-    height: 200,
+    width: 150, // 크기 살짝 줄임
+    height: 150,
     marginBottom: 16,
   },
   loadingText: {
@@ -256,24 +225,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666666",
   },
-
   aiCompleteContainer: {
     alignItems: "center",
     paddingVertical: 20,
   },
-  aiCompleteIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#fff0d7",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  checkIcon: {
-    fontSize: 24,
-    color: "#fec566",
-    fontWeight: "bold",
+  // ✨ 추가: 생성된 이미지를 보여줄 스타일, 보면서 수정해야...
+  generatedImage: {
+    width: "100%",
+    height: 300, // 이미지 높이 조절
+    borderRadius: 12,
+    marginBottom: 24,
+    backgroundColor: "#F0F0F0",
   },
   aiCompleteText: {
     fontSize: 16,
@@ -286,8 +248,6 @@ const styles = StyleSheet.create({
     color: "#666666",
     textAlign: "center",
   },
-
-  // 텍스트 섹션
   textSection: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
@@ -295,14 +255,14 @@ const styles = StyleSheet.create({
     marginBottom: 100,
   },
   textInput: {
-    minHeight: 200,
+    minHeight: 150, // 높이 조절
     borderWidth: 1,
     borderColor: "#E8E8E8",
     borderRadius: 12,
     padding: 16,
     backgroundColor: "#fff",
     color: "#333",
-    fontSize: 12,
+    fontSize: 14, // 폰트 크기 키움
     lineHeight: 22,
     textAlignVertical: "top",
   },
@@ -314,8 +274,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#999999",
   },
-
-  // 하단 버튼
   bottom: {
     position: "absolute",
     bottom: 0,
