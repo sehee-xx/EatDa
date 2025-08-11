@@ -2,7 +2,9 @@ package com.domain.menu.service.impl;
 
 import com.domain.menu.dto.redis.MenuPosterAssetGenerateMessage;
 import com.domain.menu.dto.request.MenuPosterAssetCreateRequest;
+import com.domain.menu.dto.request.MenuPosterFinalizeRequest;
 import com.domain.menu.dto.response.MenuPosterAssetRequestResponse;
+import com.domain.menu.dto.response.MenuPosterFinalizeResponse;
 import com.domain.menu.entity.Menu;
 import com.domain.menu.entity.MenuPoster;
 import com.domain.menu.entity.MenuPosterAsset;
@@ -100,6 +102,22 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         };
     }
 
+    @Override
+    @Transactional
+    public MenuPosterFinalizeResponse finalizeMenuPoster(MenuPosterFinalizeRequest request) {
+        MenuPosterAsset asset = validateAsset(request.menuPosterAssetId());
+        menuValidator.validateForFinalization(asset);
+
+        MenuPoster menuPoster = validateMenuPoster(request.menuPosterId());
+        menuValidator.validatePendingStatus(menuPoster);
+
+        menuPoster.updateDescription(request.description());
+        menuPoster.updateStatus(Status.SUCCESS);
+        asset.registerMenuPoster(menuPoster);
+
+        return MenuPosterFinalizeResponse.from(menuPoster);
+    }
+
     private User validateEater(final String eaterEmail) {
         return eaterRepository.findByEmailAndDeletedFalse(eaterEmail)
                 .orElseThrow(() -> {
@@ -113,6 +131,14 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                 .orElseThrow(() -> {
                     log.warn("[MenuPosterService] 가게를 찾을 수 없음 - storeId: {}", storeId);
                     return new ApiException(ErrorCode.STORE_NOT_FOUND);
+                });
+    }
+
+    private MenuPoster validateMenuPoster(final Long menuPosterId) {
+        return menuPosterRepository.findById(menuPosterId)
+                .orElseThrow(() -> {
+                    log.warn("[MenuPosterService] 메뉴 포스터를 찾을 수 없음 - menuPosterId: {}", menuPosterId);
+                    return new ApiException(ErrorCode.MENU_POSTER_NOT_FOUND, menuPosterId);
                 });
     }
 
