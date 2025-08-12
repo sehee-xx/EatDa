@@ -25,6 +25,7 @@ import com.global.dto.response.BaseResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,6 +43,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
@@ -55,6 +57,13 @@ public class EventController {
             @RequestPart(value = "images", required = false) List<MultipartFile> eventImageRequests,
             @AuthenticationPrincipal final String email
     ) {
+        final int imageCount = (eventImageRequests == null) ? 0 : eventImageRequests.size();
+        log.info("===== [Controller] requestEventAsset START =====");
+        log.info("BaseRequest: title={}, type={}, startDate={}, endDate={}, prompt.length={}",
+                baseRequest.title(), baseRequest.type(), baseRequest.startDate(), baseRequest.endDate(),
+                baseRequest.prompt() == null ? 0 : baseRequest.prompt().length());
+        log.info("images size: {}", imageCount);
+        log.info("makerEmail(principal): {}", email);
         EventAssetRequestResponse response = eventService.requestEventAsset(baseRequest, email, eventImageRequests);
         return ApiResponseFactory.success(EVENT_ASSET_REQUESTED, response);
     }

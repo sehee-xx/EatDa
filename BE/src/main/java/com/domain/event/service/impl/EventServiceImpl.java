@@ -61,25 +61,63 @@ public class EventServiceImpl implements EventService {
     public EventAssetRequestResponse requestEventAsset(final EventAssetCreateRequest baseRequest,
                                                        final String makerEmail,
                                                        final List<MultipartFile> eventImageRequests) {
-        // 사용자 ROLE 검사
+
+        log.info("===== [Service] requestEventAsset START =====");
+
+        // [Step1] 사용자/권한 확인
+        log.info("Step1: Load maker by email");
         User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
-                .orElseThrow(() -> new ApiException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> {
+                    log.warn("Step1-ERROR: maker not found or deleted. email={}", makerEmail);
+                    return new ApiException(ErrorCode.FORBIDDEN);
+                });
+        log.info("Step1: OK - makerId={}", maker.getId());
 
-        // storeId 유효성 검사
+        // [Step2] 매장 선택 (첫 번째 매장)
+        log.info("Step2: Resolve maker's store");
+        if (maker.getStores() == null || maker.getStores().isEmpty()) {
+            log.warn("Step2-ERROR: maker has no stores. makerId={}", maker.getId());
+            throw new ApiException(ErrorCode.RESOURCE_NOT_FOUND, "No store for maker");
+        }
         Store store = maker.getStores().getFirst();
+        log.info("Step2: OK - storeId={}", store.getId());
 
-        AssetValidator.validateImages(eventImageRequests, ErrorCode.IMAGE_TOO_LARGE);
+        // [Step3] 입력 이미지 검증
+        final List<MultipartFile> safeImages = (eventImageRequests == null)
+                ? Collections.emptyList()
+                : eventImageRequests;
+        log.info("Step3: Validate images. count={}", safeImages.size());
+        AssetValidator.validateImages(safeImages, ErrorCode.IMAGE_TOO_LARGE);
+        log.info("Step3: OK");
 
-        LocalDate startDate = LocalDate.parse(baseRequest.startDate());
-        LocalDate endDate = LocalDate.parse(baseRequest.endDate());
-
+        // [Step4] 날짜 파싱 및 검증
+        log.info("Step4: Parse dates. start={}, end={}", baseRequest.startDate(), baseRequest.endDate());
+        final LocalDate startDate = LocalDate.parse(baseRequest.startDate()); // 예외 발생 시 전파
+        final LocalDate endDate = LocalDate.parse(baseRequest.endDate());
         EventValidator.validateDateRange(startDate, endDate);
+        log.info("Step4: OK");
+
+        // [Step5] Event / EventAsset 엔티티 생성(PENDING)
+        log.info("Step5: Create pending event + eventAsset");
         Event event = createPendingEvent(store, startDate, endDate);
         EventAsset eventAsset = createPendingEventAsset(event, baseRequest);
+        log.info("Step5: OK - eventId={}, eventAssetId={}", event.getId(), eventAsset.getId());
 
-        boolean convertToWebp = shouldConvertToWebp(baseRequest.type());
-        List<String> uploadedImageUrls = uploadImages(eventImageRequests, IMAGE_BASE_PATH + maker.getEmail(),
-                convertToWebp);
+        // [Step6] 업로드 경로/변환 정책 결정
+        log.info("Step6: Decide upload path & webp");
+        final boolean convertToWebp = shouldConvertToWebp(baseRequest.type());
+        final String uploadBasePath = IMAGE_BASE_PATH + maker.getEmail();
+        log.info("Step6: OK - convertToWebp={}, uploadBasePath={}", convertToWebp, uploadBasePath);
+
+        // [Step7] 이미지 업로드
+        log.info("Step7: Upload images. count={}", safeImages.size());
+        final long tUpload = System.nanoTime();
+        List<String> uploadedImageUrls = uploadImages(safeImages, uploadBasePath, convertToWebp);
+        final long uploadElapsedMs = (System.nanoTime() - tUpload) / 1_000_000L;
+        log.info("Step7: OK - uploadedUrls.size={}, elapsed={}ms", uploadedImageUrls.size(), uploadElapsedMs);
+
+        // [Step8] 메시지 발행(Redis Stream 등)
+        log.info("Step8: Publish message to generator");
         EventAssetGenerateMessage message = EventAssetGenerateMessage.of(
                 eventAsset.getId(),
                 baseRequest.type(),
@@ -92,8 +130,14 @@ public class EventServiceImpl implements EventService {
                 uploadedImageUrls
         );
         eventAssetRedisPublisher.publish(RedisStreamKey.EVENT_ASSET, message);
+        log.info("Step8: OK - published to stream={}, eventAssetId={}", RedisStreamKey.EVENT_ASSET, eventAsset.getId());
 
-        return EventAssetRequestResponse.from(eventAsset);
+        // [Step9] 응답 변환
+        log.info("Step9: Build response");
+        EventAssetRequestResponse response = EventAssetRequestResponse.from(eventAsset);
+        log.info("===== [Service] requestEventAsset END =====");
+
+        return response;
     }
 
     @Override
