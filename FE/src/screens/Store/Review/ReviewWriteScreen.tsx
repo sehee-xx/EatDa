@@ -23,10 +23,26 @@ export default function ReviewWriteScreen({ navigation }: Props) {
   const [genLoading, setGenLoading] = useState(false);
   const [aiOk, setAiOk] = useState(false);
   const [text, setText] = useState("");
+  
+  // 영수증 이미지 URI 저장
+  const [receiptImageUri, setReceiptImageUri] = useState<string>("");
 
   // 화면 닫기 핸들러
   const handleClose = () => {
     navigation.goBack();
+  };
+
+  // OCR 성공 핸들러 - 다음 단계로 이동
+  const handleOCRSuccess = (imageUri: string) => {
+    console.log("영수증 인증 완료:", imageUri);
+    setReceiptImageUri(imageUri); // 영수증 이미지 저장
+    setStep("menu"); // 메뉴 선택 단계로 이동
+  };
+
+  // OCR 실패 핸들러
+  const handleOCRFailure = () => {
+    console.log("영수증 인증 실패");
+    // 실패 시 특별한 처리가 필요하면 여기에 추가
   };
 
   const nextGen = () => {
@@ -59,9 +75,24 @@ export default function ReviewWriteScreen({ navigation }: Props) {
     if (selected.length) setStep("gen");
   };
 
-  // 뒤로가기 핸들러
+  // 각 단계별 뒤로가기 핸들러
+  const handleOCRBack = () => {
+    navigation.goBack(); // 화면 닫기
+  };
+
   const handleMenuBack = () => {
-    setStep("ocr");
+    setStep("ocr"); // OCR 단계로 돌아가기
+  };
+
+  const handleGenBack = () => {
+    setStep("menu"); // 메뉴 선택 단계로 돌아가기
+  };
+
+  const handleWriteBack = () => {
+    // WriteStep에서 뒤로가기 시 AI 상태 초기화
+    setGenLoading(false);
+    setAiOk(false);
+    setStep("gen"); // 생성 단계로 돌아가기
   };
 
   // 이미지 추가 함수
@@ -73,9 +104,9 @@ export default function ReviewWriteScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       {step === "ocr" && (
         <OCRStep
-          onSuccess={() => setStep("menu")}
-          onFailure={handleClose}
-          onBack={handleClose}
+          onSuccess={handleOCRSuccess} // 수정: 다음 단계로 이동
+          onFailure={handleOCRFailure}
+          onBack={handleOCRBack}
         />
       )}
 
@@ -102,7 +133,7 @@ export default function ReviewWriteScreen({ navigation }: Props) {
           onRemove={(i) => setImgs((p) => p.filter((_, idx) => idx !== i))}
           onPrompt={setPrompt}
           onNext={nextGen}
-          onBack={() => setStep("menu")}
+          onBack={handleGenBack} // 수정: 명확한 핸들러 사용
         />
       )}
 
@@ -112,13 +143,8 @@ export default function ReviewWriteScreen({ navigation }: Props) {
           aiDone={aiOk} // AI 생성 완료 상태
           text={text}
           onChange={setText}
-          onNext={handleWriteComplete} // 수정된 부분: 리뷰 페이지로 직접 이동
-          onBack={() => {
-            // WriteStep에서 뒤로가기 시 AI 상태 초기화
-            setGenLoading(false);
-            setAiOk(false);
-            setStep("gen");
-          }}
+          onNext={handleWriteComplete} // 리뷰 페이지로 직접 이동
+          onBack={handleWriteBack} // 수정: 명확한 핸들러 사용
           onClose={handleClose}
         />
       )}
