@@ -1,5 +1,6 @@
 package com.global.config;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,7 @@ public class FileStorageProperties {
     private static final String VIDEOS_PATH = "videos";
 
     private String baseDir;
+    private String baseUrl;
 
     public String getImageRoot() {
         return Paths.get(baseDir, DATA_PATH, IMAGES_PATH)
@@ -31,5 +33,9 @@ public class FileStorageProperties {
                 .toAbsolutePath()
                 .normalize()
                 .toString();
+    }
+
+    public Path getBaseDirPath() {
+        return Paths.get(baseDir).toAbsolutePath().normalize();
     }
 }

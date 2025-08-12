@@ -30,6 +30,7 @@ import com.domain.review.repository.ReviewAssetRepository;
 import com.domain.review.repository.ReviewMenuRepository;
 import com.domain.review.repository.ReviewRepository;
 import com.domain.review.service.PoiStoreDistanceService;
+import com.domain.review.service.ReviewAssetService;
 import com.domain.review.service.ReviewService;
 import com.domain.review.validator.ReviewValidator;
 import com.domain.store.entity.Store;
@@ -73,6 +74,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewAssetRedisPublisher reviewAssetRedisPublisher;
     private final FileStorageService fileStorageService;
     private final PoiStoreDistanceService poiStoreDistanceService;
+    private final ReviewAssetService reviewAssetService;
 
     // @formatter:off
     /**
@@ -587,14 +589,14 @@ public class ReviewServiceImpl implements ReviewService {
                         ))
                         .toList();
 
-        ReviewAssetGenerateMessage message = ReviewAssetGenerateMessage.of(
+        ReviewAssetGenerateMessage message = reviewAssetService.prepareForRedis(
                 reviewAsset.getId(),
                 request.type(),
                 request.prompt(),
                 store.getId(),
                 userId,
                 menuItems,
-                uploadedImageUrls // referenceImages
+                uploadedImageUrls
         );
 
         reviewAssetRedisPublisher.publish(message);
