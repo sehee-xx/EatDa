@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import java.sql.Struct;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -57,7 +58,7 @@ public class ReviewAsset {
 
     @Builder
     public ReviewAsset(final Review review, final ReviewAssetType type, final String assetUrl, final String prompt,
-                       final Status status) {
+                       final String thumbnailPath, final Status status) {
         this.review = review;
         this.type = type;
         switch (type) {
@@ -65,6 +66,7 @@ public class ReviewAsset {
             case SHORTS_RAY_2, SHORTS_GEN_4 -> this.shortsUrl = assetUrl;
         }
         this.prompt = prompt;
+        this.thumbnailPath = thumbnailPath;
         this.status = status != null ? status : Status.PENDING;
     }
 
