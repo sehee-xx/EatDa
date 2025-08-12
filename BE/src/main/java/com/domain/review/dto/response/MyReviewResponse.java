@@ -16,5 +16,7 @@ public record MyReviewResponse(
         String imageUrl,
         @ExcludeFromLogging
         String shortsUrl,
+        @ExcludeFromLogging
+        String thumbnailUrl,
         LocalDateTime createdAt
 ) {}

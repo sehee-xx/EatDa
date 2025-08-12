@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @Table(name = "review_asset")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Slf4j
 public class ReviewAsset {
 
     @Id
@@ -81,8 +80,6 @@ public class ReviewAsset {
     }
 
     public void updateShortsUrl(final String shortsUrl) {
-        log.info("[Thumbnail2] shourtsUrl: {}", shortsUrl);
-
         this.shortsUrl = shortsUrl;
     }
 
