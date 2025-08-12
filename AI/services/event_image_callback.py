@@ -49,7 +49,7 @@ class EventCallbackService:
                     if response.status == 200:
                         # [성공] 최소 메타만 간결하게 남김
                         self.logger.info(
-                            f"콜백 전송 성공: AssetId={callback_data.get('AssetId')}, result={callback_data.get('result')}"
+                            f"콜백 전송 성공: assetId={callback_data.get('assetId')}, result={callback_data.get('result')}"
                         )
                         return response_json or {
                             "code": "OK",
@@ -60,14 +60,44 @@ class EventCallbackService:
                         }
                     elif response.status in (400, 422):
                         # [클라이언트 오류] 유효성 문제 등
+                        # 상세 진단 로그 추가 (요청/응답 메타, 본문 일부)
+                        try:
+                            req_info = response.request_info
+                            req_method = getattr(req_info, "method", "?")
+                            req_url = str(getattr(req_info, "url", self.callback_url))
+                        except Exception:
+                            req_method, req_url = "?", self.callback_url
+
+                        resp_url = str(getattr(response, "url", self.callback_url))
+                        reason = getattr(response, "reason", "")
                         self.logger.warning(
-                            f"유효성 검증 실패: AssetId={callback_data.get('AssetId')}"
+                            "\n".join(
+                                [
+                                    "[EventCallback] 4xx from Spring (validation)",
+                                    f"- status: {response.status} {reason}",
+                                    f"- request: {req_method} {req_url}",
+                                    f"- response.url: {resp_url}",
+                                    f"- callback_url(env): {self.callback_url}",
+                                    f"- response.headers: {dict(response.headers)}",
+                                    f"- rawBody(first 1000B): {raw_text[:1000]}",
+                                    f"- sent.payload: {callback_data}",
+                                    f"- sent.headers: {headers}",
+                                ]
+                            )
                         )
                         return response_json or {
                             "code": "VALIDATION_ERROR",
                             "message": "Validation failed at Spring callback",
                             "status": response.status,
-                            "data": {"rawBody": raw_text[:1000]},
+                            "data": {
+                                "requestMethod": req_method,
+                                "requestUrl": req_url,
+                                "responseUrl": resp_url,
+                                "responseHeaders": dict(response.headers),
+                                "rawBody": raw_text[:1000],
+                                "callbackUrlEnv": self.callback_url,
+                                "payload": callback_data,
+                            },
                             "timestamp": datetime.utcnow().isoformat(),
                         }
                     elif response.status in (401, 403):
