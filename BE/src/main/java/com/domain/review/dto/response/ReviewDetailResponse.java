@@ -39,6 +39,8 @@ public record ReviewDetailResponse(
             @ExcludeFromLogging
             String imageUrl,
             @ExcludeFromLogging
-            String shortsUrl
+            String shortsUrl,
+            @ExcludeFromLogging
+            String thumbnailUrl
     ) {}
 }

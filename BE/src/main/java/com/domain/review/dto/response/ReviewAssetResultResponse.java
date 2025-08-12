@@ -10,6 +10,9 @@ public record ReviewAssetResultResponse(
         String imageUrl,
 
         @ExcludeFromLogging
-        String shortsUrl
+        String shortsUrl,
+
+        @ExcludeFromLogging
+        String thumbnailUrl
 ){
 }
