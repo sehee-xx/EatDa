@@ -16,11 +16,13 @@ import com.global.dto.response.AssetResultResponse;
 import com.global.dto.response.BaseResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/menu-posters")
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class MenuPosterController {
             @Valid @ModelAttribute final MenuPosterAssetCreateRequest request,
             @AuthenticationPrincipal final String email
     ) {
+        log.info("메뉴 포스터 자산 요청 수신 (이메일: {})", email);
         MenuPosterAssetRequestResponse response = menuPosterService.requestMenuPosterAsset(request, email);
         return ApiResponseFactory.success(SuccessCode.POSTER_REQUESTED, response);
     }
