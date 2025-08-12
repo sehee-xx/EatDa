@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mapstruct.Named;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class FileUrlResolver {
     private final FileStorageProperties properties;
 
+    @Named("toPublicUrl")
     public String toPublicUrl(String fullPath) {
         Path full = Paths.get(fullPath).toAbsolutePath().normalize();
         Path base = properties.getBaseDirPath();
