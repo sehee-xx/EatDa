@@ -118,10 +118,36 @@ class EventImageConsumer:
 
     async def handle_message(self, message_id: str, fields: Dict[str, str]) -> None:
         try:
-            self.logger.debug(
-                f"[이벤트이미지컨슈머] 메시지 처리 시작: id={message_id}, keys={list(fields.keys())}"
-            )
-            req = self.parse_message(fields)
+            # 원본 수신 로그
+            try:
+                self.logger.info(
+                    f"[이벤트이미지컨슈머] recv: id={message_id}, rawKeys={list(fields.keys())}, raw={fields}"
+                )
+            except Exception:
+                pass
+
+            # 역직렬화 및 매핑 결과 로그
+            pre_data = self._deserialize_fields(fields)
+            try:
+                self.logger.info(
+                    f"[이벤트이미지컨슈머] deserialized: id={message_id}, keys={list(pre_data.keys())}, data={pre_data}"
+                )
+            except Exception:
+                pass
+
+            # 모델 검증
+            try:
+                req = EventAssetGenerateMessage.model_validate(pre_data)
+            except Exception as ve:
+                self.logger.exception(
+                    f"[이벤트이미지컨슈머] validation error: id={message_id}, data={pre_data}"
+                )
+                try:
+                    payload = json.dumps({"error": str(ve), "fields": fields, "deserialized": pre_data})
+                except Exception:
+                    payload = str({"error": str(ve)})
+                await self.client.xadd(self.dead_stream, {"payload": payload})
+                raise
             result, url = await self.process_image(req)
 
             callback_data = {
@@ -130,6 +156,9 @@ class EventImageConsumer:
                 "assetUrl": url,
                 "type": "IMAGE",
             }
+            self.logger.info(
+                f"[이벤트이미지컨슈머] callback payload: id={message_id}, payload={callback_data}"
+            )
             await event_image_callback_service.send_callback_to_spring(callback_data)
         except Exception as e:
             try:
@@ -165,6 +194,13 @@ class EventImageConsumer:
                 if not result:
                     continue
                 for _, messages in result:
+                    try:
+                        mid_list = [m[0] for m in messages]
+                        self.logger.info(
+                            f"[이벤트이미지컨슈머] xreadgroup: count={len(messages)}, ids={mid_list}"
+                        )
+                    except Exception:
+                        pass
                     for message_id, fields in messages:
                         try:
                             await self.handle_message(message_id, fields)
