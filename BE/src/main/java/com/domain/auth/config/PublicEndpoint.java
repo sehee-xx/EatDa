@@ -34,7 +34,15 @@ public enum PublicEndpoint {
 
     // REVIEW
     REVIEW_ASSET_CALLBACK("/api/reviews/assets/callback"),
-    REVIEW_ASSET_POLLING("/api/reviews/asset/*/result");
+    REVIEW_ASSET_POLLING("/api/reviews/asset/*/result"),
+
+    // Menu Poster
+    MENU_POSTER_CALLBACK("/api/menu-posters/assets/callback"),
+    MENU_POSTER_POLLING("/api/menu-posters/asset/*/result"),
+
+    // Event
+    EVENT_ASSET_CALLBACK("/api/events/assets/callback"),
+    EVENT_ASSET_POLLING("/api/events/asset/*/result");
 
     private final String path;
 
