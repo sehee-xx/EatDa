@@ -598,6 +598,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new ApiException(ErrorCode.ASSET_TYPE_REQUIRED, asset.getId());
         }
 
+        log.info("[Thumbnail1] {}", type);
         switch (type) {
             case IMAGE -> asset.updateImageUrl(url);
             case SHORTS_RAY_2, SHORTS_GEN_4 -> {
@@ -606,20 +607,34 @@ public class ReviewServiceImpl implements ReviewService {
 
                 // 2) 썸네일 생성 대상 경로/파일명 구성: {baseDir}/data/shorts/{email}/{fileName}.jpg
                 final String email = asset.getReview().getUser().getEmail();
+                log.info("[Thumbnail3] {}", email);
+
                 final Path baseDir = fileStorageProperties.getBaseDirPath();
+                log.info("[Thumbnail4] {}", baseDir);
+
                 final Path targetDir = baseDir
                         .resolve(DATA_DIR)
                         .resolve(SHORTS_DIR)
                         .resolve(email);
 
+                log.info("[Thumbnail5] {}", targetDir);
+
                 final String fileName = deriveBaseName(url, "shorts-" + asset.getId());
+
+                log.info("[Thumbnail6] {}", fileName);
 
                 // 3) ffmpeg로 썸네일 추출
                 final Path savedPath = reviewThumbnailService.extractThumbnail(url, targetDir.toString(), fileName);
 
+                log.info("[Thumbnail7] {}", savedPath);
+
                 // 4) 퍼블릭 URL로 변환해서 엔티티에 저장
                 final String publicUrl = fileUrlResolver.toPublicUrl(savedPath.toString());
+                log.info("[Thumbnail8] {}", publicUrl);
+
                 asset.updateThumbnailPath(publicUrl);
+                log.info("[Thumbnail9] {}", asset.getThumbnailPath());
+
             }
             default -> throw new ApiException(ErrorCode.REVIEW_TYPE_INVALID, asset.getId());
         }
