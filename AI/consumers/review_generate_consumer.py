@@ -110,7 +110,7 @@ class ReviewGenerateConsumer:
     async def process_luma(self, req: GenerateRequest) -> Tuple[str, str | None]:
         if not luma_service.is_available():
             return "FAIL", None
-        detailed = await gpt_service.enhance_prompt(req.prompt)
+        detailed = await gpt_service.enhance_prompt_for_luma(req.prompt)
         gen = await luma_service.generate_video(detailed, req.referenceImages, model_name="ray-2")
         wait = await luma_service.wait_for_generation_completion(gen["id"])
         ok = wait["state"] == "completed" and bool(wait.get("asset_url"))
@@ -119,7 +119,7 @@ class ReviewGenerateConsumer:
     async def process_runway(self, req: GenerateRequest) -> Tuple[str, str | None]:
         if not runway_service.is_available():
             return "FAIL", None
-        detailed = await gpt_service.enhance_prompt(req.prompt)
+        detailed = await gpt_service.enhance_prompt_for_runway(req.prompt)
         gen = await runway_service.generate_video(
             enhanced_prompt=detailed,
             reference_images=req.referenceImages,

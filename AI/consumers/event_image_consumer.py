@@ -20,7 +20,7 @@ except Exception as e:  # pragma: no cover
     raise RuntimeError("redis 패키지가 필요합니다. requirements.txt에 redis>=5 를 설치하세요.") from e
 
 from models.event_image_models import EventAssetGenerateMessage
-from services import image_service, luma_service, runway_service, gpt_service
+from services import image_service
 from services.event_image_callback import event_image_callback_service
 
 
@@ -71,48 +71,18 @@ class EventImageConsumer:
             return "FAIL", None
         url = await image_service.generate_image_url(req.prompt)
         return ("SUCCESS" if url else "FAIL"), url
-
-    async def process_luma(self, req: EventAssetGenerateMessage) -> Tuple[str, str | None]:
-        if not luma_service.is_available():
-            return "FAIL", None
-        detailed = await gpt_service.enhance_prompt(req.prompt)
-        gen = await luma_service.generate_video(detailed, req.referenceImages, model_name="ray-2")
-        wait = await luma_service.wait_for_generation_completion(gen["id"])
-        ok = wait["state"] == "completed" and bool(wait.get("asset_url"))
-        return ("SUCCESS" if ok else "FAIL"), wait.get("asset_url")
-
-    async def process_runway(self, req: EventAssetGenerateMessage) -> Tuple[str, str | None]:
-        if not runway_service.is_available():
-            return "FAIL", None
-        detailed = await gpt_service.enhance_prompt(req.prompt)
-        gen = await runway_service.generate_video(
-            enhanced_prompt=detailed,
-            reference_images=req.referenceImages,
-            model_name="gen4_turbo",
-            ratio="720:1280",
-            duration_seconds=5,
-        )
-        wait = await runway_service.wait_for_generation_completion(gen["id"])
-        ok = wait["state"] == "completed" and bool(wait.get("asset_url"))
-        return ("SUCCESS" if ok else "FAIL"), wait.get("asset_url")
+    
 
     async def handle_message(self, message_id: str, fields: Dict[str, str]) -> None:
         try:
             req = self.parse_message(fields)
-            t = (req.type or "").upper()
-
-            if t == "IMAGE":
-                result, url = await self.process_image(req)
-            elif t == "SHORTS_GEN_4":
-                result, url = await self.process_runway(req)
-            else:  # SHORTS_RAY2 or SHORTS
-                result, url = await self.process_luma(req)
+            result, url = await self.process_image(req)
 
             callback_data = {
                 "eventAssetId": req.eventAssetId,
                 "result": result,
                 "assetUrl": url,
-                "type": req.type,
+                "type": "IMAGE",
             }
             await event_image_callback_service.send_callback_to_spring(callback_data)
         except Exception as e:

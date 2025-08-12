@@ -22,7 +22,7 @@ except Exception as e:  # pragma: no cover
 from models.menuboard_generate_models import (
     MenuPosterGenerateMessage,
 )
-from services import image_service
+from services import image_service, gpt_service
 from services.menuboard_generate_callback import menuboard_generate_callback_service
 
 
@@ -72,7 +72,9 @@ class MenuboardGenerateConsumer:
     async def process_image(self, req: MenuPosterGenerateMessage) -> Tuple[str, str | None]:
         if not image_service.is_available():
             return "FAIL", None
-        url = await image_service.generate_image_url(req.prompt)
+        # 메뉴보드 전용 GPT 보강 후 이미지 생성
+        enhanced = await gpt_service.enhance_prompt_for_menuboard(req.prompt)
+        url = await image_service.generate_image_url(enhanced)
         return ("SUCCESS" if url else "FAIL"), url
 
     async def handle_message(self, message_id: str, fields: Dict[str, str]) -> None:
