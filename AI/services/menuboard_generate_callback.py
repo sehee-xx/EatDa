@@ -75,14 +75,44 @@ class MenuPosterCallbackService:
                             "timestamp": datetime.utcnow().isoformat(),
                         }
                     elif response.status >= 500:
+                        # 5xx도 상세 진단 로그 남김
+                        try:
+                            req_info = response.request_info
+                            req_method = getattr(req_info, "method", "?")
+                            req_url = str(getattr(req_info, "url", self.callback_url))
+                        except Exception:
+                            req_method, req_url = "?", self.callback_url
+
+                        resp_url = str(getattr(response, "url", self.callback_url))
+                        reason = getattr(response, "reason", "")
                         self.logger.error(
-                            f"서버 오류: assetId={callback_data.get('assetId')}"
+                            "\n".join(
+                                [
+                                    "[MenuPosterCallback] 5xx from Spring",
+                                    f"- status: {response.status} {reason}",
+                                    f"- request: {req_method} {req_url}",
+                                    f"- response.url: {resp_url}",
+                                    f"- callback_url(env): {self.callback_url}",
+                                    f"- response.headers: {dict(response.headers)}",
+                                    f"- rawBody(first 1000B): {raw_text[:1000]}",
+                                    f"- sent.payload: {callback_data}",
+                                    f"- sent.headers: {headers}",
+                                ]
+                            )
                         )
                         return response_json or {
                             "code": "SPRING_ERROR",
                             "message": "Spring server error",
                             "status": response.status,
-                            "data": {"rawBody": raw_text[:1000]},
+                            "data": {
+                                "requestMethod": req_method,
+                                "requestUrl": req_url,
+                                "responseUrl": resp_url,
+                                "responseHeaders": dict(response.headers),
+                                "rawBody": raw_text[:1000],
+                                "callbackUrlEnv": self.callback_url,
+                                "payload": callback_data,
+                            },
                             "timestamp": datetime.utcnow().isoformat(),
                         }
                     else:
