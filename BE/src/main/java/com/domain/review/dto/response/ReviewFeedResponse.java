@@ -17,6 +17,8 @@ public record ReviewFeedResponse(
         String imageUrl,
         @ExcludeFromLogging
         String shortsUrl,
+        @ExcludeFromLogging
+        String thumbnailUrl,
         Integer distance  // 전체 피드의 경우 null
 ) {
 }
