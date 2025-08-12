@@ -134,7 +134,7 @@ public class EventServiceImpl implements EventService {
         log.info("Step11: OK");
 
         log.info("===== [Service] requestEventAsset END =====");
-        return EventAssetRequestResponse.from(eventAsset);
+        return EventAssetRequestResponse.from(event, eventAsset);
     }
 
     @Override
