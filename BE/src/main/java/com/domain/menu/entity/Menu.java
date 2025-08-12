@@ -1,6 +1,7 @@
 package com.domain.menu.entity;
 
 import com.domain.store.entity.Store;
+import com.global.annotation.ExcludeFromLogging;
 import com.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -32,6 +33,7 @@ public class Menu extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @ExcludeFromLogging
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
