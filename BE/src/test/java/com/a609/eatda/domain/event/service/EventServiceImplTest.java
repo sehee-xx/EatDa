@@ -1,5 +1,19 @@
 package com.a609.eatda.domain.event.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 import com.domain.event.dto.redis.EventAssetGenerateMessage;
 import com.domain.event.dto.request.EventAssetCreateRequest;
 import com.domain.event.dto.request.EventFinalizeRequest;
@@ -27,6 +41,10 @@ import com.global.dto.response.AssetResultResponse;
 import com.global.exception.ApiException;
 import com.global.filestorage.FileStorageService;
 import com.global.redis.constants.RedisStreamKey;
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,24 +60,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class EventServiceImplTest {
 
+    private final String makerEmail = "maker@example.com";
+    private final Long userId = 1L;
+    private final Long storeId = 100L;
+    private final Long assetId = 300L;
     @InjectMocks
     private EventServiceImpl eventService;
-
     @Mock
     private StoreRepository storeRepository;
     @Mock
@@ -72,7 +82,6 @@ class EventServiceImplTest {
     private FileStorageService fileStorageService;
     @Mock
     private EventAssetRedisPublisher eventAssetRedisPublisher;
-
     @Mock
     private User maker;
     @Mock
@@ -81,10 +90,6 @@ class EventServiceImplTest {
     private Event event;
     @Mock
     private EventAsset eventAsset;
-    private final String makerEmail = "maker@example.com";
-    private final Long userId = 1L;
-    private final Long storeId = 100L;
-    private final Long assetId = 300L;
 
     @BeforeEach
     void setUp() {
@@ -118,7 +123,6 @@ class EventServiceImplTest {
     private EventAssetCreateRequest createRequest(String title,
                                                   String prompt, List<MultipartFile> files) {
         return new EventAssetCreateRequest(
-                storeId,
                 title,
                 AssetType.IMAGE,
                 "2025-12-20",
@@ -1258,7 +1262,8 @@ class EventServiceImplTest {
 
         given(storeRepository.findById(storeId))
                 .willReturn(Optional.of(store));
-        given(eventRepository.findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId), any(Pageable.class)))
+        given(eventRepository.findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId),
+                any(Pageable.class)))
                 .willReturn(List.of(event));
         given(eventAssetRepository.findByEventIds(any()))
                 .willReturn(Collections.emptyList());
@@ -1270,7 +1275,8 @@ class EventServiceImplTest {
         assertThat(responses).hasSize(1);
         assertThat(responses.getFirst().eventId()).isEqualTo(25L);
 
-        verify(eventRepository).findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId), any(Pageable.class));
+        verify(eventRepository).findActiveStoreEvents(eq(storeId), any(LocalDate.class), eq(lastEventId),
+                any(Pageable.class));
     }
 
     @Test
