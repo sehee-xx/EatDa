@@ -58,41 +58,83 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    public EventAssetRequestResponse requestEventAsset(final EventAssetCreateRequest baseRequest,
-                                                       final String makerEmail,
-                                                       final List<MultipartFile> eventImageRequests) {
-        // 사용자 ROLE 검사
+    public EventAssetRequestResponse requestEventAsset(final EventAssetCreateRequest request,
+                                                       final String makerEmail) {
+
+        log.info("===== [Service] requestEventAsset START =====");
+
+        // Step1: 메이커 사용자 조회 + 권한 확인
+        log.info("Step1: Find maker by email={}", makerEmail);
         User maker = makerRepository.findByEmailAndDeletedFalse(makerEmail)
-                .orElseThrow(() -> new ApiException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> {
+                    log.warn("Step1-ERROR: maker not found or deleted");
+                    return new ApiException(ErrorCode.FORBIDDEN);
+                });
+        log.info("Step1: OK - makerId={}", maker.getId());
 
-        // storeId 유효성 검사
+        // Step2: 매장 선택
+        log.info("Step2: Get first store from maker");
         Store store = maker.getStores().getFirst();
+        log.info("Step2: OK - storeId={}", store.getId());
 
-        AssetValidator.validateImages(eventImageRequests, ErrorCode.IMAGE_TOO_LARGE);
+        // Step3: 이미지 유효성 검사
+        log.info("Step3: Validate images - count={}", request.image() != null ? request.image().size() : 0);
+        AssetValidator.validateImages(request.image(), ErrorCode.IMAGE_TOO_LARGE);
+        log.info("Step3: OK");
 
-        LocalDate startDate = LocalDate.parse(baseRequest.startDate());
-        LocalDate endDate = LocalDate.parse(baseRequest.endDate());
+        // Step4: 날짜 파싱
+        log.info("Step4: Parse dates - start={}, end={}", request.startDate(), request.endDate());
+        LocalDate startDate = LocalDate.parse(request.startDate());
+        LocalDate endDate = LocalDate.parse(request.endDate());
+        log.info("Step4: OK");
 
+        // Step5: 날짜 범위 검증
+        log.info("Step5: Validate date range");
         EventValidator.validateDateRange(startDate, endDate);
-        Event event = createPendingEvent(store, startDate, endDate);
-        EventAsset eventAsset = createPendingEventAsset(event, baseRequest);
+        log.info("Step5: OK");
 
-        boolean convertToWebp = shouldConvertToWebp(baseRequest.type());
-        List<String> uploadedImageUrls = uploadImages(eventImageRequests, IMAGE_BASE_PATH + maker.getEmail(),
+        // Step6: 이벤트 생성
+        log.info("Step6: Create pending event");
+        Event event = createPendingEvent(store, startDate, endDate);
+        log.info("Step6: OK - eventId={}", event.getId());
+
+        // Step7: 이벤트 에셋 생성
+        log.info("Step7: Create pending event asset");
+        EventAsset eventAsset = createPendingEventAsset(event, request);
+        log.info("Step7: OK - eventAssetId={}", eventAsset.getId());
+
+        // Step8: WEBP 변환 여부 결정
+        log.info("Step8: Determine if images should convert to WEBP");
+        boolean convertToWebp = shouldConvertToWebp(request.type());
+        log.info("Step8: OK - convertToWebp={}", convertToWebp);
+
+        // Step9: 이미지 업로드
+        log.info("Step9: Upload images to path={}", IMAGE_BASE_PATH + maker.getEmail());
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + maker.getEmail(),
                 convertToWebp);
+        log.info("Step9: OK - uploadedImageCount={}", uploadedImageUrls.size());
+
+        // Step10: 메시지 생성
+        log.info("Step10: Create EventAssetGenerateMessage");
         EventAssetGenerateMessage message = EventAssetGenerateMessage.of(
                 eventAsset.getId(),
-                baseRequest.type(),
-                baseRequest.prompt(),
+                request.type(),
+                request.prompt(),
                 store.getId(),
                 maker.getId(),
-                baseRequest.title(),
+                request.title(),
                 startDate,
                 endDate,
                 uploadedImageUrls
         );
-        eventAssetRedisPublisher.publish(RedisStreamKey.EVENT_ASSET, message);
+        log.info("Step10: OK");
 
+        // Step11: 메시지 발행
+        log.info("Step11: Publish message to Redis stream={}", RedisStreamKey.EVENT_ASSET);
+        eventAssetRedisPublisher.publish(RedisStreamKey.EVENT_ASSET, message);
+        log.info("Step11: OK");
+
+        log.info("===== [Service] requestEventAsset END =====");
         return EventAssetRequestResponse.from(eventAsset);
     }
 
