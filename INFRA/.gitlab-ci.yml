@@ -18,16 +18,13 @@ reload-infra:
     pull_policy: if-not-present
     entrypoint: [""]
   script:
-    - cp -r $CI_PROJECT_DIR/INFRA/nginx/* /srv/nginx/
+    - cp -r $CI_PROJECT_DIR/INFRA/* /srv/
     - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.yml up -d
   rules:
-    - changes:
-        - INFRA/.gitlab-ci.yml
-      when: manual
+    - when: manual
   allow_failure: true
 
-
-run-test:
+BE:run-test:
   stage: test
   before_script:
     - cd $CI_PROJECT_DIR/BE
@@ -42,7 +39,7 @@ run-test:
     - if: '($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "be/develop" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "be/master") && $CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH =~ /^be\//'
 
-check-build:
+BE:check-build:
   stage: test
   before_script:
     - cd $CI_PROJECT_DIR/BE
@@ -58,7 +55,7 @@ check-build:
     - if: '$CI_COMMIT_BRANCH == "be/develop"'
     - if: '$CI_COMMIT_BRANCH == "be/master"'
 
-build-jar:
+BE:build-jar:
   stage: build
   before_script:
     - cd $CI_PROJECT_DIR/BE
@@ -78,7 +75,7 @@ build-jar:
     - if: '$CI_COMMIT_BRANCH == "be/develop"'
     - if: '$CI_COMMIT_BRANCH == "be/master"'
 
-build-docker-image:
+BE:build-docker-image:
   stage: build
   image:
     name: docker:latest
@@ -104,9 +101,27 @@ build-docker-image:
     - if: '$CI_COMMIT_BRANCH == "be/develop"'
     - if: '$CI_COMMIT_BRANCH == "be/master"'
   needs:
-    - build-jar
+    - BE:build-jar
 
-deploy-slot-based:
+AI:build-deploy-docker-image:
+  stage: build
+  image:
+    name: docker:latest
+    pull_policy: if-not-present
+    entrypoint: [""]
+  before_script:
+    - cd $CI_PROJECT_DIR/AI
+  script:
+    - cp "$ENV_FILE" .env
+    - docker build -t eatda-ai:latest .
+    - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.ai.yml up -d
+  rules:
+    - changes:
+        - INFRA/.gitlab-ci.yml
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "ai/master"'
+
+BE:deploy-slot-based:
   stage: deploy
   dependencies: []
   image:
@@ -115,6 +130,7 @@ deploy-slot-based:
     entrypoint: [""]
   before_script:
     - chmod +x $CI_PROJECT_DIR/INFRA/scripts/get-next-slot.sh
+    - chmod +x $CI_PROJECT_DIR/INFRA/scripts/check-slot-health.sh
   script:
     - |
       if [[ "$CI_COMMIT_BRANCH" == "be/master" ]]; then
@@ -125,8 +141,11 @@ deploy-slot-based:
       export NEXT_SLOT=$($CI_PROJECT_DIR/INFRA/scripts/get-next-slot.sh $ENV)
       export PREV_SLOT=$( [ "$NEXT_SLOT" = "blue" ] && echo "green" || echo "blue" )
       docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml up -d ${ENV}-${NEXT_SLOT}
-      docker exec ${ENV}-nginx ln -sf /srv/nginx/${ENV}/default-${NEXT_SLOT}.conf /srv/nginx/${ENV}/default.conf
-      # health check
+      docker exec ${ENV}-nginx cp /srv/nginx/${ENV}/default-${NEXT_SLOT}.conf /etc/nginx/conf.d/default.conf
+      if ! $CI_PROJECT_DIR/INFRA/scripts/check-slot-health.sh $ENV $NEXT_SLOT; then
+        docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml stop ${ENV}-${NEXT_SLOT}
+        exit 1
+      fi
       docker exec ${ENV}-nginx nginx -s reload
       docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml stop ${ENV}-${PREV_SLOT}
   rules:
@@ -158,4 +177,3 @@ cleanup-temp-files:
       when: never
     - if: '$CI_COMMIT_BRANCH == "be/develop"'
     - if: '$CI_COMMIT_BRANCH == "be/master"'
-    
