@@ -8,9 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class ReviewThumbnailServiceImpl implements ReviewThumbnailService {
 
     private static final String FFMPEG = "ffmpeg";
@@ -29,9 +31,12 @@ public class ReviewThumbnailServiceImpl implements ReviewThumbnailService {
      */
     @Override
     public Path extractThumbnail(final String videoUrl, final String filePath, final String fileName) {
+        log.info("[Thumbnail7] {}", videoUrl);
         validateURL(videoUrl);
 
         Path out = Path.of(filePath, THUMBNAIL_PATH, fileName + EXTENSION);
+        log.info("[Thumbnail8] {}", out);
+
         try {
             Files.createDirectories(out.getParent());
         } catch (IOException e) {
