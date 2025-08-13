@@ -42,12 +42,12 @@ export default function CompleteModal({
     if (contentType === "SHORTS_RAY_2") {
       return {
         title: "예쁜 쇼츠 생성 완료!",
-        subtitle: "고품질 AI 쇼츠가 생성되었습니다.\n자동 재생되는 영상을 확인하고 리뷰를 게시하시겠습니까?"
+        subtitle: "고품질 AI 쇼츠가 생성되었습니다.생성된 리뷰를 게시하시겠습니까?"
       };
     } else if (contentType === "SHORTS_GEN_4") {
       return {
         title: "빠른 쇼츠 생성 완료!",
-        subtitle: "빠르게 생성된 AI 쇼츠입니다.\n자동 재생되는 영상을 확인하고 리뷰를 게시하시겠습니까?"
+        subtitle: "빠르게 생성된 AI 쇼츠입니다. 생성된 리뷰를 게시하시겠습니까?"
       };
     } else {
       return {

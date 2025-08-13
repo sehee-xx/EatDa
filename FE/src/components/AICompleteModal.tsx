@@ -214,13 +214,6 @@ export default function AICompleteModal({
           <View style={styles.textContent}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
-            
-            {/* 콘텐츠 타입별 추가 정보 */}
-            {isVideo && (
-              <Text style={styles.videoInfo}>
-                쇼츠가 자동 재생됩니다. 탭하여 재생/일시정지할 수 있습니다.
-              </Text>
-            )}
           </View>
 
           {/* 버튼들 */}
