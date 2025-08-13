@@ -142,16 +142,16 @@ class MenuboardGenerateConsumer:
             enhanced,
             reference_image_paths=req.referenceImages,
         )
-        # data URL로 온 경우, 환경변수 설정 시 EC2 디스크에 저장하여 public URL로 변환
-        url = self._to_public_url_if_possible(url)
+        # data URL이면 디스크에 저장하고 저장 경로로 치환
+        url = self._save_data_url_to_disk(url, req.userId)
         return ("SUCCESS" if url else "FAIL"), url
 
-    def _to_public_url_if_possible(self, asset_url: str | None) -> str | None:
+    def _save_data_url_to_disk(self, asset_url: str | None, user_id: int) -> str | None:
         try:
             if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith("data:"):
                 return asset_url
-            asset_dir='/home/ubuntu/eatda/test/data/images/menuPosters/gonaging@example.com'
-            if not asset_dir :
+            asset_dir=f'/home/ubuntu/eatda/test/data/images/menuPosters/{user_id}'
+            if not asset_dir:
                 return asset_url
             # ~ 확장 및 디렉터리 보장
             asset_dir = os.path.expanduser(asset_dir)
@@ -169,10 +169,9 @@ class MenuboardGenerateConsumer:
             file_path = os.path.join(asset_dir, file_name)
             with open(file_path, "wb") as f:
                 f.write(base64.b64decode(b64data))
-            # base_url이 없으면 파일 경로 자체를 반환 (요청하신 정책)
-            public_url = f"/assets/{file_name}"
-            self.logger.info(f"[메뉴판컨슈머] data URL saved to {file_path} -> {public_url}")
-            return public_url
+            # 콜백에는 실제 저장 파일 경로를 전달
+            self.logger.info(f"[메뉴판컨슈머] data URL saved to file={file_path}")
+            return file_path
         except Exception as e:
             self.logger.warning(f"[메뉴판컨슈머] data URL 저장/치환 실패: {e}")
             return asset_url

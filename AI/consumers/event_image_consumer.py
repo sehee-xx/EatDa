@@ -47,12 +47,12 @@ class EventImageConsumer:
 
         self.client: redis.Redis = redis.from_url(self.redis_url, decode_responses=True)
 
-    def _to_public_url_if_possible(self, asset_url: str | None) -> str | None:
+    def _save_data_url_to_disk(self, asset_url: str | None, user_id: int) -> str | None:
         try:
             if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith("data:"):
                 return asset_url
             # 이벤트 에셋 저장 디렉터리 (요청 사항대로 하드코딩)
-            asset_dir = '/home/ubuntu/eatda/test/data/images/events/gonaging@example.com'
+            asset_dir = f'/home/ubuntu/eatda/test/data/images/events/{user_id}'
             if not asset_dir:
                 return asset_url
             asset_dir = os.path.expanduser(asset_dir)
@@ -153,8 +153,8 @@ class EventImageConsumer:
         # Google GenAI SDK는 동기 API이므로 스레드
         loop = asyncio.get_running_loop()
         url = await loop.run_in_executor(None, google_image_service.generate_image_url, req.prompt, None)
-        # data URL이면 디스크 저장 후 퍼블릭 URL로 치환
-        url = self._to_public_url_if_possible(url)
+        # data URL이면 디스크에 저장하고 저장 경로로 치환
+        url = self._save_data_url_to_disk(url, req.userId)
         return ("SUCCESS" if url else "FAIL"), url
     
 

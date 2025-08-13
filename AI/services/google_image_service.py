@@ -13,13 +13,9 @@ from __future__ import annotations
 
 import os
 from typing import Optional, List
-from PIL import Image
 import base64
 import mimetypes
 import logging
-import uuid
-from io import BytesIO
-import shutil
 
 try:
     # pip install google-genai
@@ -34,8 +30,6 @@ class GoogleImageService:
     def __init__(self) -> None:
         self.api_key = "AIzaSyDXwG0T-pqiiQvhLcghPM8tNBnCcWbjg_8"
         self.logger = logging.getLogger(__name__)
-        # 저장 디렉터리(하드코딩)
-        self.asset_dir = '/home/ubuntu/eatda/test/data/images/menuPosters/gonaging@example.com'
 
         if not self.api_key or genai is None:
             self.client = None
