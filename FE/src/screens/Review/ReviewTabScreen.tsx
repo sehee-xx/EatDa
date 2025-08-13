@@ -777,19 +777,9 @@ export default function Reviews(props?: ReviewProps) {
                       >
                         <Text style={styles.titleText}>#{item.title}</Text>
                         <Text style={styles.descText}>{item.description}</Text>
-                        {item.menuNames && item.menuNames.length > 0 && (
-                          <Text style={styles.menuText}>
-                            메뉴: {item.menuNames.join(', ')}
-                          </Text>
-                        )}
                         {item.user && (
                           <Text style={styles.userText}>
                             by {item.user.nickname}
-                          </Text>
-                        )}
-                        {item.scrapCount !== undefined && (
-                          <Text style={styles.scrapText}>
-                            스크랩 {item.scrapCount}회
                           </Text>
                         )}
                       </View>
