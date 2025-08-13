@@ -151,8 +151,7 @@ class MenuboardGenerateConsumer:
             if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith("data:"):
                 return asset_url
             asset_dir='/home/ubuntu/eatda/test/data/images/menuPosters/gonaging@example.com'
-            base_url='https://i13a609.p.ssafy.io/eatda/test'
-            if not asset_dir or not base_url:
+            if not asset_dir :
                 return asset_url
             # ~ 확장 및 디렉터리 보장
             asset_dir = os.path.expanduser(asset_dir)
@@ -171,10 +170,7 @@ class MenuboardGenerateConsumer:
             with open(file_path, "wb") as f:
                 f.write(base64.b64decode(b64data))
             # base_url이 없으면 파일 경로 자체를 반환 (요청하신 정책)
-            if not base_url:
-                self.logger.info(f"[메뉴판컨슈머] data URL saved to {file_path}")
-                return file_path
-            public_url = f"{base_url.rstrip('/')}/assets/{file_name}"
+            public_url = f"/assets/{file_name}"
             self.logger.info(f"[메뉴판컨슈머] data URL saved to {file_path} -> {public_url}")
             return public_url
         except Exception as e:
