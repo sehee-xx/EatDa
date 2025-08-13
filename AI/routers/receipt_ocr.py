@@ -17,9 +17,7 @@ from models.receipt_ocr_models import (
 )
 from services.receipt_ocr_service import receipt_ocr_service
 
-
 router = APIRouter(prefix="/api/reviews", tags=["receipt_ocr"])
-
 
 _requests_state: Dict[str, Dict] = {}
 

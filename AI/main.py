@@ -91,21 +91,6 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-
-<<<<<<< Updated upstream
-# 백그라운드로 이벤트 에셋 Redis consumer 구동
-# 서버가 켜지눈 순갑누터 stream 데이터를 비동기 구독하여 즉시 처리
-@app.on_event("startup")
-async def startup_event():
-    # 이벤트 에셋 (event_image)
-    asyncio.create_task(EventImageConsumer().run_forever())
-    # 메뉴 포스터 (menuboard_generate)
-    asyncio.create_task(MenuboardGenerateConsumer().run_forever())
-    # 영수증 OCR (receipt_ocr)
-    asyncio.create_task(ReceiptOCRConsumer().run_forever())
-    # 리뷰 생성 (review_generate)
-    asyncio.create_task(ReviewGenerateConsumer().run_forever())
-
 # 서버 실행 (개발용)
 if __name__ == "__main__":
     import uvicorn

@@ -136,7 +136,6 @@ async def get_menu_extraction_result(assetId: int):
     # 알 수 없는 상태 처리
     raise HTTPException(status_code=500, detail="Unknown status")
 
-
 async def _process_ocr_from_bytes(asset_id: str, image_bytes: bytes, image_format: str):
     try:
         extracted = await menuboard_ocr_service.extract_menus_from_image(image_bytes, image_format)

@@ -88,5 +88,3 @@ class ReceiptOCRService:
 
 
 receipt_ocr_service = ReceiptOCRService()
-
-
