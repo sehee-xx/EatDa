@@ -24,13 +24,15 @@ public class ReviewAssetService {
             List<MenuItem> menu,
             List<String> referenceImagesLocalPaths  // 로컬 파일 시스템 경로 배열
     ) {
-        List<String> publicUrls = referenceImagesLocalPaths.stream()
-                .map(fileUrlResolver::toPublicUrl)
-                .toList();
+        List<String> resolvedReferences = (type == ReviewAssetType.IMAGE)
+                ? referenceImagesLocalPaths
+                : referenceImagesLocalPaths.stream()
+                        .map(fileUrlResolver::toPublicUrl)
+                        .toList();
 
         log.info("ReviewAssetService");
         log.info("referenceImagesLocalPaths: {}", referenceImagesLocalPaths);
-        log.info(publicUrls.toString());
+        log.info(resolvedReferences.toString());
         return ReviewAssetGenerateMessage.of(
                 reviewAssetId,
                 type,
@@ -38,7 +40,7 @@ public class ReviewAssetService {
                 storeId,
                 userId,
                 menu,
-                publicUrls
+                resolvedReferences
         );
     }
 }
