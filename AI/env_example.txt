@@ -52,3 +52,8 @@ EVENT_ASSET_DEAD_STREAM =
 # 메뉴 포스터 생성 스트림
 MENU_POSTER_STREAM_KEY = 
 MENU_POSTER_DEAD_STREAM = 
+
+# 이미지 파일이 저장될 EC2 경로 
+AI_ASSET_DIR = 
+# 외부에서 접근 가능한 베이스 URL 
+AI_PUBLIC_BASE_URL = 
