@@ -36,6 +36,7 @@ management: # Spring-Actuator 설정
 filestorage: # 파일 저장소 설정
   base-dir: /root/eatda
   base-url: ""
+  host-base-dir: /home/ubuntu/eatda/test
   video:
     max-size-mb: 32
     request-timeout-sec: 20
