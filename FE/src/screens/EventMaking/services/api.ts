@@ -31,6 +31,7 @@ export interface ActiveEvent {
   endAt: string;
   postUrl: string;
   storeName: string;
+  description:string;
 }
 
 // API의 공통 응답 구조 타입
@@ -406,7 +407,7 @@ export const getActiveEvents = async (
   }
 
   const url = lastEventId
-    ? `${BASE_URL}/api/events//active?lastEventId=${encodeURIComponent(
+    ? `${BASE_URL}/api/events/active?lastEventId=${encodeURIComponent(
         String(lastEventId)
       )}`
     : `${BASE_URL}/api/events/active`;
@@ -438,7 +439,7 @@ export const getActiveEvents = async (
     throw new Error((json && json.message) || raw || `HTTP ${res.status}`);
   }
 
-  console.log("✅ 진행 중인 이벤트 조회 성공:", json);
+  console.log("✅ 진행 중인 이벤트 조회 성공:");
 
   return json?.data ?? [];
 };

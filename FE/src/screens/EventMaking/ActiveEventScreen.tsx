@@ -53,20 +53,24 @@ export default function ActiveEventScreen() {
   const [containerWidth, setContainerWidth] = useState(0);
   const tile = Math.floor(containerWidth / 3);
 
-  const adapt = (a: ActiveEvent): eventItem => ({
-    id: String(a.eventId),
-    eventName: a.title,
-    eventDescription: a.title,
-    uri: { uri: a.postUrl },
-    start_date: new Date(a.startAt),
-    end_date: new Date(a.endAt),
-    storeName: a.storeName,
-  });
+  const adapt = (a: ActiveEvent): eventItem => {
+    console.log("[DEBUG] adapt() input:", a);
+    return {
+      id: String(a.eventId),
+      eventName: a.title,
+      eventDescription: a.description,
+      uri: { uri: a.postUrl },
+      start_date: new Date(a.startAt),
+      end_date: new Date(a.endAt),
+      storeName: a.storeName,
+    };
+  };
 
   const fetchActive = React.useCallback(async () => {
     setLoading(true);
     try {
       const list = await getActiveEvents();
+      console.log("[DEBUG] getActiveEvents() raw list:", list);
       setItems(list.map(adapt));
     } catch (e) {
       console.warn("getActiveEvents failed", e);
@@ -118,6 +122,7 @@ export default function ActiveEventScreen() {
 
   // 상세 보기
   if (selectedEvent) {
+     console.log("[DEBUG] rendering detail view with:", selectedEvent);
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
         <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
@@ -201,7 +206,10 @@ export default function ActiveEventScreen() {
               size={tile} // 정수 타일
               index={index}
               totalLength={items.length}
-              onPress={() => setSelectedEvent(item)}
+              onPress={() => {
+                console.log("[DEBUG] onPress item (before detail):", item);
+                setSelectedEvent(item);
+              }}
             />
           )}
           refreshing={refreshing}
