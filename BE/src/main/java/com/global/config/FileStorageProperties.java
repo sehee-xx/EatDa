@@ -36,6 +36,11 @@ public class FileStorageProperties {
     private String baseUrl = "";
 
     /**
+     * 서버의 베이스 디렉토리 (/home/ubuntu/eatda/{})
+     */
+    private String hostBaseDir;
+
+    /**
      * 영상 관련 설정
      */
     @Valid
