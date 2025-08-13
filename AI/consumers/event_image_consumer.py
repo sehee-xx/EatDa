@@ -22,7 +22,7 @@ except Exception as e:  # pragma: no cover
     raise RuntimeError("redis 패키지가 필요합니다. requirements.txt에 redis>=5 를 설치하세요.") from e
 
 from models.event_image_models import EventAssetGenerateMessage
-from services import image_service
+from services.google_image_service import google_image_service
 from services.event_image_callback import event_image_callback_service
 
 
@@ -110,9 +110,11 @@ class EventImageConsumer:
         return EventAssetGenerateMessage.model_validate(data)
 
     async def process_image(self, req: EventAssetGenerateMessage) -> Tuple[str, str | None]:
-        if not image_service.is_available():
+        if not google_image_service.is_available():
             return "FAIL", None
-        url = await image_service.generate_image_url(req.prompt)
+        # Google GenAI SDK는 동기 API이므로 스레드
+        loop = asyncio.get_running_loop()
+        url = await loop.run_in_executor(None, google_image_service.generate_image_url, req.prompt, None)
         return ("SUCCESS" if url else "FAIL"), url
     
 

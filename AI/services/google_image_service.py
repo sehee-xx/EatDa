@@ -56,7 +56,7 @@ class GoogleImageService:
 
     def generate_image_url(self, prompt: str, reference_image_paths: Optional[List[str]] = None) -> Optional[str]:
         """
-        이미지를 생성하고, 첫 이미지 결과를 data URL("data:image/png;base64,...")로 반환.
+        이미지를 생성하고, 첫 이미지 결과를 data URL("data:<mime>;base64,<...>")로 반환.
         실패 시 None 반환. reference_image_paths는 로컬 파일 경로 목록.
         """
         if not self.is_available():
@@ -117,53 +117,21 @@ class GoogleImageService:
                     inline_data = getattr(part, "inline_data", None)
                     if inline_data and getattr(inline_data, "data", None):
                         mime = getattr(inline_data, "mime_type", "image/png") or "image/png"
+                        data_field = getattr(inline_data, "data")
                         try:
-                            self.logger.info("GoogleImageService: image generated successfully")
-                        except Exception:
-                            pass
-                        # 디스크 저장 시도 및 파일 경로 반환
-                        try:
-                            disk = shutil.disk_usage(self.asset_dir) if os.path.exists(self.asset_dir) else None
-                            self.logger.info(
-                                "GoogleImageService: save-pre-check "
-                                f"dir={self.asset_dir}, exists={os.path.exists(self.asset_dir)}, "
-                                f"writable={(os.access(self.asset_dir, os.W_OK) if os.path.exists(self.asset_dir) else 'n/a')}, "
-                                f"disk_free={(disk.free if disk else 'n/a')}"
-                            )
-                            os.makedirs(self.asset_dir, exist_ok=True)
-                        except Exception as se:
-                            self.logger.exception(f"GoogleImageService: failed to create directory '{self.asset_dir}': {se}")
-                            return None
-                        # 항상 JPG로 저장하도록 변경
-                        file_name = f"{uuid.uuid4().hex}.jpg"
-                        file_path = os.path.join(self.asset_dir, file_name)
-                        try:
-                            img = Image.open(BytesIO(inline_data.data))
-                            # JPG 저장을 위한 RGB 변환 및 알파 제거 처리
-                            if img.mode in ("RGBA", "LA"):
-                                background = Image.new("RGB", img.size, (255, 255, 255))
-                                alpha = img.split()[-1]
-                                background.paste(img, mask=alpha)
-                                img = background
+                            # google-genai SDK는 bytes를 반환. 방어적으로 처리
+                            if isinstance(data_field, (bytes, bytearray)):
+                                raw_bytes = bytes(data_field)
                             else:
-                                img = img.convert("RGB")
-                            img.save(file_path, format="JPEG", quality=90, optimize=True)
-                        except Exception as se1:
-                            try:
-                                # 최후 수단: 원본 바이트 그대로 저장(확장자는 .jpg이지만 원본 포맷일 수 있음)
-                                with open(file_path, "wb") as f:
-                                    f.write(inline_data.data)
-                            except Exception as se2:
-                                self.logger.exception(
-                                    f"GoogleImageService: save failed to '{file_path}' (PIL err={se1}, raw err={se2})"
-                                )
-                                return None
-                        try:
-                            size = os.path.getsize(file_path)
-                            self.logger.info(f"GoogleImageService: saved file path={file_path}, size={size} bytes, mime={mime}")
-                        except Exception:
-                            pass
-                        return file_path
+                                # str 등인 경우를 대비해 base64로 간주하고 decode 시도
+                                raw_bytes = base64.b64decode(str(data_field))
+                            b64 = base64.b64encode(raw_bytes).decode("ascii")
+                            data_url = f"data:{mime};base64,{b64}"
+                            self.logger.info("GoogleImageService: image generated successfully (data URL)")
+                            return data_url
+                        except Exception as enc_err:
+                            self.logger.exception(f"GoogleImageService: failed to encode data URL: {enc_err}")
+                            return None
             try:
                 self.logger.warning("GoogleImageService: no image in response (candidates/parts missing)")
             except Exception:
