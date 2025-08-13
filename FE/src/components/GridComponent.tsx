@@ -1,5 +1,5 @@
 import React from "react";
-import { View, TouchableOpacity, Image } from "react-native";
+import { View, TouchableOpacity, Image, ImageSourcePropType } from "react-native";
 import { Video } from "expo-av";
 import { SvgProps } from "react-native-svg";
 
@@ -21,8 +21,7 @@ export interface eventItem {
   id: string;
   eventName: string;
   eventDescription: string;
-  uri: number;
-  // storeId:string; 
+  uri: ImageSourcePropType;
   start_date:Date;
   end_date:Date;
 }
@@ -46,7 +45,7 @@ export default function GridComponent({
   const LastRow = index >= totalLength - (totalLength % 3 || 3);
 
   // 리뷰아이템인지, 이벤트아이템인지 구분
-  let imgSource :{uri:string} | number;
+  let imgSource :ImageSourcePropType;
   if("type" in item){
     imgSource = {uri: item.type === "video" ? (item.thumbnail || item.uri): item.uri};
   }else{

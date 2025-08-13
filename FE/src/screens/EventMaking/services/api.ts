@@ -29,7 +29,7 @@ export interface ActiveEvent {
   title: string;
   startAt: string;
   endAt: string;
-  posterUrl: string;
+  postUrl: string;
 }
 
 // API의 공통 응답 구조 타입
@@ -405,10 +405,10 @@ export const getActiveEvents = async (
   }
 
   const url = lastEventId
-    ? `${BASE_URL}/api/events/store/active?lastEventId=${encodeURIComponent(
+    ? `${BASE_URL}/api/events//active?lastEventId=${encodeURIComponent(
         String(lastEventId)
       )}`
-    : `${BASE_URL}/api/events/store/active`;
+    : `${BASE_URL}/api/events/active`;
 
   console.log(`🚀 진행 중인 이벤트 조회 요청: ${url}`);
 
@@ -442,41 +442,6 @@ export const getActiveEvents = async (
   return json?.data ?? [];
 };
 
-// 사장님별 이벤트 조회
-export const getMyEvents = async (lastEventId?: number) => {
-  const { accessToken } = await getTokens();
-  if (!accessToken)
-    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요");
-
-  const url = lastEventId
-    ? `${BASE_URL}/api/events/my?lastEventId=${lastEventId}`
-    : `${BASE_URL}/api/events/my`;
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const status = res.status;
-  const raw = await res.text();
-  let json: any = null;
-  try {
-    json = JSON.parse(raw);
-  } catch {}
-
-  if (!res.ok) {
-    console.error("GET MY EVENTS ERROR", { status, raw });
-    throw new Error(
-      (json && (json.message || json.error)) || raw || `HTTP ${status}`
-    );
-  }
-
-  return json?.data;
-};
-
-// 이벤트 삭제
 
 // 생성 다 되고나서 fianlize 되게끔하기
 
@@ -602,3 +567,40 @@ export async function waitForAssetReady(
     delay = Math.min(delay * backoff, 6000);
   }
 }
+
+// 사장님별 이벤트 조회
+export const getMyEvents = async (lastEventId?: number) => {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요");
+
+  const url = lastEventId
+    ? `${BASE_URL}/api/events/my?lastEventId=${lastEventId}`
+    : `${BASE_URL}/api/events/my`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const status = res.status;
+  const raw = await res.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {}
+
+  if (!res.ok) {
+    console.error("GET MY EVENTS ERROR", { status, raw });
+    throw new Error(
+      (json && (json.message || json.error)) || raw || `HTTP ${status}`
+    );
+  }
+
+  return json?.data;
+};
+
+
+
