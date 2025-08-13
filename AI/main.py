@@ -8,15 +8,8 @@ from contextlib import asynccontextmanager
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
 import logging
 from starlette.staticfiles import StaticFiles
->>>>>>> Stashed changes
-=======
-import logging
->>>>>>> ai/master
 
 # 라우터 임포트
 from routers import stream_test_router, menuboard_ocr_router, receipt_ocr_router
@@ -76,8 +69,6 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(stream_test_router)
-app.include_router(menuboard_ocr_router)
-app.include_router(receipt_ocr_router)
 
 # 정적 파일(생성된 이미지) 서비스 경로 마운트
 asset_dir = os.getenv(
@@ -101,7 +92,6 @@ async def health_check():
     return {"status": "healthy"}
 
 
-<<<<<<< HEAD
 <<<<<<< Updated upstream
 # 백그라운드로 이벤트 에셋 Redis consumer 구동
 # 서버가 켜지눈 순갑누터 stream 데이터를 비동기 구독하여 즉시 처리
@@ -115,22 +105,7 @@ async def startup_event():
     asyncio.create_task(ReceiptOCRConsumer().run_forever())
     # 리뷰 생성 (review_generate)
     asyncio.create_task(ReviewGenerateConsumer().run_forever())
-=======
-# # 백그라운드로 이벤트 에셋 Redis consumer 구동
-# # 서버가 켜지눈 순간부터 stream 데이터를 비동기 구독하여 즉시 처리
-# @app.on_event("startup")
-# async def startup_event():
-#     logger.info("✅ AI Server started and ready")
-#     # 이벤트 에셋 (event_image)
-#     asyncio.create_task(EventImageConsumer().run_forever())
-#     # 메뉴 포스터 (menuboard_generate)
-#     asyncio.create_task(MenuboardGenerateConsumer().run_forever())
-#     # 리뷰 생성 (review_generate)
-#     asyncio.create_task(ReviewGenerateConsumer().run_forever())
->>>>>>> ai/master
 
-=======
->>>>>>> Stashed changes
 # 서버 실행 (개발용)
 if __name__ == "__main__":
     import uvicorn
