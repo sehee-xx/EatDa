@@ -170,6 +170,10 @@ class MenuboardGenerateConsumer:
             file_path = os.path.join(asset_dir, file_name)
             with open(file_path, "wb") as f:
                 f.write(base64.b64decode(b64data))
+            # base_url이 없으면 파일 경로 자체를 반환 (요청하신 정책)
+            if not base_url:
+                self.logger.info(f"[메뉴판컨슈머] data URL saved to {file_path}")
+                return file_path
             public_url = f"{base_url.rstrip('/')}/assets/{file_name}"
             self.logger.info(f"[메뉴판컨슈머] data URL saved to {file_path} -> {public_url}")
             return public_url

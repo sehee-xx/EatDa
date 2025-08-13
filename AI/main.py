@@ -72,11 +72,8 @@ app.include_router(stream_test_router)
 app.include_router(receipt_ocr_router)
 app.include_router(menuboard_ocr_router)
 
-# 정적 파일(생성된 이미지) 서비스 경로 마운트
-asset_dir = os.getenv(
-    "AI_ASSET_DIR",
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "assets")),
-)
+
+asset_dir = '/home/ubuntu/eatda/test/data/images/menuPosters/gonaging@example.com'
 try:
     os.makedirs(asset_dir, exist_ok=True)
 except Exception:
