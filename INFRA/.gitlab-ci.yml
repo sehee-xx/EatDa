@@ -114,6 +114,7 @@ AI:build-deploy-docker-image:
   script:
     - cp "$ENV_FILE" .env
     - docker build -t eatda-ai:latest .
+    - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.ai.yml down
     - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.ai.yml up -d
   rules:
     - changes:
