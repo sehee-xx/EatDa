@@ -5,7 +5,7 @@ services:
     ports:
       - "8085:8000"
     volumes:
-      - /home/ubuntu/eatda/ai:/root/eatda
+      - /home/ubuntu/eatda/ai:/home/ubuntu/eatda/ai
     networks:
       - backend  # 기존에 쓰던 외부 네트워크 재사용
 
