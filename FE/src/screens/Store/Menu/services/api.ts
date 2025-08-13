@@ -1,10 +1,12 @@
+// src/screens/Store/Menu/services/api.ts
+
 import { getTokens } from "../../../Login/services/tokenStorage";
 const BASE_URL = "https://i13a609.p.ssafy.io/test";
 
 export type StoreMenuItem = {
-  menuId: number;
   name: string;
   price: number;
+  description?: string;
   imageUrl?: string;
 };
 
@@ -16,60 +18,50 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
-// 가게 메뉴 조회 API (로그 포함)
+// 가게 메뉴 조회 API
 export async function getStoreMenu(storeId: number): Promise<StoreMenuItem[]> {
   const { accessToken } = await getTokens();
-  if (!accessToken)
-    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요.");
+  if (!accessToken) throw new Error("인증이 필요합니다.");
 
   const url = `${BASE_URL}/api/menu/${encodeURIComponent(String(storeId))}`;
 
-  // ── 요청 로그
-  console.log(`[MENU][REQ] GET ${url}`);
-  console.log(
-    `[MENU][REQ] Authorization: Bearer ****(len=${accessToken.length})`
-  );
-
   const started = Date.now();
+  console.log(`[MENU][REQ] GET ${url}`);
+
   const res = await fetch(url, {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const ms = Date.now() - started;
 
-  const status = res.status;
+  const elapsed = Date.now() - started;
   const raw = await res.text();
+  console.log(
+    `[MENU][RES] ${res.status} (${elapsed}ms) raw: ${raw.slice(0, 300)}${
+      raw.length > 300 ? "..." : ""
+    }`
+  );
 
-  // JSON 파싱 (비JSON 대비)
   let json: ApiResponse<StoreMenuItem[]> | null = null;
   try {
-    json = raw ? JSON.parse(raw) : null;
+    json = raw ? (JSON.parse(raw) as ApiResponse<StoreMenuItem[]>) : null;
   } catch {
-    // no-op
-  }
-
-  // ── 응답 로그
-  if (json) {
-    console.log(
-      `[MENU][RES ${status}] (${ms}ms) → JSON:\n${JSON.stringify(
-        json,
-        null,
-        2
-      )}`
-    );
-  } else {
-    const preview =
-      typeof raw === "string" && raw.length > 1000
-        ? raw.slice(0, 1000) + `… (truncated ${raw.length - 1000} chars)`
-        : raw || "(empty)";
-    console.log(`[MENU][RES ${status}] (${ms}ms) → non-JSON body:\n${preview}`);
+    // 서버가 JSON이 아니면 그대로 처리 (명세 우선)
   }
 
   if (!res.ok) {
-    throw new Error((json && json.message) || raw || `HTTP ${status}`);
+    // 명세서: 401 인증 실패
+    if (res.status === 401) {
+      throw new Error(json?.message || "인증이 필요합니다.");
+    }
+    // 나머지는 서버가 내려준 메시지 그대로(500 포함)
+    throw new Error(json?.message || `HTTP ${res.status}`);
   }
 
-  return json?.data ?? [];
+  if (!json || !Array.isArray(json.data)) {
+    throw new Error("응답 형식이 올바르지 않습니다.");
+  }
+
+  return json.data;
 }
 
 // 메뉴 포스터 asset 생성 요청 API

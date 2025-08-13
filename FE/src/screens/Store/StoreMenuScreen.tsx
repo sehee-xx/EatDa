@@ -1,97 +1,93 @@
-// StoreMenuScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Image, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import { getStoreMenu, StoreMenuItem } from "./Menu/services/api";
 import NoDataScreen from "../../components/NoDataScreen";
 
-export default function StoreMenuScreen({ storeId }: { storeId: number }) {
+type Props = { storeId: number }; // ✅ 정확한 prop 이름: storeId
+
+export default function StoreMenuScreen({ storeId }: Props) {
   const [items, setItems] = useState<StoreMenuItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    console.log(`[StoreMenu] storeId=${storeId}`);
-    if (!Number.isFinite(storeId)) {
-      console.warn(`[StoreMenu] ⚠️ invalid storeId:`, storeId);
-    }
-  }, [storeId]);
+  const [fetchedOnce, setFetchedOnce] = useState(false);
 
   const fetchMenus = useCallback(async () => {
+    if (!Number.isFinite(storeId) || storeId <= 0) {
+      setItems([]);
+      setFetchedOnce(true);
+      return;
+    }
+
     setLoading(true);
     const t0 = Date.now();
     try {
-      console.log(`[StoreMenu] fetch start (storeId=${storeId})`);
       const list = await getStoreMenu(storeId);
-      setItems(list);
-      console.log(
-        `[StoreMenu] fetch success (${Date.now() - t0}ms) count=${list.length}`
-      );
-      if (list[0]) console.log(`[StoreMenu] first`, list[0]);
+      setItems(Array.isArray(list) ? list : []);
     } catch (e) {
       console.warn("[StoreMenu] fetch failed:", e);
       setItems([]);
     } finally {
+      setFetchedOnce(true);
       setLoading(false);
+      console.log(
+        `[StoreMenu] fetch done (storeId=${storeId}, ${Date.now() - t0}ms)`
+      );
     }
   }, [storeId]);
+
+  useEffect(() => {
+    fetchMenus();
+  }, [fetchMenus]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      setItems(await getStoreMenu(storeId));
+      const list = await getStoreMenu(storeId);
+      setItems(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.warn("[StoreMenu] refresh failed:", e);
     } finally {
       setRefreshing(false);
     }
   }, [storeId]);
 
-  if (!loading && items.length === 0) return <NoDataScreen />;
+  if (fetchedOnce && !loading && items.length === 0) {
+    return <NoDataScreen />;
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      {loading ? (
+      {loading && !fetchedOnce ? (
         <ActivityIndicator style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={items}
-          keyExtractor={(m) => String(m.menuId)}
+          keyExtractor={(m, idx) => `${storeId}-${m.name}-${idx}`} // ✅ 명세에 id 없음 → 안전 조합키
           refreshing={refreshing}
           onRefresh={onRefresh}
+          contentContainerStyle={{ paddingVertical: 8 }}
           renderItem={({ item }) => (
-            <View
-              style={{
-                flexDirection: "row",
-                padding: 12,
-                alignItems: "center",
-              }}
-            >
+            <View style={styles.row}>
               {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 8,
-                    marginRight: 12,
-                  }}
-                />
+                <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
               ) : (
-                <View
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 8,
-                    marginRight: 12,
-                    backgroundColor: "#eee",
-                  }}
-                />
+                <View style={[styles.thumb, styles.thumbPlaceholder]} />
               )}
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: "600" }}>
-                  {item.name}
-                </Text>
-                <Text style={{ marginTop: 2 }}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.price}>
                   {item.price.toLocaleString()}원
                 </Text>
+                {item.description ? (
+                  <Text style={styles.desc}>{item.description}</Text>
+                ) : null}
               </View>
             </View>
           )}
@@ -100,3 +96,17 @@ export default function StoreMenuScreen({ storeId }: { storeId: number }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  thumb: { width: 64, height: 64, borderRadius: 8, marginRight: 12 },
+  thumbPlaceholder: { backgroundColor: "#eee" },
+  name: { fontSize: 16, fontWeight: "600" },
+  price: { marginTop: 2 },
+  desc: { marginTop: 4, color: "#666" },
+});
