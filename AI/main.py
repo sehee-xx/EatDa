@@ -69,6 +69,8 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(stream_test_router)
+app.include_router(receipt_ocr_router)
+app.include_router(menuboard_ocr_router)
 
 # 정적 파일(생성된 이미지) 서비스 경로 마운트
 asset_dir = os.getenv(
