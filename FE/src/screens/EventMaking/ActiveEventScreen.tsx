@@ -58,7 +58,7 @@ export default function ActiveEventScreen() {
     return {
       id: String(a.eventId),
       eventName: a.title,
-      eventDescription: a.description,
+      description: a.description,
       uri: { uri: a.postUrl },
       start_date: new Date(a.startAt),
       end_date: new Date(a.endAt),
@@ -167,7 +167,7 @@ export default function ActiveEventScreen() {
                 { paddingBottom: height * 0.02 },
               ]}
             >
-              {selectedEvent.eventDescription}
+              {selectedEvent.description}
             </Text>
           </View>
         </Animated.View>

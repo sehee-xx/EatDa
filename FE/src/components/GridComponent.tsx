@@ -19,7 +19,7 @@ export interface ReviewItem {
 export interface eventItem {
   id: string;
   eventName: string;
-  eventDescription: string;
+  description: string;
   uri: ImageSourcePropType;
   start_date:Date;
   end_date:Date;

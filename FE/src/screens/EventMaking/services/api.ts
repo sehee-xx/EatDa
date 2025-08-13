@@ -31,7 +31,7 @@ export interface ActiveEvent {
   endAt: string;
   postUrl: string;
   storeName: string;
-  description:string;
+  description: string;
 }
 
 // API의 공통 응답 구조 타입
@@ -444,7 +444,6 @@ export const getActiveEvents = async (
   return json?.data ?? [];
 };
 
-
 // 생성 다 되고나서 fianlize 되게끔하기
 
 type AssetPhase = "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
@@ -604,5 +603,59 @@ export const getMyEvents = async (lastEventId?: number) => {
   return json?.data;
 };
 
+// 이벤트 삭제
+export const deleteEvent = async (eventId: number) => {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요");
 
+  const url = `${BASE_URL}/api/events/${encodeURIComponent(String(eventId))}`;
 
+  // 요청 로그
+  console.log("=== [DELETE EVENT] 요청 ===");
+  console.log(`DELETE ${url}`);
+  console.log(`Authorization: Bearer ****(len=${accessToken.length})`);
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const raw = await res.text();
+  let json: any = null;
+  try {
+    json = raw ? JSON.parse(raw) : null;
+  } catch {
+    // 본문이 비어있는 경우(data:null) 대비
+  }
+
+  // 응답 로그 (명세서 스타일)
+  console.log("=== [DELETE EVENT] 응답 ===");
+  if (json) {
+    console.log(JSON.stringify(json, null, 2));
+  } else {
+    console.log(raw || "(empty)");
+  }
+
+  if (!res.ok) {
+    const status = res.status;
+    const code = json?.code;
+    const serverMsg = json?.message || raw || `HTTP ${status}`;
+
+    // 명세 기반 메시지 보정
+    let msg = serverMsg;
+    if (status === 401) msg = "인증이 필요합니다.";
+    else if (status === 403) msg = "삭제 권한이 없습니다.";
+    else if (status === 404) msg = "이벤트를 찾을 수 없습니다.";
+
+    const err = new Error(msg) as any;
+    err.status = status;
+    err.code = code;
+    throw err;
+  }
+
+  return json; // 성공 시 { code:"EVENT_DELETED", message:"...", status:200, data:null, timestamp:... }
+};
