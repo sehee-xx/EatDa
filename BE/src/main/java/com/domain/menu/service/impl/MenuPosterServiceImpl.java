@@ -7,10 +7,7 @@ import com.domain.menu.dto.request.MenuPosterFinalizeRequest;
 import com.domain.menu.dto.response.AdoptMenuPostersResponse;
 import com.domain.menu.dto.response.MenuPosterAssetRequestResponse;
 import com.domain.menu.dto.response.MenuPosterFinalizeResponse;
-import com.domain.menu.entity.AdoptedMenuPoster;
-import com.domain.menu.entity.Menu;
-import com.domain.menu.entity.MenuPoster;
-import com.domain.menu.entity.MenuPosterAsset;
+import com.domain.menu.entity.*;
 import com.domain.menu.redis.MenuPosterAssetRedisPublisher;
 import com.domain.menu.repository.AdoptedMenuPosterRepository;
 import com.domain.menu.repository.MenuPosterAssetRepository;
@@ -66,6 +63,8 @@ public class MenuPosterServiceImpl implements MenuPosterService {
 
         List<Menu> menus = menuValidator.validateMenusBelongToStore(request.menuIds(), store);
         MenuPoster menuPoster = createPendingPoster(eater, store);
+
+        connectMenusToMenuPoster(menuPoster, menus);
         MenuPosterAsset menuPosterAsset = createPendingAsset(menuPoster, request);
 
         boolean convertToWebp = shouldConvertToWebp(request.type());
@@ -99,9 +98,12 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         MenuPosterAsset asset = menuPosterAssetRepository.findById(request.assetId())
                 .orElseThrow(() -> new ApiException(ErrorCode.ASSET_NOT_FOUND));
 
+        log.info("handleMenuPosterAssetCallback: assetId={}", asset.getId());
         AssetValidator.validateCallbackRequest(asset, request);
         Status status = Status.fromString(request.result());
+        log.info("Success 처리 중: assetId={}", asset.getId());
         asset.processCallback(status, request.assetUrl());
+        log.info("Success 완료 중: assetId={}", asset.getId());
     }
 
     @Override
@@ -233,12 +235,22 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                         file,
                         relativeBase,
                         file.getOriginalFilename(),
-                        convertToWebp
+                        false
                 ))
                 .toList();
     }
 
     private boolean shouldConvertToWebp(String type) {
         return AssetType.IMAGE.name().equals(type);
+    }
+
+    private void connectMenusToMenuPoster(MenuPoster menuPoster, List<Menu> menus) {
+        for (Menu menu : menus) {
+            MenuPosterMenu menuPosterMenu = MenuPosterMenu.builder()
+                    .menuPoster(menuPoster)
+                    .menu(menu)
+                    .build();
+            menuPoster.getMenuPosterMenus().add(menuPosterMenu);
+        }
     }
 }

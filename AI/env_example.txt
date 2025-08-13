@@ -1,0 +1,54 @@
+# 프롬프트 api 키
+GMS_API_KEY = 
+GOOGLE_API_KEY = 
+
+# shorts 생성 api 키
+LUMAAI_API_KEY = 
+RUNWAY_API_KEY = 
+RUNWAY_API_BASE_URL = https://api.dev.runwayml.com
+RUNWAY_API_FALLBACK_ENABLED = false
+RUNWAY_API_FALLBACK_BASE_URL = https://api.runwayml.com
+GMS_BASE_URL = https://gms.ssafy.io/gmsapi/api.openai.com/v1
+
+# 생성 자산 저장/공개 경로(구글 이미지 생성용)
+AI_ASSET_DIR = ./AI/assets
+
+# 사업자 등록증 api 키 - 현재는 미운영
+CLOVA_LICENSE_SECRET_KEY = 
+CLOVA_LICENSE_API_URL= 
+
+# 영수증 인증 api 키
+CLOVA_RECEIPT_SECRET_KEY = 
+CLOVA_RECEIPT_API_URL = 
+
+# 메뉴판 등록 api 키
+CLOVA_MENU_SECRET_KEY = 
+CLOVA_MENU_API_URL =
+
+# 콜백 URL (리뷰 이미지/영상 생성)
+SPRING_CALLBACK_URL = https://i13a609.p.ssafy.io/api/reviews/assets/callback
+
+# 콜백 URL (이벤트 포스터 생성)
+SPRING_EVENT_ASSET_CALLBACK_URL = https://i13a609.p.ssafy.io/api/events/assets/callback
+
+# 콜백 URL (메뉴 포스터 생성)
+SPRING_MENU_POSTER_CALLBACK_URL = https://i13a609.p.ssafy.io/api/menu-posters/assets/callback
+
+# Redis Streams (consumer)
+REDIS_URL = 
+REDIS_GROUP = 
+REDIS_CONSUMER_ID = 
+REDIS_DEAD_STREAM = 
+OCR_RECEIPT_STREAM_KEY =
+
+# 리뷰 이미지/영상 생성 스트림
+REVIEW_ASSET_STREAM_KEY = 
+REVIEW_ASSET_DEAD_STREAM =
+
+# 이벤트 포스터 생성 스트림
+EVENT_ASSET_STREAM_KEY = 
+EVENT_ASSET_DEAD_STREAM = 
+
+# 메뉴 포스터 생성 스트림
+MENU_POSTER_STREAM_KEY = 
+MENU_POSTER_DEAD_STREAM = 
