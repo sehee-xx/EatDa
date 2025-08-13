@@ -28,10 +28,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                        @Param("lastEventId") Long lastEventId,
                                        Pageable pageable);
 
-    // 진행 중인 가게 이벤트 조회 (deleted = false 조건 추가)
+    // 진행 중인 가게 이벤트 조회 (Store fetch join 추가)
     @Query("SELECT e FROM Event e " +
-            "WHERE e.store.deleted = false " +  // Store deleted 체크
-            "AND e.deleted = false " +  // Event deleted 체크 추가
+            "JOIN FETCH e.store s " +  // Store fetch join 추가
+            "WHERE s.deleted = false " +
+            "AND e.deleted = false " +
             "AND e.status = 'SUCCESS' " +
             "AND e.startDate <= :currentDate " +
             "AND e.endDate >= :currentDate " +
