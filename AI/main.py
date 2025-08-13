@@ -7,6 +7,11 @@ from fastapi import FastAPI
 import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+<<<<<<< Updated upstream
+=======
+import logging
+from starlette.staticfiles import StaticFiles
+>>>>>>> Stashed changes
 
 # 라우터 임포트
 from routers import ocr_router, stream_test_router
@@ -39,6 +44,17 @@ app.add_middleware(
 app.include_router(ocr_router)
 app.include_router(stream_test_router)
 
+# 정적 파일(생성된 이미지) 서비스 경로 마운트
+asset_dir = os.getenv(
+    "AI_ASSET_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "assets")),
+)
+try:
+    os.makedirs(asset_dir, exist_ok=True)
+except Exception:
+    pass
+app.mount("/assets", StaticFiles(directory=asset_dir), name="assets")
+
 # API 서버 상태 확인(루트 페이지)
 @app.get("/609")
 async def root():
@@ -50,6 +66,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
+<<<<<<< Updated upstream
 # 백그라운드로 이벤트 에셋 Redis consumer 구동
 # 서버가 켜지눈 순갑누터 stream 데이터를 비동기 구독하여 즉시 처리
 @app.on_event("startup")
@@ -63,6 +80,8 @@ async def startup_event():
     # 리뷰 생성 (review_generate)
     asyncio.create_task(ReviewGenerateConsumer().run_forever())
 
+=======
+>>>>>>> Stashed changes
 # 서버 실행 (개발용)
 if __name__ == "__main__":
     import uvicorn

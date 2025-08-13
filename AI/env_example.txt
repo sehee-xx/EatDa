@@ -1,10 +1,14 @@
 # 프롬프트 api 키
 GMS_API_KEY = 
+GOOGLE_API_KEY = 
 
 # shorts 생성 api 키
 LUMAAI_API_KEY = 
 RUNWAY_API_KEY = 
 GMS_BASE_URL = https://gms.ssafy.io/gmsapi/api.openai.com/v1
+
+# 생성 자산 저장/공개 경로(구글 이미지 생성용)
+AI_ASSET_DIR = ./AI/assets
 
 # 사업자 등록증 api 키 - 현재는 미운영
 CLOVA_LICENSE_SECRET_KEY = 
