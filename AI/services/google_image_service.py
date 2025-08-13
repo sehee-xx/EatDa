@@ -19,6 +19,7 @@ import mimetypes
 import logging
 import uuid
 from io import BytesIO
+import shutil
 
 try:
     # pip install google-genai
@@ -68,7 +69,19 @@ class GoogleImageService:
             exist_count = 0
             for p in reference_image_paths:
                 try:
-                    if not p or not os.path.exists(p):
+                    if not p:
+                        try:
+                            self.logger.info("GoogleImageService: reference path is empty/None")
+                        except Exception:
+                            pass
+                        continue
+                    try:
+                        self.logger.info(
+                            f"GoogleImageService: ref path check path={p}, exists={os.path.exists(p)}, isfile={os.path.isfile(p)}"
+                        )
+                    except Exception:
+                        pass
+                    if not os.path.exists(p):
                         continue
                     mime, _ = mimetypes.guess_type(p)
                     mime = mime or "image/png"
@@ -108,6 +121,13 @@ class GoogleImageService:
                             pass
                         # 디스크 저장 시도 및 파일 경로 반환
                         try:
+                            disk = shutil.disk_usage(self.asset_dir) if os.path.exists(self.asset_dir) else None
+                            self.logger.info(
+                                "GoogleImageService: save-pre-check "
+                                f"dir={self.asset_dir}, exists={os.path.exists(self.asset_dir)}, "
+                                f"writable={(os.access(self.asset_dir, os.W_OK) if os.path.exists(self.asset_dir) else 'n/a')}, "
+                                f"disk_free={(disk.free if disk else 'n/a')}"
+                            )
                             os.makedirs(self.asset_dir, exist_ok=True)
                         except Exception as se:
                             self.logger.exception(f"GoogleImageService: failed to create directory '{self.asset_dir}': {se}")
