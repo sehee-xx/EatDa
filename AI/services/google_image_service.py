@@ -29,7 +29,7 @@ except Exception:  # pragma: no cover
 
 class GoogleImageService:
     def __init__(self) -> None:
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.api_key = "AIzaSyDXwG0T-pqiiQvhLcghPM8tNBnCcWbjg_8"
         self.logger = logging.getLogger(__name__)
 
         if not self.api_key or genai is None:
