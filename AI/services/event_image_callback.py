@@ -25,13 +25,22 @@ class EventCallbackService:
             async with aiohttp.ClientSession() as session:
                 # [요청 준비] 콜백 전송 전에 요청 메타/페이로드 로깅
                 try:
+                    # data URL이 너무 길어 로그를 오염시키지 않도록 축약 출력 (메뉴보드 동일)
+                    pretty_payload = dict(callback_data)
+                    au = pretty_payload.get("assetUrl")
+                    if isinstance(au, str) and au.startswith("data:"):
+                        try:
+                            header, b64 = au.split(",", 1)
+                            pretty_payload["assetUrl"] = f"{header},<base64 {len(b64)} bytes>"
+                        except Exception:
+                            pretty_payload["assetUrl"] = "data:<inline image>"
                     self.logger.info(
                         "\n".join(
                             [
                                 "[EventCallback] Sending callback",
                                 f"- url: {self.callback_url}",
                                 f"- headers: {headers}",
-                                f"- payload: {callback_data}",
+                                f"- payload: {pretty_payload}",
                             ]
                         )
                     )

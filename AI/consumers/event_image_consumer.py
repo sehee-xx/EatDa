@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import base64
+import uuid
 import os
 import socket
 from typing import Any, Dict, Tuple
@@ -44,6 +46,42 @@ class EventImageConsumer:
         self.dead_stream: str = os.getenv("EVENT_ASSET_DEAD_STREAM", "event.asset.dead")
 
         self.client: redis.Redis = redis.from_url(self.redis_url, decode_responses=True)
+
+    def _to_public_url_if_possible(self, asset_url: str | None) -> str | None:
+        try:
+            if not asset_url or not isinstance(asset_url, str) or not asset_url.startswith("data:"):
+                return asset_url
+            # 이벤트 에셋 저장 디렉터리 (요청 사항대로 하드코딩)
+            asset_dir = '/home/ubuntu/eatda/test/data/images/events/gonaging@example.com'
+            if not asset_dir:
+                return asset_url
+            asset_dir = os.path.expanduser(asset_dir)
+            header, b64data = asset_url.split(",", 1)
+            mime_part = header.split(";")[0]
+            mime = mime_part.split(":", 1)[1] if ":" in mime_part else "image/png"
+            ext = (
+                "png" if "png" in mime else
+                "jpg" if ("jpeg" in mime or "jpg" in mime) else
+                "webp" if "webp" in mime else
+                "png"
+            )
+            os.makedirs(asset_dir, exist_ok=True)
+            file_name = f"{uuid.uuid4().hex}.{ext}"
+            file_path = os.path.join(asset_dir, file_name)
+            with open(file_path, "wb") as f:
+                f.write(base64.b64decode(b64data))
+            # 콜백에는 퍼블릭 URL이 아닌 실제 저장 파일 경로를 전달
+            try:
+                self.logger.info(f"[이벤트이미지컨슈머] data URL saved to file={file_path}")
+            except Exception:
+                pass
+            return file_path
+        except Exception as e:
+            try:
+                self.logger.warning(f"[이벤트이미지컨슈머] data URL 저장/치환 실패: {e}")
+            except Exception:
+                pass
+            return asset_url
 
     async def ensure_consumer_group(self) -> None:
         try:
@@ -115,6 +153,8 @@ class EventImageConsumer:
         # Google GenAI SDK는 동기 API이므로 스레드
         loop = asyncio.get_running_loop()
         url = await loop.run_in_executor(None, google_image_service.generate_image_url, req.prompt, None)
+        # data URL이면 디스크 저장 후 퍼블릭 URL로 치환
+        url = self._to_public_url_if_possible(url)
         return ("SUCCESS" if url else "FAIL"), url
     
 
@@ -158,9 +198,21 @@ class EventImageConsumer:
                 "assetUrl": url,
                 "type": "IMAGE",
             }
-            self.logger.info(
-                f"[이벤트이미지컨슈머] callback payload: id={message_id}, payload={callback_data}"
-            )
+            try:
+                # 로그에는 data URL 전체를 남기지 않도록 축약 표시 (메뉴보드 동일 처리)
+                log_payload = dict(callback_data)
+                au = log_payload.get("assetUrl")
+                if isinstance(au, str) and au.startswith("data:"):
+                    try:
+                        header, b64 = au.split(",", 1)
+                        log_payload["assetUrl"] = f"{header},<base64 {len(b64)} bytes>"
+                    except Exception:
+                        log_payload["assetUrl"] = "data:<inline image>"
+                self.logger.info(
+                    f"[이벤트이미지컨슈머] callback payload: id={message_id}, payload={log_payload}"
+                )
+            except Exception:
+                pass
             await event_image_callback_service.send_callback_to_spring(callback_data)
         except Exception as e:
             try:
