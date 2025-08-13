@@ -131,26 +131,22 @@ export default function ImageUploader({
 
 const styles = StyleSheet.create({
   container: {} as ViewStyle,
-
   imageContainer: {
     flexDirection: "row",
     gap: 12,
     justifyContent: "flex-start",
   } as ViewStyle,
-
   imageWrapper: {
     position: "relative",
     width: 100,
     height: 100,
   } as ViewStyle,
-
   uploadedImage: {
     width: 100,
     height: 100,
     borderRadius: 12,
     backgroundColor: "#F5F5F5",
   } as ImageStyle,
-
   removeButton: {
     position: "absolute",
     top: -8,
@@ -166,14 +162,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   } as ViewStyle,
-
   removeButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
     lineHeight: 18,
   } as TextStyle,
-
   addButton: {
     width: 100,
     height: 100,
@@ -198,7 +192,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   } as ViewStyle,
-
   addIconText: {
     color: "white",
     fontSize: 20,
