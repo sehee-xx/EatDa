@@ -13,6 +13,7 @@ from starlette.staticfiles import StaticFiles
 
 # 라우터 임포트
 from routers import stream_test_router, menuboard_ocr_router, receipt_ocr_router
+from test import router as fs_test_router
 from consumers.event_image_consumer import EventImageConsumer
 from consumers.menuboard_generate_consumer import MenuboardGenerateConsumer
 from consumers.review_generate_consumer import ReviewGenerateConsumer
@@ -71,6 +72,7 @@ app.add_middleware(
 app.include_router(stream_test_router)
 app.include_router(receipt_ocr_router)
 app.include_router(menuboard_ocr_router)
+app.include_router(fs_test_router)
 
 
 asset_dir = '/home/ubuntu/eatda/test/data/images/menuPosters/gonaging@example.com'
