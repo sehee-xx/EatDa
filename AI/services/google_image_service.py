@@ -63,7 +63,6 @@ class GoogleImageService:
         if reference_image_paths:
             exist_count = 0
             for p in reference_image_paths:
-                
                 try:
                     if not p:
                         try:
@@ -89,7 +88,7 @@ class GoogleImageService:
                     exist_count += 1
                 except Exception:
                     # 문제가 있는 파일은 건너뜀
-                    continue
+                    continue     
             try:
                 self.logger.info(f"GoogleImageService: reference images attached: {exist_count}/{len(reference_image_paths)}")
             except Exception:
@@ -103,34 +102,6 @@ class GoogleImageService:
                 config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]) if types else None,
             )
 
-            # 첫 번째 이미지 파트를 찾아서 data URL로 변환하여 반환
-            for candidate in getattr(response, "candidates", []) or []:
-                content = getattr(candidate, "content", None)
-                parts = getattr(content, "parts", []) if content else []
-                for part in parts:
-                    inline_data = getattr(part, "inline_data", None)
-                    if inline_data and getattr(inline_data, "data", None):
-                        mime = getattr(inline_data, "mime_type", "image/png") or "image/png"
-                        data_field = getattr(inline_data, "data")
-                        try:
-                            # google-genai SDK는 bytes를 반환. 방어적으로 처리
-                            if isinstance(data_field, (bytes, bytearray)):
-                                raw_bytes = bytes(data_field)
-                            else:
-                                # str 등인 경우를 대비해 base64로 간주하고 decode 시도
-                                raw_bytes = base64.b64decode(str(data_field))
-                            b64 = base64.b64encode(raw_bytes).decode("ascii")
-                            data_url = f"data:{mime};base64,{b64}"
-                            self.logger.info("GoogleImageService: image generated successfully (data URL)")
-                            return data_url
-                        except Exception as enc_err:
-                            self.logger.exception(f"GoogleImageService: failed to encode data URL: {enc_err}")
-                            return None
-            try:
-                self.logger.warning("GoogleImageService: no image in response (candidates/parts missing)")
-            except Exception:
-                pass
-            return None
         except Exception as e:
             try:
                 self.logger.exception(f"GoogleImageService: generation error: {e}")
