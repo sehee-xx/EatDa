@@ -22,7 +22,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class StoreServiceImpl implements StoreService {
 
-    private final SpatialSearchService poiStoreDistanceService;
+    private final SpatialSearchService spatialSearchService;
 
     @Override
     public StoreNearbyResponse getNearbyStores(StoreNearbyRequest request, String email) {
@@ -30,10 +30,10 @@ public class StoreServiceImpl implements StoreService {
         SearchDistance searchRadius = validateDistance(request.distance());
 
         // Poi 찾고
-        Poi poi = poiStoreDistanceService.findNearestPoi(request.latitude(), request.longitude());
+        Poi poi = spatialSearchService.findNearestPoi(request.latitude(), request.longitude());
 
         // 그거 기반으로
-        List<StoreInfo> nearbyStores = poiStoreDistanceService.getNearbyStores(poi.getId(), request.distance());
+        List<StoreInfo> nearbyStores = spatialSearchService.getNearbyStores(poi.getId(), request.distance());
         return StoreNearbyResponse.of(nearbyStores, searchRadius.getMeters(), request.latitude(), request.longitude());
     }
 
