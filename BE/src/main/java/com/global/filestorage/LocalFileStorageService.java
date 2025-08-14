@@ -80,6 +80,23 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
+    public String storeEventAndMenuPosterImage(final MultipartFile file, final String relativePath,
+                                               final String originalName,
+                                               final boolean convertToWebp) {
+
+        try {
+            String originalMimeType = extractAndValidateMimeType(file);
+            InputStream optimizedStream = ImageOptimizationUtils.optimize(file, convertToWebp);
+            String targetMimeType = convertToWebp ? MIME_TYPE_WEBP : originalMimeType;
+
+            return storeEventAndMenuPosterOptimizedImage(optimizedStream, targetMimeType, properties.getImageRoot(),
+                    relativePath);
+        } catch (IOException e) {
+            throw new GlobalException(FILE_UPLOAD_ERROR, originalName, e);
+        }
+    }
+
+    @Override
     public String storeImage(final MultipartFile file,
                              final String relativePath,
                              final String originalName) {
@@ -261,6 +278,23 @@ public class LocalFileStorageService implements FileStorageService {
      */
     private String storeOptimizedImage(final InputStream inputStream, final String mimeType, final String imageRoot,
                                        final String relativePath) throws IOException {
+        String extension = resolveExtensionFromMimeType(mimeType);
+        Path fullPath = generateFullPath(imageRoot, relativePath, extension);
+        return fullPath.toString();
+    }
+
+    /**
+     * 최적화된 이벤트, 메뉴 포스터 이미지 파일을 저장소에 저장 (InputStream 기반)
+     *
+     * @param inputStream  이미지 데이터 스트림
+     * @param mimeType     이미지 MIME 타입
+     * @param imageRoot    저장소 루트 디렉토리 (이미지용)
+     * @param relativePath 루트 기준 상대 경로
+     * @return 저장된 파일의 전체 경로
+     */
+    private String storeEventAndMenuPosterOptimizedImage(final InputStream inputStream, final String mimeType,
+                                                         final String imageRoot,
+                                                         final String relativePath) throws IOException {
         String extension = resolveExtensionFromMimeType(mimeType);
         Path fullPath = generateFullPath(imageRoot, relativePath, extension);
         // 스트림을 디스크에 저장

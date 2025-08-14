@@ -246,7 +246,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                                       final boolean convertToWebp) {
         System.out.println("Here1 " + relativeBase);
         return images.stream()
-                .map(file -> fileStorageService.storeImage(
+                .map(file -> fileStorageService.storeEventAndMenuPosterImage(
                         file,
                         relativeBase,
                         file.getOriginalFilename(),

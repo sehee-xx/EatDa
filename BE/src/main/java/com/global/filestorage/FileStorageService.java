@@ -19,6 +19,19 @@ public interface FileStorageService {
     String storeImage(MultipartFile file, String relativePath, String originalName, boolean convertToWebp);
 
     /**
+     * 이벤트, 메뉴판 포스터 이미지 파일을 저장소에 저장
+     *
+     * @param file          저장할 이미지 파일
+     * @param relativePath  저장할 도메인 또는 하위 디렉토리 경로
+     * @param originalName  원본 파일명
+     * @param convertToWebp true면 webp로 변환, false면 원본 확장자 유지
+     * @return 저장된 파일의 경로
+     */
+    String storeEventAndMenuPosterImage(final MultipartFile file, final String relativePath,
+                                        final String originalName,
+                                        final boolean convertToWebp);
+
+    /**
      * 이미지 파일을 저장소에 저장
      *
      * @param file         저장할 이미지 파일
