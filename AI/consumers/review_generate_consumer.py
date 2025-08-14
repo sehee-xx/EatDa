@@ -104,11 +104,20 @@ class ReviewGenerateConsumer:
         return await review_generate_callback.send_callback_to_spring(callback_data)
 
     async def process_image(self, req: GenerateRequest) -> Tuple[str, str | None]:
+        # 최소 1개 이상의 사용자 이미지가 있어야 생성 허용
+        try:
+            if not req.referenceImages or len(req.referenceImages) < 1:
+                self.logger.info(
+                    f"[리뷰컨슈머] referenceImages 비어있음 -> 생성 불가: reviewAssetId={req.reviewAssetId}"
+                )
+                return "FAIL", None
+        except Exception:
+            return "FAIL", None
         if not google_image_service.is_available():
             return "FAIL", None
         # Google GenAI SDK는 동기 API이므로 스레드로 오프로드
         loop = asyncio.get_running_loop()
-        url = await loop.run_in_executor(None, google_image_service.generate_image_url, req.prompt, None)
+        url = await loop.run_in_executor(None, google_image_service.generate_image_url, req.prompt, req.referenceImages)
         # data URL이면 디스크에 저장하고 저장 경로로 치환
         url = self._save_data_url_to_disk(url, req.userId)
         return ("SUCCESS" if url else "FAIL"), url

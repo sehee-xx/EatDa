@@ -135,6 +135,15 @@ class MenuboardGenerateConsumer:
             self.logger.warning("[메뉴판컨슈머] GoogleImageService unavailable. GOOGLE_API_KEY 또는 라이브러리 확인 필요")
             return "FAIL", None
         # 메뉴보드 전용 GPT 보강 후 이미지 생성 (참고 이미지가 있다면 함께 전달)
+        # 최소 1개 이상의 사용자 이미지가 있어야 생성 허용
+        try:
+            if not req.referenceImages or len(req.referenceImages) < 1:
+                self.logger.info(
+                    f"[메뉴판컨슈머] referenceImages 비어있음 -> 생성 불가: menuPosterAssetId={req.menuPosterAssetId}"
+                )
+                return "FAIL", None
+        except Exception:
+            return "FAIL", None
         enhanced = await gpt_service.enhance_prompt_for_menuboard(req.prompt)
         # 참고 이미지 경로(referenceImages)는 EC2에 저장된 로컬 파일 경로라고 가정하고 그대로 전달
         # google_image_service는 로컬 경로가 실제 존재하는 경우에만 이미지를 contents에 포함함
