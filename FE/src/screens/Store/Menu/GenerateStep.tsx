@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ImageUploader from "../../../components/ImageUploader";
 import { requestMenuPosterAsset } from "./services/api";
 import { useNavigation, useRoute } from "@react-navigation/native";
-
+import { normalizeImageForUpload } from "../../../utils/normalizeImage";
 interface GenPropsFromRoute {
   storeId: number;
   selectedMenuIds: number[];
@@ -83,20 +83,27 @@ export default function GenerateStep() {
     try {
       setLoading(true);
 
+      const files = await Promise.all(
+        localImages
+          .map((uri, idx) => (uri ? { uri, idx } : null))
+          .filter(Boolean)
+          .map(async ({ uri, idx }: any) =>
+            normalizeImageForUpload({ uri, name: `image_${idx}.jpg` }, idx)
+          )
+      );
+
       const formData = new FormData();
       formData.append("storeId", String(storeId));
       selectedMenuIds.forEach((id) => formData.append("menuIds", String(id)));
       formData.append("prompt", prompt);
-
+      formData.append("type", "IMAGE");
       localImages.forEach((uri, idx) => {
-        if (uri) {
-          formData.append("images", {
-            uri,
-            name: `image_${idx}.jpg`,
-            type: "image/jpeg",
-          } as any);
-        }
+        files.forEach((f) => formData.append("image", f as any));
       });
+      if (!files.length) {
+        Alert.alert("오류", "최소 1장의 이미지를 첨부해주세요.");
+        return;
+      }
 
       const res = await requestMenuPosterAsset(formData);
       const menuPosterId: number | undefined =

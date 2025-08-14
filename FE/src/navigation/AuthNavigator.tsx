@@ -24,6 +24,7 @@ import MapScreen from "../screens/Store/Map/MapScreen";
 // 메뉴 관련
 import MenuCustomScreen from "../screens/Store/Menu/MenuCustomScreen";
 import GenerateStep from "../screens/Store/Menu/GenerateStep";
+import MenuPosterWriteStep from "../screens/Store/Menu/WriteStep";
 
 import MypageScreen from "../screens/Mypage/MypageScreen";
 
@@ -76,7 +77,7 @@ export type AuthStackParamList = {
   MenuSelectStep: undefined;
   OCRStep: undefined;
   ReviewWriteScreen: undefined;
-  WriteStep: undefined;
+  MenuPosterWriteStep: { menuPosterId: number };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -144,6 +145,10 @@ export default function AuthNavigator() {
         component={MenuCustomScreen}
       ></Stack.Screen>
       <Stack.Screen name="GenerateStep" component={GenerateStep} />
+      <Stack.Screen
+        name="MenuPosterWriteStep"
+        component={MenuPosterWriteStep}
+      />
 
       {/* 리뷰 작성 관련 */}
       <Stack.Screen

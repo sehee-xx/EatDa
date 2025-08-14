@@ -69,6 +69,7 @@ export const getStoreMenus = async (
 
 export type MenuPosterRequest = {
   storeId: number;
+  tyle: "IMAGE";
   menuIds: number[];
   prompt: string;
   images: Array<{ uri: string; name?: string; type?: string } | any>;
