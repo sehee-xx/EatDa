@@ -15,7 +15,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,5 +66,15 @@ public class MakerController {
     public ResponseEntity<BaseResponse> checkEmail(@Validated @RequestBody final MakerCheckEmailRequest request) {
         makerService.validateEmailAvailable(request);
         return ApiResponseFactory.success(SuccessCode.EMAIL_AVAILABLE);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<BaseResponse> getProfile(@AuthenticationPrincipal String email) {
+        return ApiResponseFactory.success(SuccessCode.PROFILE_GET,
+                makerMapper.toResponse(
+                        makerService.countReceivedReviews(email),
+                        makerService.countMyEvents(email),
+                        makerService.countMyMenuPosters(email)
+                ));
     }
 }

@@ -78,4 +78,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findAllScrappedByUserId(@Param("userId") Long userId);
 
     List<Review> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, Status status);
+
+    Long countByUserIdAndStatus(Long userId, Status status);
+
+    Long countByStroeIdAndStatus(Long storeId, Status status);
 }
