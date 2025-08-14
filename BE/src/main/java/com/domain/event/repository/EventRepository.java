@@ -41,5 +41,5 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                  @Param("lastEventId") Long lastEventId,
                                  Pageable pageable);
 
-    Long countByStroeIdAndStatus(Long storerId, Status status);
+    Long countByStoreIdAndStatus(Long storerId, Status status);
 }

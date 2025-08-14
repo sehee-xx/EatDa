@@ -98,7 +98,7 @@ public class MakerServiceImpl implements MakerService {
 
     @Override
     public Long countMyEvents(final String email) {
-        return eventRepository.countByStroeIdAndStatus(getStorerId(email), Status.SUCCESS);
+        return eventRepository.countByStoreIdAndStatus(getStorerId(email), Status.SUCCESS);
     }
 
     @Override
