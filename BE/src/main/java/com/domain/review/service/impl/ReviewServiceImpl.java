@@ -584,8 +584,8 @@ public class ReviewServiceImpl implements ReviewService {
                 asset.updateImageUrl(url);
             }
             case SHORTS_RAY_2, SHORTS_GEN_4 -> {
-                System.out.println("Here " + url);
-                System.out.println("Here " + fileUrlResolver.toPublicUrl(url));
+                System.out.println("HHHH " + url);
+                System.out.println("HHHH " + fileUrlResolver.toPublicUrl(url));
                 // 1) SHORTS URL 저장(Public)
                 asset.updateShortsUrl(fileUrlResolver.toPublicUrl(url));
 
