@@ -47,6 +47,7 @@ import com.global.constants.Status;
 import com.global.exception.ApiException;
 import com.global.filestorage.FileStorageService;
 import com.global.filestorage.FileUrlResolver;
+import com.global.utils.AssetValidator;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -106,7 +107,7 @@ public class ReviewServiceImpl implements ReviewService {
         Store store = storeRepository.findById(request.storeId())
                 .orElseThrow(() -> new ApiException(STORE_NOT_FOUND));
         ReviewValidator.validateCreateRequest(request);
-
+        AssetValidator.validateImages(request.image());
         Review review = createPendingReview(store, eater);
         ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
 
