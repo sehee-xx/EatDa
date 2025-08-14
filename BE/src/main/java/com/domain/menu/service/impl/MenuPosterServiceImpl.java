@@ -7,7 +7,11 @@ import com.domain.menu.dto.request.MenuPosterFinalizeRequest;
 import com.domain.menu.dto.response.AdoptMenuPostersResponse;
 import com.domain.menu.dto.response.MenuPosterAssetRequestResponse;
 import com.domain.menu.dto.response.MenuPosterFinalizeResponse;
-import com.domain.menu.entity.*;
+import com.domain.menu.entity.AdoptedMenuPoster;
+import com.domain.menu.entity.Menu;
+import com.domain.menu.entity.MenuPoster;
+import com.domain.menu.entity.MenuPosterAsset;
+import com.domain.menu.entity.MenuPosterMenu;
 import com.domain.menu.redis.MenuPosterAssetRedisPublisher;
 import com.domain.menu.repository.AdoptedMenuPosterRepository;
 import com.domain.menu.repository.MenuPosterAssetRepository;
@@ -29,13 +33,12 @@ import com.global.exception.ApiException;
 import com.global.filestorage.FileStorageService;
 import com.global.redis.constants.RedisStreamKey;
 import com.global.utils.AssetValidator;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -55,7 +58,8 @@ public class MenuPosterServiceImpl implements MenuPosterService {
 
     @Override
     @Transactional
-    public MenuPosterAssetRequestResponse requestMenuPosterAsset(MenuPosterAssetCreateRequest request, String eaterMail) {
+    public MenuPosterAssetRequestResponse requestMenuPosterAsset(MenuPosterAssetCreateRequest request,
+                                                                 String eaterMail) {
         User eater = validateEater(eaterMail);
         Store store = validateStore(request.storeId());
 
@@ -68,7 +72,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         MenuPosterAsset menuPosterAsset = createPendingAsset(menuPoster, request);
 
         boolean convertToWebp = shouldConvertToWebp(request.type());
-        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(), convertToWebp);
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(), false);
         List<MenuPosterAssetGenerateMessage.MenuItem> menuItems = menus.stream()
                 .map(m -> new MenuPosterAssetGenerateMessage.MenuItem(
                         m.getId(),
@@ -87,7 +91,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                 menuItems,  // MenuItem DTO 리스트 전달
                 uploadedImageUrls
         );
-        log.info("[MenuPosterServiceImpl]: message={}",uploadedImageUrls.toString());
+        log.info("[MenuPosterServiceImpl]: message={}", uploadedImageUrls.toString());
         menuPosterAssetRedisPublisher.publish(RedisStreamKey.MENU_POSTER, message);
 
         return MenuPosterAssetRequestResponse.from(menuPosterAsset);
@@ -167,7 +171,8 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         menuValidator.validateAllPostersSent(menuPosters);
         menuValidator.validatePostersBelongToStore(menuPosters, request.storeId());
 
-        List<AdoptedMenuPoster> existingAdopted = adoptedMenuPosterRepository.findByStoreIdAndDeletedFalse(request.storeId());
+        List<AdoptedMenuPoster> existingAdopted = adoptedMenuPosterRepository.findByStoreIdAndDeletedFalse(
+                request.storeId());
         if (!existingAdopted.isEmpty()) {
             existingAdopted.forEach(BaseEntity::delete);
             adoptedMenuPosterRepository.saveAll(existingAdopted);
@@ -227,8 +232,10 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         return menuPosterRepository.save(MenuPoster.createPending(user, store));
     }
 
-    private MenuPosterAsset createPendingAsset(final MenuPoster menuPoster, final MenuPosterAssetCreateRequest request) {
-        return menuPosterAssetRepository.save(MenuPosterAsset.createPending(menuPoster, AssetType.IMAGE, request.prompt()));
+    private MenuPosterAsset createPendingAsset(final MenuPoster menuPoster,
+                                               final MenuPosterAssetCreateRequest request) {
+        return menuPosterAssetRepository.save(
+                MenuPosterAsset.createPending(menuPoster, AssetType.IMAGE, request.prompt()));
     }
 
     private void updateMenuPosterAsset(final MenuPosterAsset asset) {
@@ -237,6 +244,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
 
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
+        System.out.println("Here1 " + relativeBase);
         return images.stream()
                 .map(file -> fileStorageService.storeImage(
                         file,
