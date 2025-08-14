@@ -84,7 +84,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final ReviewAssetRedisPublisher reviewAssetRedisPublisher;
     private final FileStorageService fileStorageService;
-    private final SpatialSearchService poiStoreDistanceService;
+    private final SpatialSearchService spatialSearchService;
     private final ReviewAssetService reviewAssetService;
 
     private final ReviewThumbnailService reviewThumbnailService;
@@ -321,7 +321,7 @@ public class ReviewServiceImpl implements ReviewService {
      */
     private Optional<Poi> findNearestPoi(double latitude, double longitude) {
         try {
-            Poi nearestPoi = poiStoreDistanceService.findNearestPoi(latitude, longitude);
+            Poi nearestPoi = spatialSearchService.findNearestPoi(latitude, longitude);
             if (nearestPoi == null) {
                 return Optional.empty();
             }
@@ -338,7 +338,7 @@ public class ReviewServiceImpl implements ReviewService {
      */
     private List<StoreDistanceResult> getNearbyStores(Long poiId, int distance) {
         try {
-            List<StoreDistanceResult> stores = poiStoreDistanceService.getNearbyStoresWithDistance(poiId, distance);
+            List<StoreDistanceResult> stores = spatialSearchService.getNearbyStoresWithDistance(poiId, distance);
             return stores != null ? stores : Collections.emptyList();
         } catch (Exception e) {
             log.warn("Failed to get nearby stores for POI {}: {}", poiId, e.getMessage());
