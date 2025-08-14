@@ -56,7 +56,7 @@ public class StoreController {
 
     @GetMapping("/nearby")
     public ResponseEntity<BaseResponse> getNearbyStores(
-            @Valid @ModelAttribute final StoreNearbyRequest request,
+            @ModelAttribute final StoreNearbyRequest request,
             @AuthenticationPrincipal final String email
             ) {
         StoreNearbyResponse response = storeService.getNearbyStores(request, email);
