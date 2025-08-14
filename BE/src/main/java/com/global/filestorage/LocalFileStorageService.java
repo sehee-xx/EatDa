@@ -142,12 +142,17 @@ public class LocalFileStorageService implements FileStorageService {
     public String storeVideoFromUrl(final String url,
                                     final String relativePath,
                                     final String originalName) {
+        log.info("storeVideoFromUrl: url={}, relativePath={}, originalName={}", url, relativePath, originalName);
+
         Video videoProps = properties.getVideo();
+
+        log.info("storeVideoFromUrl: videoProps={}", videoProps);
 
         try {
             // 1) URL 파싱 & 스킴 검증
             URI downloadUri = resolveDownloadUri(url);
 
+            log.info("storeVideoFromUrl: downloadUri={}", downloadUri);
             // 2) 다운로드(리다이렉트 포함)
             HttpResponse<InputStream> resp = fetchWithRedirects(httpClient(), downloadUri);
             int status = resp.statusCode();
@@ -160,6 +165,7 @@ public class LocalFileStorageService implements FileStorageService {
 
             // 3) 헤더 기반 선 검증 (크기 / MIME 1차)
             long contentLength = resp.headers().firstValueAsLong("Content-Length").orElse(-1L);
+            log.info("storeVideoFromUrl: contentLength={}", contentLength);
 
             if (contentLength > videoProps.getMaxSizeBytes()) {
                 closeQuietly(resp.body());
@@ -171,9 +177,10 @@ public class LocalFileStorageService implements FileStorageService {
                     .firstValue("Content-Type")
                     .map(v -> v.split(";")[0].trim().toLowerCase())
                     .orElse(null);
-
+            log.info("storeVideoFromUrl: contentType={}", contentType);
             if (!Objects.isNull(contentType) && !videoProps.getAllowedMimeSet().contains(contentType)) {
                 closeQuietly(resp.body());
+                log.error("storeVideoFromUrl: contentType={}", contentType);
                 throw new GlobalException(INVALID_FILE_TYPE, contentType);
             }
 
@@ -181,18 +188,24 @@ public class LocalFileStorageService implements FileStorageService {
             if (Objects.isNull(contentType) || !MIME_TO_EXT.containsKey(contentType)) {
                 if (!videoProps.getAllowedMimeSet().contains(contentType)) {
                     closeQuietly(resp.body());
+                    log.error("storeVideoFromUrl: contentType={}", contentType);
                     throw new GlobalException(INVALID_FILE_TYPE, contentType);
                 }
             }
             // 5) 최종 경로 생성
             String extension = resolveExtensionFromMimeType(contentType);
+            log.info("storeVideoFromUrl: extension={}", extension);
             String safeRelativePath = sanitize(relativePath);
+            log.info("storeVideoFromUrl: safeRelativePath={}", safeRelativePath);
             Path finalPath = generateFullPath(properties.getVideoRoot(), safeRelativePath, extension);
+            log.info("storeVideoFromUrl: finalPath={}", finalPath);
             Path parentDir = finalPath.getParent();
+            log.info("storeVideoFromUrl: parentDir={}", parentDir);
             Files.createDirectories(parentDir);
 
             // 6) 스트리밍 저장 (임시 파일 → 원자적 move)
             final Path tempFile = Files.createTempFile(parentDir, "dl-", ".tmp");
+            log.info("storeVideoFromUrl: tempFile={}", tempFile);
             try (InputStream in = resp.body()) {
                 pipeWithLimit(in, tempFile, videoProps.getMaxSizeBytes());
                 Files.move(tempFile, finalPath);
@@ -360,6 +373,7 @@ public class LocalFileStorageService implements FileStorageService {
             throws IOException, InterruptedException {
 
         URI current = startUri;
+        log.info("fetchWithRedirects: startUri={}", startUri);
         for (int i = 0; i <= MAX_REDIRECTS; i++) {
             final HttpRequest req = HttpRequest.newBuilder(current)
                     .timeout(properties.getVideo().getRequestTimeout())
@@ -370,7 +384,7 @@ public class LocalFileStorageService implements FileStorageService {
                     client.send(req, HttpResponse.BodyHandlers.ofInputStream());
 
             final int status = resp.statusCode();
-
+            log.info("fetchWithRedirects: status={}", status);
             // 리다이렉트
             if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
                 final String location = resp.headers().firstValue("Location").orElse(null);
@@ -380,8 +394,9 @@ public class LocalFileStorageService implements FileStorageService {
                             "Redirect without Location from " + current);
                 }
                 final URI next = current.resolve(location);
-
+                log.info("fetchWithRedirects: next={}", next);
                 final String scheme = Optional.ofNullable(next.getScheme()).orElse("").toLowerCase();
+                log.info("fetchWithRedirects: scheme={}", scheme);
                 if (!ALLOWED_SCHEMES.contains(scheme)) {
                     closeQuietly(resp.body());
                     throw new GlobalException(ErrorCode.FILE_DOWNLOAD_ERROR,

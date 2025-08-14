@@ -60,6 +60,13 @@ public class FileStorageProperties {
         return Paths.get(baseDir).toAbsolutePath().normalize();
     }
 
+    public Path getHostBaseDirPath() {
+        if (hostBaseDir == null || hostBaseDir.isBlank()) {
+            return null;
+        }
+        return Paths.get(hostBaseDir).toAbsolutePath().normalize();
+    }
+
     // ------- nested properties -------
 
     @Getter

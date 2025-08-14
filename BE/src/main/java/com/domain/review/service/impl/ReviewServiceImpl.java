@@ -590,7 +590,10 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         switch (type) {
-            case IMAGE -> asset.updateImageUrl(url);
+            case IMAGE -> {
+                final String publicUrl = fileUrlResolver.toPublicUrl(url);
+                asset.updateImageUrl(publicUrl);
+            }
             case SHORTS_RAY_2, SHORTS_GEN_4 -> {
                 // 1) SHORTS URL 저장
                 asset.updateShortsUrl(url);
@@ -609,7 +612,7 @@ public class ReviewServiceImpl implements ReviewService {
                 final Path savedPath = reviewThumbnailService.extractThumbnail(url, targetDir.toString(), fileName);
 
                 // 4) 퍼블릭 URL로 변환해서 엔티티에 저장
-                //                final String publicUrl = fileUrlResolver.toPublicUrl(savedPath.toString());
+                final String publicUrl = fileUrlResolver.toPublicUrl(savedPath.toString());
 
                 asset.updateThumbnailPath(savedPath.toString());
             }
