@@ -361,7 +361,7 @@ public class ReviewServiceImpl implements ReviewService {
      */
     private List<StoreDistanceResult> getNearbyStores(Long poiId, int distance) {
         try {
-            List<StoreDistanceResult> stores = poiStoreDistanceService.getNearbyStores(poiId, distance);
+            List<StoreDistanceResult> stores = poiStoreDistanceService.getNearbyStoresWithDistance(poiId, distance);
             return stores != null ? stores : Collections.emptyList();
         } catch (Exception e) {
             log.warn("Failed to get nearby stores for POI {}: {}", poiId, e.getMessage());
@@ -571,6 +571,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .toList();
     }
 
+    // java
     private void updateAssetUrlIfSuccess(final ReviewAssetCallbackRequest request,
                                          final Status status,
                                          final ReviewAsset asset) {
@@ -661,6 +662,7 @@ public class ReviewServiceImpl implements ReviewService {
                 menuItems,
                 uploadedImageUrls
         );
+
         reviewAssetRedisPublisher.publish(message);
     }
 
