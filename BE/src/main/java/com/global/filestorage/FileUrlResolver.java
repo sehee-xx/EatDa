@@ -30,8 +30,10 @@ public class FileUrlResolver {
         String rel = null;
         if (full.startsWith(base)) {
             rel = base.relativize(full).toString();
+            System.out.println("rel1: " + rel);
         } else if (hostBase != null && full.startsWith(hostBase)) {
             rel = hostBase.relativize(full).toString();
+            System.out.println("rel2: " + rel);
         } else {
             // 모르는 루트면 변환하지 않음(필요시 로깅)
             return fullPath;
