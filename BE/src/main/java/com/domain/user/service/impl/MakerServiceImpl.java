@@ -93,7 +93,7 @@ public class MakerServiceImpl implements MakerService {
 
     @Override
     public Long countReceivedReviews(final String email) {
-        return reviewRepository.countByStroeIdAndStatus(getStorerId(email), Status.SUCCESS);
+        return reviewRepository.countByStoreIdAndStatus(getStorerId(email), Status.SUCCESS);
     }
 
     @Override

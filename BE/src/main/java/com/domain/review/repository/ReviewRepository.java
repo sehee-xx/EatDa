@@ -81,5 +81,5 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     Long countByUserIdAndStatus(Long userId, Status status);
 
-    Long countByStroeIdAndStatus(Long storeId, Status status);
+    Long countByStoreIdAndStatus(Long storeId, Status status);
 }
