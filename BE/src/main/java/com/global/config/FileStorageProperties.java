@@ -61,9 +61,6 @@ public class FileStorageProperties {
     }
 
     public Path getHostBaseDirPath() {
-        if (hostBaseDir == null || hostBaseDir.isBlank()) {
-            return null;
-        }
         return Paths.get(hostBaseDir).toAbsolutePath().normalize();
     }
 

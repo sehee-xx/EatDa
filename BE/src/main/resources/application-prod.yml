@@ -19,7 +19,7 @@ logging:
 
 filestorage: # 파일 저장소 설정
   base-dir: /root/eatda
-  host-base-dir: /home/ubuntu/eatda/test
+  host-base-dir: /home/ubuntu/eatda/prod
   base-url: "https://i13a609.p.ssafy.io/eatda/prod"
 
 springdoc:
