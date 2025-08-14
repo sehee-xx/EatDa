@@ -16,7 +16,7 @@ text_input = ('Hi, This is a picture of me.'
 
 try:
     response = client.models.generate_content(
-        model="imagen-4.0-generate-preview-06-06",
+        model="gemini-2.0-flash-preview-image-generation",
         contents=[text_input, image],
         config=types.GenerateContentConfig(
           response_modalities=['TEXT', 'IMAGE']
