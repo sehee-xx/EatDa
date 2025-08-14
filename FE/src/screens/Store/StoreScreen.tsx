@@ -85,7 +85,6 @@ export default function StoreScreen(props?: StoreProps) {
     setBottomActiveScreen(null);
   };
 
-  // useEffect로 네비게이션 처리 (렌더링 중이 아닌 사이드 이펙트로 처리)
   useEffect(() => {
     if (bottomActiveScreen) {
       switch (bottomActiveScreen) {
@@ -93,7 +92,7 @@ export default function StoreScreen(props?: StoreProps) {
           navigation.navigate("ReviewWriteScreen");
           break;
         case "map":
-          navigation.navigate("MapScreen");
+          navigation.navigate("MapScreen", {}); // 빈 객체 전달
           break;
         case "menu":
           navigation.navigate("MenuCustomScreen");
@@ -108,10 +107,7 @@ export default function StoreScreen(props?: StoreProps) {
     <SafeAreaView style={[{ backgroundColor: "#F7F8F9", flex: 1 }]}>
       {/* 헤더 */}
       <View style={styles.headerContainer}>
-        <HamburgerButton
-          userRole="eater"
-          onMypage={handleMypage}
-        />
+        <HamburgerButton userRole="eater" onMypage={handleMypage} />
         <HeaderLogo />
       </View>
 
