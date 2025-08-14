@@ -70,38 +70,93 @@ class GoogleImageService:
                         except Exception:
                             pass
                         continue
+                    # 입력은 로컬 파일 경로만 허용한다는 전제
+                    # 존재/파일 여부 점검 및 상세 로그
+                    exists = os.path.exists(p)
+                    isfile = os.path.isfile(p)
                     try:
                         self.logger.info(
-                            f"GoogleImageService: ref path check path={p}, exists={os.path.exists(p)}, isfile={os.path.isfile(p)}"
+                            f"GoogleImageService: ref path check path={p}, exists={exists}, isfile={isfile}"
                         )
                     except Exception:
                         pass
-                    if not os.path.exists(p):
+                    if not exists:
+                        try:
+                            self.logger.warning(f"GoogleImageService: reference path not found: path={p}")
+                        except Exception:
+                            pass
+                        continue
+                    if not isfile:
+                        try:
+                            self.logger.warning(f"GoogleImageService: reference path is not a file: path={p}")
+                        except Exception:
+                            pass
                         continue
                     mime, _ = mimetypes.guess_type(p)
                     mime = mime or "image/png"
-                    with open(p, "rb") as f:
-                        b64 = base64.b64encode(f.read()).decode("ascii")
+                    try:
+                        with open(p, "rb") as f:
+                            b64 = base64.b64encode(f.read()).decode("ascii")
+                    except Exception as read_err:
+                        try:
+                            self.logger.exception(
+                                f"GoogleImageService: failed to read reference file: path={p}, err={read_err}"
+                            )
+                        except Exception:
+                            pass
+                        continue
                     contents.append({
                         "inline_data": {"mime_type": mime, "data": b64}
                     })
                     exist_count += 1
                 except Exception:
                     # 문제가 있는 파일은 건너뜀
-                    continue     
+                    continue
             try:
                 self.logger.info(f"GoogleImageService: reference images attached: {exist_count}/{len(reference_image_paths)}")
             except Exception:
                 pass
+            if exist_count == 0:
+                try:
+                    self.logger.warning("GoogleImageService: no valid reference images attached (all missing/unreadable)")
+                except Exception:
+                    pass
 
         try:
             response = self.client.models.generate_content(  # type: ignore[union-attr]
                 model="gemini-2.0-flash-preview-image-generation",
                 contents=contents,
-                # 이 모델은 응답 모달리티 조합으로 ["TEXT", "IMAGE"]를 요구함
                 config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]) if types else None,
             )
 
+            # 첫 번째 이미지 파트를 찾아서 data URL로 변환하여 반환
+            for candidate in getattr(response, "candidates", []) or []:
+                content = getattr(candidate, "content", None)
+                parts = getattr(content, "parts", []) if content else []
+                for part in parts:
+                    inline_data = getattr(part, "inline_data", None)
+                    if inline_data and getattr(inline_data, "data", None):
+                        mime = getattr(inline_data, "mime_type", "image/png") or "image/png"
+                        data_field = getattr(inline_data, "data")
+                        try:
+                            raw_bytes: bytes
+                            if isinstance(data_field, (bytes, bytearray)):
+                                raw_bytes = bytes(data_field)
+                            else:
+                                raw_bytes = base64.b64decode(str(data_field))
+                            b64 = base64.b64encode(raw_bytes).decode("ascii")
+                            data_url = f"data:{mime};base64,{b64}"
+                            self.logger.info("GoogleImageService: image generated successfully (data URL)")
+                            return data_url
+                        except Exception as enc_err:
+                            self.logger.exception(f"GoogleImageService: failed to encode data URL: {enc_err}")
+                            return None
+
+            try:
+                self.logger.warning("GoogleImageService: no image in response (candidates/parts missing)")
+            except Exception:
+                pass
+            return None
         except Exception as e:
             try:
                 self.logger.exception(f"GoogleImageService: generation error: {e}")
