@@ -190,14 +190,9 @@ public class ReviewServiceImpl implements ReviewService {
         ReviewValidator.checkOwner(eater, review);
         ReviewValidator.checkReviewAssetReady(asset);
         ReviewValidator.checkAssetMatches(asset, request);
-
+        System.out.println("Here5 " + review);
         // 도메인 업데이트
         asset.registerReview(review);
-        if (!asset.getType().equals(ReviewAssetType.IMAGE)) {
-            String downloadedVideoPath = fileStorageService.storeVideoFromUrl(asset.getShortsUrl(), DATA_DIR,
-                    SHORTS_DIR);
-            asset.updateShortsUrl(fileUrlResolver.toPublicUrl(downloadedVideoPath));
-        }
         review.updateDescription(request.description());
         createReviewMenus(review, request.menuIds());
         review.updateStatus(Status.SUCCESS);
@@ -574,7 +569,6 @@ public class ReviewServiceImpl implements ReviewService {
                 .toList();
     }
 
-    // java
     private void updateAssetUrlIfSuccess(final ReviewAssetCallbackRequest request,
                                          final Status status,
                                          final ReviewAsset asset) {
@@ -595,12 +589,13 @@ public class ReviewServiceImpl implements ReviewService {
 
         switch (type) {
             case IMAGE -> {
-                final String publicUrl = fileUrlResolver.toPublicUrl(url);
-                asset.updateImageUrl(publicUrl);
+                asset.updateImageUrl(url);
+                System.out.println("HERE1 " + asset.getImageUrl());
             }
             case SHORTS_RAY_2, SHORTS_GEN_4 -> {
                 // 1) SHORTS URL 저장
                 asset.updateShortsUrl(url);
+                System.out.println("HERE2 " + asset.getShortsUrl());
 
                 // 2) 썸네일 생성 대상 경로/파일명 구성: {baseDir}/data/shorts/{email}/{fileName}.jpg
                 final String email = asset.getReview().getUser().getEmail();
@@ -609,9 +604,9 @@ public class ReviewServiceImpl implements ReviewService {
                         .resolve(DATA_DIR)
                         .resolve(SHORTS_DIR)
                         .resolve(email);
-
+                System.out.println("HERE3 " + email + " " + baseDir + " " + targetDir);
                 final String fileName = deriveBaseName(url, "shorts-" + asset.getId());
-
+                System.out.println("HERE4 " + fileName);
                 // 3) ffmpeg로 썸네일 추출
                 final Path savedPath = reviewThumbnailService.extractThumbnail(url, targetDir.toString(), fileName);
 
