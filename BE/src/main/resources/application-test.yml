@@ -17,13 +17,20 @@ spring:
 
 logging:
   level:
-    com.global.aop: TRACE
-    com.domain..controller: INFO
-    com.domain..service: INFO
-    com.domain..repository: INFO
+    root: WARN
+    com.domain: INFO
+    com.global: INFO
+    # --- Hibernate SQL 관련 모두 OFF ---
     org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.extract: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+    org.hibernate.stat: OFF
 
 filestorage: # 파일 저장소 설정
+  base-dir: /root/eatda
+  host-base-dir: /home/ubuntu/eatda/test
   base-url: "https://i13a609.p.ssafy.io/eatda/test"
 
 springdoc:

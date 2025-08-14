@@ -72,8 +72,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         MenuPosterAsset menuPosterAsset = createPendingAsset(menuPoster, request);
 
         boolean convertToWebp = shouldConvertToWebp(request.type());
-        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
-                convertToWebp);
+        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(), false);
         List<MenuPosterAssetGenerateMessage.MenuItem> menuItems = menus.stream()
                 .map(m -> new MenuPosterAssetGenerateMessage.MenuItem(
                         m.getId(),
@@ -92,6 +91,7 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                 menuItems,  // MenuItem DTO 리스트 전달
                 uploadedImageUrls
         );
+        log.info("[MenuPosterServiceImpl]: message={}", uploadedImageUrls.toString());
         menuPosterAssetRedisPublisher.publish(RedisStreamKey.MENU_POSTER, message);
 
         return MenuPosterAssetRequestResponse.from(menuPosterAsset);
@@ -109,6 +109,8 @@ public class MenuPosterServiceImpl implements MenuPosterService {
         log.info("Success 처리 중: assetId={}", asset.getId());
         asset.processCallback(status, request.assetUrl());
         log.info("Success 완료 중: assetId={}", asset.getId());
+        updateMenuPosterAsset(asset);
+        log.info("DB 반영: assetId={}", asset.getId());
     }
 
     @Override
@@ -236,10 +238,15 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                 MenuPosterAsset.createPending(menuPoster, AssetType.IMAGE, request.prompt()));
     }
 
+    private void updateMenuPosterAsset(final MenuPosterAsset asset) {
+        menuPosterAssetRepository.save(asset);
+    }
+
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
+        System.out.println("Here1 " + relativeBase);
         return images.stream()
-                .map(file -> fileStorageService.storeImage(
+                .map(file -> fileStorageService.storeEventAndMenuPosterImage(
                         file,
                         relativeBase,
                         file.getOriginalFilename(),

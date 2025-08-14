@@ -128,6 +128,7 @@ public class EventServiceImpl implements EventService {
         );
         log.info("Step10: OK");
 
+        log.info("[EventServiceImpl]: {}", uploadedImageUrls);
         // Step11: 메시지 발행
         log.info("Step11: Publish message to Redis stream={}", RedisStreamKey.EVENT_ASSET);
         eventAssetRedisPublisher.publish(RedisStreamKey.EVENT_ASSET, message);
@@ -281,7 +282,8 @@ public class EventServiceImpl implements EventService {
         return events.stream()
                 .map(event -> ActiveStoreEventResponse.from(
                         event,
-                        assetMap.get(event.getId())  // null일 수 있음을 고려
+                        assetMap.get(event.getId()),
+                        event.getStore()
                 ))
                 .toList();
     }
@@ -313,7 +315,7 @@ public class EventServiceImpl implements EventService {
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
         return images.stream()
-                .map(file -> fileStorageService.storeImage(
+                .map(file -> fileStorageService.storeEventAndMenuPosterImage(
                         file,
                         relativeBase,
                         file.getOriginalFilename(),
