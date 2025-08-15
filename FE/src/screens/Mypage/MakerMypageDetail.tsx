@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+// src/screens/Mypage/MakerMypageDetail.tsx
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,26 +12,35 @@ import {
   Animated,
   FlatList,
   ViewToken,
+  StyleProp,
+  ViewStyle,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
-import { COLORS, textStyles, SPACING, RADIUS } from "../../constants/theme";
+import { COLORS, SPACING } from "../../constants/theme";
 import MypageGridComponent, {
   ReviewItem,
 } from "../../components/MypageGridComponent";
 import TabNavigation from "../../components/TabNavigation";
-import { reviewData } from "../../data/reviewData";
 import CloseBtn from "../../../assets/closeBtn.svg";
+
 import { getMyEvents } from "../EventMaking/services/api";
-import { getReceivedReviews } from "./services/api";
+import {
+  getReceivedReviews,
+  getReceivedMenuPosters,
+  mapReceivedPostersToGridItems,
+} from "./services/api";
 
 // 빈 상태 아이콘
 const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
 
+// FlatList 가시영역 설정(훅 아님 — 순서 안전)
+const VIEWABILITY_CONFIG = { viewAreaCoveragePercentThreshold: 80 as const };
+
 interface MakerMypageProps {
   userRole: "maker";
   onLogout: () => void;
-  initialTab?: TabKey; // 초기 탭
-  onBack?: () => void; // 뒤로가기 핸들러
+  initialTab?: TabKey;
+  onBack?: () => void;
   setHeaderVisible?: (visible: boolean) => void;
 }
 
@@ -52,102 +62,83 @@ export default function MakerMypageDetail({
   onBack,
   setHeaderVisible,
 }: MakerMypageProps) {
+  // ---- 모든 훅은 최상단 고정 (순서 변동 금지) ----
   const { width, height } = useWindowDimensions();
   const screenHeight = Dimensions.get("window").height;
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
-  // 내 가게에 적힌 리뷰 조회용
+  // 내 가게에 적힌 리뷰
   const [reviewsData, setReviewsData] = useState<ReviewItem[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
 
-  // 내 가게 이벤트 용
+  // 내 가게 이벤트
   const [eventsData, setEventsData] = useState<ReviewItem[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
-  // ===== 상세보기 상태 =====
+  // 받은 메뉴판
+  const [receivedPosters, setReceivedPosters] = useState<ReviewItem[]>([]);
+  const [loadingReceivedPosters, setLoadingReceivedPosters] = useState(false);
+  const [receivedPostersError, setReceivedPostersError] = useState<
+    string | null
+  >(null);
+
+  // 상세보기 상태
   const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
   const [detailList, setDetailList] = useState<ReviewItem[]>([]);
+  const [detailSource, setDetailSource] = useState<TabKey | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const flatListRef = useRef<FlatList<ReviewItem>>(null);
   const vdoRefs = useRef<{ [key: number]: Video | null }>({});
+  const scaleAnimRef = useRef(new Animated.Value(1));
+  const scaleAnim = scaleAnimRef.current;
 
-  // 비디오 플레이/일시정지 컨트롤
+  // 현재 인덱스에 맞춰 비디오 재생/일시정지
   useEffect(() => {
     Object.keys(vdoRefs.current).forEach((key) => {
       const idx = parseInt(key, 10);
       const video = vdoRefs.current[idx];
       if (!video) return;
-      if (idx === currentIndex) {
-        video.playAsync();
-      } else {
-        video.pauseAsync();
-      }
+      if (idx === currentIndex) video.playAsync();
+      else video.pauseAsync();
     });
   }, [currentIndex]);
 
-  // 확대 애니메이션
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handleOpenDetail = (item: ReviewItem, source: TabKey) => {
-    // 상세보기 데이터 소스를 "현재 탭의 리스트"로 고정
-    const list = source === "storeEvents" ? eventsData : reviewsData;
-    setDetailList(list);
-    setSelectedItem(item);
-    setHeaderVisible?.(false);
-
-    scaleAnim.setValue(0.8);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const onViewableItemsChanged = useRef(
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
         setCurrentIndex(viewableItems[0].index as number);
       }
-    }
-  ).current;
+    },
+    []
+  );
 
-  const viewConfig = useRef({
-    viewAreaCoveragePercentThreshold: 80,
-  }).current;
-
-  const storeEventsData = reviewData.slice(6, 12); // ← 더미 제거: 실제 API 사용
-
-  // 내 가게 리뷰 조회 API 호출
+  // ---- 데이터 로딩 훅들 ----
+  // 내 가게 리뷰
   useEffect(() => {
     if (activeTab !== "storeReviews") return;
 
     setLoadingReviews(true);
     setReviewsError(null);
 
-    getReceivedReviews({ size: 30 }) // 필요시 lastReviewId로 페이지네이션
+    getReceivedReviews({ size: 30 })
       .then((res) => {
-        // ReceivedReview -> ReviewItem 매핑
         const mapped: ReviewItem[] = (Array.isArray(res) ? res : [])
           .map((r, idx): ReviewItem | null => {
             const uri = r.shortsUrl || r.imageUrl || "";
             if (!uri) return null;
-
             return {
               id: `${uri}#${idx}`,
               type: r.shortsUrl ? "video" : "image",
               uri,
               title: "리뷰",
               description: r.description ?? "",
-              // 너가 옵셔널로 바꿨다면 안 넣어도 됨. 기본값 쓰려면 아래 주석 해제
-              // likes: 0,
-              // views: 0,
             };
           })
           .filter(Boolean) as ReviewItem[];
-
         setReviewsData(mapped);
       })
       .catch((err) => {
@@ -157,7 +148,7 @@ export default function MakerMypageDetail({
       .finally(() => setLoadingReviews(false));
   }, [activeTab]);
 
-  // ===== 이벤트 API 호출 =====
+  // 내 가게 이벤트
   useEffect(() => {
     if (activeTab !== "storeEvents") return;
 
@@ -166,13 +157,12 @@ export default function MakerMypageDetail({
 
     getMyEvents()
       .then((res) => {
-        // 안전 매핑: 서버 응답의 가능한 키들을 가정
-        // 예: { eventId, title, startAt, endAt, postUrl, storeName }
         const mapped: ReviewItem[] = (Array.isArray(res) ? res : [])
           .map((e: any) => {
-            const id = e?.eventId ?? e?.id;
+            const id = e?.eventId ?? e?.id ?? Math.random();
             const uri = e?.postUrl ?? e?.mediaUrl ?? e?.imageUrl ?? "";
-            // 기본은 이미지로 처리. 서버가 타입 주면 맞춰서 변경.
+            if (!uri) return null;
+
             const type: "image" | "video" =
               e?.mediaType === "video" ? "video" : "image";
             const title = e?.title ?? "이벤트";
@@ -183,14 +173,14 @@ export default function MakerMypageDetail({
             const description = e?.description ?? descParts.join(" · ");
 
             return {
-              id: String(id ?? Math.random()),
+              id: String(id),
               type,
               uri,
               title,
               description,
-            };
+            } as ReviewItem;
           })
-          .filter((x: ReviewItem) => !!x.uri);
+          .filter((x: ReviewItem | null): x is ReviewItem => !!x);
 
         setEventsData(mapped);
       })
@@ -201,13 +191,58 @@ export default function MakerMypageDetail({
       .finally(() => setLoadingEvents(false));
   }, [activeTab]);
 
-  // 그리드 셀 크기
+  // 받은 메뉴판
+  useEffect(() => {
+    if (activeTab !== "receivedMenuBoard") return;
+
+    setLoadingReceivedPosters(true);
+    setReceivedPostersError(null);
+
+    (async () => {
+      try {
+        const posters = await getReceivedMenuPosters();
+        const mapped = mapReceivedPostersToGridItems(
+          posters,
+          "받은 메뉴판"
+        ) as ReviewItem[];
+        setReceivedPosters(mapped);
+      } catch (err: any) {
+        console.error("[RCV-POSTERS][UI] fetch:error", err);
+        setReceivedPostersError(
+          err?.message ?? "받은 메뉴판을 불러오지 못했습니다"
+        );
+      } finally {
+        setLoadingReceivedPosters(false);
+      }
+    })();
+  }, [activeTab]);
+
+  // 상세 열기
+  const handleOpenDetail = (item: ReviewItem, source: TabKey) => {
+    const list =
+      source === "storeEvents"
+        ? eventsData
+        : source === "receivedMenuBoard"
+        ? receivedPosters
+        : reviewsData;
+
+    setDetailList(list);
+    setSelectedItem(item);
+    setDetailSource(source);
+    setHeaderVisible?.(false);
+
+    scaleAnim.setValue(0.8);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const gridSize = (width - SPACING.md * 2 - 16) / 2;
 
-  // ===== 렌더 =====
+  // ---- 렌더 ----
   return (
     <View style={styles.container}>
-      {/* 상세보기 모드 */}
       {selectedItem ? (
         <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
           <FlatList
@@ -220,7 +255,9 @@ export default function MakerMypageDetail({
                 {item.type === "image" ? (
                   <Image
                     source={{ uri: item.uri }}
-                    style={StyleSheet.absoluteFillObject}
+                    style={
+                      StyleSheet.absoluteFillObject as StyleProp<ViewStyle>
+                    }
                     resizeMode="cover"
                   />
                 ) : (
@@ -248,13 +285,15 @@ export default function MakerMypageDetail({
                   <CloseBtn />
                 </TouchableOpacity>
 
-                {/* 하단 텍스트 오버레이 */}
-                <View style={[styles.textOverlay, { bottom: height * 0.1 }]}>
-                  <Text style={styles.titleText}>#{item.title}</Text>
-                  {!!item.description && (
-                    <Text style={styles.descText}>{item.description}</Text>
-                  )}
-                </View>
+                {/* 받은 메뉴판 상세에서는 텍스트 오버레이 숨김 */}
+                {detailSource !== "receivedMenuBoard" && (
+                  <View style={[styles.textOverlay, { bottom: height * 0.1 }]}>
+                    <Text style={styles.titleText}>#{item.title}</Text>
+                    {!!item.description && (
+                      <Text style={styles.descText}>{item.description}</Text>
+                    )}
+                  </View>
+                )}
               </View>
             )}
             pagingEnabled
@@ -272,7 +311,7 @@ export default function MakerMypageDetail({
               index,
             })}
             onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewConfig}
+            viewabilityConfig={VIEWABILITY_CONFIG}
             windowSize={2}
             initialNumToRender={1}
             maxToRenderPerBatch={1}
@@ -280,7 +319,6 @@ export default function MakerMypageDetail({
           />
         </Animated.View>
       ) : (
-        // 일반 모드
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* 탭 */}
           <TabNavigation
@@ -338,9 +376,32 @@ export default function MakerMypageDetail({
               ))}
 
             {/* 받은 메뉴판 탭 */}
-            {activeTab === "receivedMenuBoard" && (
-              <EmptyState message="받은 메뉴판이 없습니다" icon={EmptyIcon} />
-            )}
+            {activeTab === "receivedMenuBoard" &&
+              (loadingReceivedPosters ? (
+                <EmptyState
+                  message="받은 메뉴판 불러오는 중..."
+                  icon={EmptyIcon}
+                />
+              ) : receivedPostersError ? (
+                <EmptyState message={receivedPostersError} icon={EmptyIcon} />
+              ) : receivedPosters.length > 0 ? (
+                <View style={styles.gridContainer}>
+                  {receivedPosters.map((item, index) => (
+                    <MypageGridComponent
+                      key={item.id}
+                      item={item}
+                      size={gridSize}
+                      index={index}
+                      totalLength={receivedPosters.length}
+                      onPress={() =>
+                        handleOpenDetail(item, "receivedMenuBoard")
+                      }
+                    />
+                  ))}
+                </View>
+              ) : (
+                <EmptyState message="받은 메뉴판이 없습니다" icon={EmptyIcon} />
+              ))}
           </View>
         </ScrollView>
       )}
@@ -381,7 +442,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.textColors.secondary,
+    color: COLORS.textColors?.secondary ?? "#666",
     textAlign: "center",
   },
   closeBtn: {
@@ -409,13 +470,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     marginTop: SPACING.xs,
-  },
-  dustbox: {
-    position: "absolute",
-    bottom: 300,
-    right: 50,
-    backgroundColor: "yellow",
-    width: 100,
-    height: 100,
   },
 });
