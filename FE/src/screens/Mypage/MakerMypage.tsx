@@ -31,6 +31,8 @@ export default function MakerMyPage({
   const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("storeReviews");
 
+  // --- 상태 추가 ---
+  const [storeName, setStoreName] = useState("가게 정보 로딩중..."); // 가게 이름 상태 추가
   const [reviewCount, setReviewCount] = useState(0); // 가게 리뷰 수
   const [eventCount, setEventCount] = useState(0); // 진행/등록 이벤트 수(스크랩 대용 슬롯)
   const [menuPosterCount, setMenuPosterCount] = useState(0); // 받은 메뉴판 수
@@ -46,7 +48,10 @@ export default function MakerMyPage({
         console.log("[MAKER-STATS][UI] fetch:start");
         const stats = await getMyMakerStats();
         if (!mounted) return;
+
+        // --- 상태 업데이트 수정 ---
         // 서버 응답 키는 extractMakerStatsFromAny에서 유연 파싱됨
+        setStoreName(stats.storeName || "가게 이름 없음"); // 가게 이름 설정
         setReviewCount(Number(stats.reviewCount || 0));
         setEventCount(Number(stats.eventCount || 0)); // 서버 확정 전 임시 슬롯: 이벤트/스크랩성 지표 연결
         setMenuPosterCount(Number(stats.menuPosterCount || 0));
@@ -55,6 +60,7 @@ export default function MakerMyPage({
         if (!mounted) return;
         console.error("[MAKER-STATS][UI] fetch:error", e);
         setStatsError(e?.message || "요약 정보를 불러오지 못했습니다.");
+        setStoreName("정보 로딩 실패"); // 에러 발생 시 가게 이름 처리
       } finally {
         if (!mounted) return;
         setStatsLoading(false);
@@ -102,7 +108,8 @@ export default function MakerMyPage({
           <Image source={maker_background} style={styles.backgroundImage} />
 
           <View style={styles.profileContent}>
-            <MypageProfile userRole="maker" nickname="Sei" />
+            {/* --- MypageProfile 수정 --- */}
+            <MypageProfile userRole="maker" nickname={storeName} />
           </View>
 
           {/* 통계 카드들 */}
@@ -111,8 +118,6 @@ export default function MakerMyPage({
             <StatsCard type="이벤트" count={eventCount} />
             <StatsCard type="메뉴판" count={menuPosterCount} />
           </View>
-
-          
         </View>
 
         {/* 카테고리 섹션 */}

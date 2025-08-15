@@ -31,6 +31,7 @@ function buildQuery(params?: Record<string, string | number | undefined>) {
  *  Eater 마이페이지 상단 정보
  * ========================= */
 export interface UserStats {
+  nickname: string; // nickname 속성 추가
   reviewCount: number;
   scrapCount: number;
   menuPosterCount: number;
@@ -39,6 +40,7 @@ export interface UserStats {
 function extractUserStatsFromAny(json: any): UserStats {
   const data = json?.data ?? json;
   return {
+    nickname: String(data?.nickname ?? "사용자"), // nickname 추출 로직 추가
     reviewCount: Number(data?.reviewCount ?? data?.countReview ?? 0),
     scrapCount: Number(data?.scrapCount ?? data?.countScrapReview ?? 0),
     menuPosterCount: Number(data?.menuPosterCount ?? data?.countMenuPost ?? 0),
@@ -102,6 +104,7 @@ export async function getMyUserStats(params?: {
  *  Maker 마이페이지 상단 정보
  * ========================= */
 export interface MakerStats {
+  storeName: string; // storeName 속성 추가
   reviewCount: number; // = countReceivedReviews
   eventCount: number; // = countEvents
   menuPosterCount: number; // = countMenuPosters
@@ -110,6 +113,7 @@ export interface MakerStats {
 function extractMakerStatsStrict(json: any): MakerStats {
   const d = json?.data ?? json ?? {};
   return {
+    storeName: String(d?.storeName ?? "가게 이름 없음"), // storeName 추출 로직 추가
     reviewCount: Number(d?.countReceivedReviews ?? 0),
     eventCount: Number(d?.countEvents ?? 0),
     menuPosterCount: Number(d?.countMenuPosters ?? 0),
