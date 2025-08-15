@@ -103,6 +103,73 @@ export async function getMyUserStats(params?: {
 
 // Maker 마이페이지 상단 정보 조회용
 
+export interface MakerStats {
+  reviewCount: number; // = countReceivedReviews
+  eventCount: number; // = countEvents
+  menuPosterCount: number; // = countMenuPosters
+}
+
+function extractMakerStatsStrict(json: any): MakerStats {
+  const d = json?.data ?? json ?? {};
+  return {
+    reviewCount: Number(d?.countReceivedReviews ?? 0),
+    eventCount: Number(d?.countEvents ?? 0),
+    menuPosterCount: Number(d?.countMenuPosters ?? 0),
+  };
+}
+
+export async function getMyMakerStats(params?: {
+  since?: string;
+}): Promise<MakerStats> {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요.");
+
+  const qs = buildQuery({ since: params?.since });
+  const url = `${BASE_API_URL}/makers/me${qs}`;
+
+  console.log(`[MAKER-STATS][REQ] GET ${url}`);
+  console.log(
+    `[MAKER-STATS][REQ] Authorization: Bearer ****(len=${accessToken.length})`
+  );
+
+  const started = Date.now();
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const status = res.status;
+  const raw = await res.text();
+
+  let json: any = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {}
+
+  if (!res.ok) {
+    if (status === 401) throw new Error("인증이 필요합니다.");
+    if (status === 400) {
+      const msg =
+        (json && (json.message || json.error)) ||
+        "요청 파라미터가 올바르지 않습니다.";
+      throw new Error(msg);
+    }
+    const msg =
+      (json && (json.message || json.error)) || raw || `HTTP ${status}`;
+    console.error("[MAKER-STATS][ERR]", { status, raw });
+    throw new Error(msg);
+  }
+
+  console.log(`[MAKER-STATS][RES] ${status} in ${Date.now() - started}ms`);
+  console.log("[MAKER-STATS][RAW-JSON]", JSON.stringify(json, null, 2));
+
+  return extractMakerStatsStrict(json);
+}
+
 // 내 가게 리뷰 조회(Eater -> Maker)
 export interface ReceivedReview {
   description: string;
