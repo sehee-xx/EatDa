@@ -10,6 +10,7 @@ import {
   Dimensions,
   Animated,
   FlatList,
+  Alert,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { COLORS, SPACING } from "../../constants/theme";
@@ -20,7 +21,11 @@ import TabNavigation from "../../components/TabNavigation";
 import CloseBtn from "../../../assets/closeBtn.svg";
 import DustBox from "../../../assets/dustbox.svg";
 import { getScrappedReviews } from "./services/api";
-import { getMyReviews, mapMyReviewsToReviewItems } from "./services/api";
+import {
+  getMyReviews,
+  mapMyReviewsToReviewItems,
+  deleteMyReview,
+} from "./services/api";
 
 const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
 
@@ -85,6 +90,7 @@ export default function EaterMypage({
       });
   }, [activeTab]);
 
+  // 스크랩한 리뷰 관련
   const [scraps, setScraps] = useState<ReviewItem[]>([]);
   const [loadingScraps, setLoadingScraps] = useState(false);
   const [scrapsError, setScrapsError] = useState<string | null>(null);
@@ -121,6 +127,82 @@ export default function EaterMypage({
         setLoadingScraps(false);
       });
   }, [activeTab]);
+
+  // 내가 작성한 리뷰 삭제
+  const [deleting, setDeleting] = useState(false);
+
+  function confirmDeleteCurrent() {
+    if (!selectedItem) return;
+    if (activeTab !== "myReviews") {
+      // 스크랩 탭/메뉴판 탭에서는 삭제 비활성
+      return;
+    }
+    Alert.alert(
+      "리뷰 삭제",
+      "정말 이 리뷰를 삭제하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: doDeleteCurrent,
+        },
+      ],
+      { cancelable: true }
+    );
+  }
+
+  async function doDeleteCurrent() {
+    if (!selectedItem) return;
+    if (deleting) return;
+
+    // ReviewItem.id가 문자열인 경우(reviewId가 문자열로 매핑됨)
+    // 숫자로 변환 실패 시 안전하게 무시
+    const reviewId = Number.parseInt(selectedItem.id, 10);
+    if (!Number.isFinite(reviewId) || reviewId <= 0) {
+      Alert.alert("삭제 실패", "유효한 리뷰 ID를 확인할 수 없습니다.");
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      console.log("[UI][DELETE] start", { reviewId });
+      await deleteMyReview(reviewId);
+      console.log("[UI][DELETE] ok", { reviewId });
+
+      // detailList / myReviews 모두에서 제거
+      setDetailList((prev) => prev.filter((i) => i.id !== String(reviewId)));
+      setMyReviews((prev) => prev.filter((i) => i.id !== String(reviewId)));
+
+      // 다음 아이템으로 이동하거나 닫기
+      const idxBefore = detailList.findIndex((i) => i.id === String(reviewId));
+      const after = detailList.filter((i) => i.id !== String(reviewId));
+
+      if (after.length === 0) {
+        // 더 이상 볼 아이템 없으면 상세 닫기
+        setSelectedItem(null);
+        setHeaderVisible?.(true);
+        return;
+      }
+
+      const nextIndex = Math.min(idxBefore, after.length - 1);
+      const nextItem = after[nextIndex];
+      setSelectedItem(nextItem);
+
+      // 스크롤 위치도 맞춰줌
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToIndex({
+          index: nextIndex,
+          animated: true,
+        });
+      });
+    } catch (e: any) {
+      console.error("[UI][DELETE] error", e);
+      Alert.alert("삭제 실패", e?.message || "삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
   // --- [FIX 1] 상세 보기에 사용할 데이터 목록을 저장할 state 추가 ---
@@ -180,7 +262,9 @@ export default function EaterMypage({
                   />
                 ) : (
                   <Video
-                    ref={(ref) => (vdoRefs.current[index] = ref)}
+                    ref={(ref) => {
+                      vdoRefs.current[index] = ref;
+                    }}
                     source={{ uri: item.uri }}
                     style={StyleSheet.absoluteFillObject}
                     resizeMode={ResizeMode.COVER}
@@ -202,7 +286,11 @@ export default function EaterMypage({
                   <Text style={styles.titleText}>#{item.title}</Text>
                   <Text style={styles.descText}>{item.description}</Text>
                 </View>
-                <TouchableOpacity style={styles.dustbox}>
+                <TouchableOpacity
+                  style={styles.dustbox}
+                  onPress={deleting ? undefined : confirmDeleteCurrent}
+                  disabled={deleting}
+                >
                   <DustBox width={50} height={50} />
                 </TouchableOpacity>
               </View>
