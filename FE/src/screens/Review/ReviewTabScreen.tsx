@@ -1,4 +1,3 @@
-// src/screens/Review/ReviewTabScreen.tsx
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
@@ -508,8 +507,8 @@ export default function Reviews(props?: ReviewProps) {
   const flatListRef = useRef<FlatList<ExtendedReviewItem>>(null);
   const vdoRefs = useRef<{ [key: number]: Video | null }>({});
 
-  // 북마크
-  const [isBookMarked, setIsBookMarked] = useState(false);
+  // ✅ 상세 조회를 이미 한 아이템 추적 (중복요청 방지)
+  const loadedDetailIds = useRef<Set<string>>(new Set());
 
   // 위치 권한 재요청 함수
   const requestLocationAgain = async () => {
@@ -530,9 +529,7 @@ export default function Reviews(props?: ReviewProps) {
     }
   };
 
-
-
-  // 가게 가기 버튼
+  // 가게 가기 버튼 (현재 선택된 카드 기준)
   const [isGoToStoreClicked, setIsGoToStoreClicked] = useState(false);
 
   // 컴포넌트 마운트 시 위치 정보 가져오기
@@ -545,7 +542,6 @@ export default function Reviews(props?: ReviewProps) {
       } catch (error) {
         console.error("위치 초기화 실패:", error);
         setLocationError("위치 정보를 가져올 수 없습니다.");
-        // 기본 위치로 설정 (이미 DEFAULT_COORDS로 초기화됨)
       } finally {
         setIsLocationLoading(false);
       }
@@ -575,13 +571,7 @@ export default function Reviews(props?: ReviewProps) {
     });
   }, [currentIndex]);
 
-  // 선택된 아이템의 북마크 상태 동기화
-  useEffect(() => {
-    if (selectedItem && selectedItem.isScrapped !== undefined) {
-      setIsBookMarked(selectedItem.isScrapped);
-    }
-  }, [selectedItem]);
-
+  // 초기 목록 로드
   const loadInitialReviews = async (coords?: LocationCoords) => {
     const locationToUse = coords || currentLocation;
     setIsLoading(true);
@@ -617,6 +607,11 @@ export default function Reviews(props?: ReviewProps) {
           `반경 ${selectedDistance}m 내에 리뷰가 없어 전체 리뷰를 보여드립니다.`
         );
       }
+
+      // 상세뷰 진입 전 초기화
+      setSelectedItem(null);
+      setCurrentIndex(0);
+      loadedDetailIds.current.clear();
     } catch (error: any) {
       if (
         error.message.includes("로그인이 필요") ||
@@ -675,21 +670,27 @@ export default function Reviews(props?: ReviewProps) {
     }
   };
 
+  // 상세 1건 로더 + 상태 반영
   const loadReviewDetail = async (reviewId: string) => {
+    if (loadedDetailIds.current.has(reviewId)) return; // 이미 로드함
     setIsLoadingDetail(true);
     try {
       const response = await fetchReviewDetail(parseInt(reviewId, 10));
       const detailedItem = convertDetailToReviewItem(response.data);
 
-      // 선택된 아이템을 상세 정보로 업데이트
-      setSelectedItem(detailedItem);
-
-      // 리뷰 데이터에서도 해당 아이템 업데이트
+      // 목록 업데이트
       setReviewData((prev) =>
         prev.map((item) =>
           item.id === reviewId ? { ...item, ...detailedItem } : item
         )
       );
+
+      // 선택 아이템이면 동기화
+      setSelectedItem((prev) =>
+        prev && prev.id === reviewId ? { ...prev, ...detailedItem } : prev
+      );
+
+      loadedDetailIds.current.add(reviewId);
     } catch (error: any) {
       if (
         error.message.includes("로그인이 필요") ||
@@ -714,56 +715,65 @@ export default function Reviews(props?: ReviewProps) {
     setReviewData([]);
   };
 
+  // 스크롤 페이징(한 장씩) + 현재 페이지/선택아이템 동기화 + 상세 보장
   const handleMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetY = e.nativeEvent.contentOffset.y;
       const page = Math.round(offsetY / screenHeight);
+
+      // 스냅
       flatListRef.current?.scrollToOffset({
         offset: page * screenHeight,
         animated: false,
       });
+
       setCurrentIndex(page);
+
+      const item = reviewData[page];
+      if (item) {
+        setSelectedItem(item); // 현재 페이지 아이템을 선택 상태와 동기화
+        // 상세 미로딩이면 가져와서 isScrapped/scrapCount 채우기
+        if (!loadedDetailIds.current.has(item.id)) {
+          loadReviewDetail(item.id);
+        }
+      }
     },
-    [screenHeight]
+    [screenHeight, reviewData]
   );
 
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index);
+      const idx = viewableItems[0].index ?? 0;
+      setCurrentIndex(idx);
     }
   }).current;
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 80 }).current;
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
   const handleOpenDetail = async (item: ExtendedReviewItem) => {
     setSelectedItem(item);
+    // 현재 index 동기화
+    const idx = reviewData.findIndex((i) => i.id === item.id);
+    if (idx >= 0) setCurrentIndex(idx);
+
     scaleAnim.setValue(0.8);
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+
     await loadReviewDetail(item.id);
   };
 
-  // 북마크 상태 동기화
-  useEffect(() => {
-    if (selectedItem?.isScrapped !== undefined) {
-      setIsBookMarked(selectedItem.isScrapped);
-    }
-  }, [selectedItem]);
-
-  const handleBookmarkToggle = async () => {
-    if (!selectedItem) return;
+  // ✅ 북마크 토글: 아이템별 갱신
+  const handleBookmarkToggle = async (reviewIdStr: string) => {
     try {
-      const res = await toggleReviewScrap(parseInt(selectedItem.id, 10));
-      setIsBookMarked(res.data.isScrapped);
-      const updated = {
-        ...selectedItem,
-        isScrapped: res.data.isScrapped,
-        scrapCount: res.data.scrapCount,
-      };
-      setSelectedItem(updated);
+      const reviewId = parseInt(reviewIdStr, 10);
+      const res = await toggleReviewScrap(reviewId);
+
+      // 목록 갱신
       setReviewData((prev) =>
         prev.map((it) =>
-          it.id === selectedItem.id
+          it.id === reviewIdStr
             ? {
                 ...it,
                 isScrapped: res.data.isScrapped,
@@ -771,6 +781,17 @@ export default function Reviews(props?: ReviewProps) {
               }
             : it
         )
+      );
+
+      // 상세 선택 중이면 동기화
+      setSelectedItem((prev) =>
+        prev && prev.id === reviewIdStr
+          ? {
+              ...prev,
+              isScrapped: res.data.isScrapped,
+              scrapCount: res.data.scrapCount,
+            }
+          : prev
       );
     } catch (e: any) {
       if (
@@ -787,7 +808,7 @@ export default function Reviews(props?: ReviewProps) {
     }
   };
 
-  // ✅ 가게로 이동 (네비게이션 파라미터 방식, 상세 미도착 대비 보강)
+  // ✅ 가게로 이동 (현재 선택된 아이템 기준)
   const handleGoToStore = async () => {
     // 1) selectedItem에 store 정보가 있으면 그대로 사용
     let s = selectedItem?.store;
@@ -806,6 +827,7 @@ export default function Reviews(props?: ReviewProps) {
         };
 
         setSelectedItem(convertDetailToReviewItem(detail.data)); // 로컬 상태 동기화
+        loadedDetailIds.current.add(String(detail.data.reviewId));
       } catch (e) {
         Alert.alert("오류", "가게 정보를 불러오지 못했습니다.");
         return;
@@ -821,7 +843,7 @@ export default function Reviews(props?: ReviewProps) {
         latitude: s.latitude,
         longitude: s.longitude,
       };
-      console.log("[NAV] go StoreScreen with params:", params); // ✅ 디버그 로그
+      console.log("[NAV] go StoreScreen with params:", params);
       navigation.navigate("StoreScreen", params);
     } else {
       Alert.alert(
@@ -921,103 +943,112 @@ export default function Reviews(props?: ReviewProps) {
               ref={flatListRef}
               data={reviewData}
               keyExtractor={(item) => item.id}
-              renderItem={({ item, index }) => (
-                <View style={{ height: screenHeight }}>
-                  {item.type === "image" ? (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={StyleSheet.absoluteFillObject}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Video
-                      ref={(ref: Video | null) => {
-                        vdoRefs.current[index] = ref;
+              renderItem={({ item, index }) => {
+                const marked = item.isScrapped === true; // ← 아이템별 표시
+                return (
+                  <View style={{ height: screenHeight }}>
+                    {item.type === "image" ? (
+                      <Image
+                        source={{ uri: item.uri }}
+                        style={StyleSheet.absoluteFillObject}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Video
+                        ref={(ref: Video | null) => {
+                          vdoRefs.current[index] = ref;
+                        }}
+                        source={{ uri: item.uri }}
+                        style={StyleSheet.absoluteFillObject}
+                        resizeMode={ResizeMode.COVER}
+                        shouldPlay={index === currentIndex}
+                        isLooping
+                        isMuted
+                      />
+                    )}
+
+                    {/* 닫기 버튼 */}
+                    <TouchableOpacity
+                      style={styles.closeBtn}
+                      onPress={() => {
+                        if (showTypeDropdown || showDistanceDropdown) {
+                          setShowTypeDropdown(false);
+                          setShowDistanceDropdown(false);
+                        }
+                        setSelectedItem(null);
                       }}
-                      source={{ uri: item.uri }}
-                      style={StyleSheet.absoluteFillObject}
-                      resizeMode={ResizeMode.COVER}
-                      shouldPlay={index === currentIndex}
-                      isLooping
-                      isMuted
-                    />
-                  )}
-
-                  {/* 닫기 버튼 */}
-                  <TouchableOpacity
-                    style={styles.closeBtn}
-                    onPress={() => {
-                      if (showTypeDropdown || showDistanceDropdown) {
-                        setShowTypeDropdown(false);
-                        setShowDistanceDropdown(false);
-                      }
-                      setSelectedItem(null);
-                    }}
-                  >
-                    <CloseBtn />
-                  </TouchableOpacity>
-
-                  {/* 텍스트 오버레이 */}
-                  <View style={[styles.textOverlay, { bottom: height * 0.25 }]}>
-                    <Text style={styles.titleText}>#{item.title}</Text>
-                    <Text style={styles.descText}>{item.description}</Text>
-                    {item.menuNames && item.menuNames.length > 0 ? (
-                      <Text style={styles.menuText}>
-                        메뉴: {item.menuNames.join(", ")}
-                      </Text>
-                    ) : null}
-                    {item.user ? (
-                      <Text style={styles.userText}>
-                        by {item.user.nickname}
-                      </Text>
-                    ) : null}
-                    {item.scrapCount !== undefined ? (
-                      <Text style={styles.scrapText}>
-                        스크랩 {item.scrapCount}회
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  {/* 로딩 오버레이 */}
-                  {isLoadingDetail && (
-                    <View style={styles.loadingOverlay}>
-                      <ActivityIndicator size="large" color="#fff" />
-                      <Text style={styles.loadingOverlayText}>
-                        상세 정보 로딩 중...
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* 우측 버튼들 */}
-                  <View style={styles.goToStoreAndBookMarkContainer}>
-                    {/* 가게페이지로 이동 */}
-                    <TouchableOpacity onPress={handleGoToStore}>
-                      {isGoToStoreClicked ? (
-                        <ColoredGoToStore />
-                      ) : (
-                        <GoToStore />
-                      )}
+                    >
+                      <CloseBtn />
                     </TouchableOpacity>
 
-                    {/* 북마크 */}
-                    {isEater && (
-                      <TouchableOpacity onPress={handleBookmarkToggle}>
-                        {isBookMarked ? (
-                          <ColoredBookMark style={styles.bookMark} />
+                    {/* 텍스트 오버레이 */}
+                    <View
+                      style={[styles.textOverlay, { bottom: height * 0.25 }]}
+                    >
+                      <Text style={styles.titleText}>#{item.title}</Text>
+                      <Text style={styles.descText}>{item.description}</Text>
+                      {item.menuNames && item.menuNames.length > 0 ? (
+                        <Text style={styles.menuText}>
+                          메뉴: {item.menuNames.join(", ")}
+                        </Text>
+                      ) : null}
+                      {item.user ? (
+                        <Text style={styles.userText}>
+                          by {item.user.nickname}
+                        </Text>
+                      ) : null}
+                      {typeof item.scrapCount === "number" ? (
+                        <Text style={styles.scrapText}>
+                          스크랩 {item.scrapCount}회
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {/* 로딩 오버레이 (상세 처음 읽는 중일 때) */}
+                    {isLoadingDetail && (
+                      <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color="#fff" />
+                        <Text style={styles.loadingOverlayText}>
+                          상세 정보 로딩 중...
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* 우측 버튼들 */}
+                    <View style={styles.goToStoreAndBookMarkContainer}>
+                      {/* 가게페이지로 이동 */}
+                      <TouchableOpacity onPress={handleGoToStore}>
+                        {isGoToStoreClicked ? (
+                          <ColoredGoToStore />
                         ) : (
-                          <BookMark style={styles.bookMark} />
+                          <GoToStore />
                         )}
                       </TouchableOpacity>
-                    )}
+
+                      {/* 북마크 (아이템별 상태로 표시 & 해당 아이템만 토글) */}
+                      {isEater && (
+                        <TouchableOpacity
+                          onPress={() => handleBookmarkToggle(item.id)}
+                          disabled={isLoadingDetail}
+                        >
+                          {marked ? (
+                            <ColoredBookMark style={styles.bookMark} />
+                          ) : (
+                            <BookMark style={styles.bookMark} />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              }}
               pagingEnabled
               decelerationRate="fast"
               snapToInterval={screenHeight}
               snapToAlignment="start"
-              initialScrollIndex={reviewData.findIndex(
-                (i) => i.id === selectedItem.id
+              initialScrollIndex={Math.max(
+                0,
+                reviewData.findIndex((i) => i.id === selectedItem.id)
               )}
               getItemLayout={(data, index) => ({
                 length: screenHeight,
@@ -1078,7 +1109,7 @@ export default function Reviews(props?: ReviewProps) {
             <Text style={styles.emptyText}>표시할 리뷰가 없습니다.</Text>
             <TouchableOpacity
               style={styles.refreshButton}
-              onPress={() => loadInitialReviews}
+              onPress={() => loadInitialReviews()}
             >
               <Text style={styles.refreshButtonText}>새로고침</Text>
             </TouchableOpacity>
