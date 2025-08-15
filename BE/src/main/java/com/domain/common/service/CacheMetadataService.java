@@ -97,16 +97,26 @@ public class CacheMetadataService {
     }
 
     /**
-     * 캐시가 너무 오래되었는지 확인 (30분 이상)
+     * 캐시가 너무 오래되었는지 확인 (60분 이상)
      */
     public boolean isTooStale(Long poiId, int distance) {
         CacheMetadata metadata = getMetadata(poiId, distance);
+
         if (metadata == null || !metadata.isStale()) {
             return false;
         }
 
+        log.info("POI {} at {}m - isStale: {}, staleReason: {}, lastUpdated: {}",
+                poiId, distance, metadata.isStale(),
+                metadata.staleReason(), metadata.lastUpdated());
+
+        if (!metadata.isStale()) {
+            log.debug("POI {} at {}m is fresh (not stale)", poiId, distance);
+            return false;
+        }
+
         Duration staleDuration = Duration.between(metadata.lastUpdated(), LocalDateTime.now());
-        return staleDuration.toMinutes() > 30;
+        return staleDuration.toMinutes() > 60;
     }
 
     private String generateKey(Long poiId, int distance) {
