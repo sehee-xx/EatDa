@@ -32,8 +32,8 @@ public class SpatialSearchService {
     private final PoiRepository poiRepository;
     private final StoreRepository storeRepository;
     private final HaversineCalculator haversineCalculator;
-    private final CacheService cacheService;
     private final CacheMetadataService cacheMetadataService;
+    private final MultiLevelCacheService multiLevelCache;  // 변경!
     private final PoiAccessTrackingService poiAccessTrackingService;
 
     // ===== Public APIs =====
@@ -89,14 +89,12 @@ public class SpatialSearchService {
         validDistance(requestedDistance);
         poiAccessTrackingService.recordAccess(poiId);
 
-        if (cacheService.hasCache(poiId, requestedDistance)) {
+        List<StoreDistanceResult> cachedData = multiLevelCache.get(poiId, requestedDistance);
+
+        if (Objects.nonNull(cachedData)) {
             boolean isHotspot = poiAccessTrackingService.isHotspot(poiId);
             boolean isStale = cacheMetadataService.isStale(poiId, requestedDistance);
             log.info("XX POI is id={}, isHotSpot={}, isStale={}", poiId, isHotspot, isStale);
-
-            // 🔵 핵심 로그 추가
-            log.info("POI {} - Cache exists, isHotspot: {}, isStale: {}",
-                    poiId, isHotspot, isStale);
 
             if (isHotspot && isStale) {
                 if (cacheMetadataService.isTooStale(poiId, requestedDistance)) {
@@ -105,11 +103,11 @@ public class SpatialSearchService {
                 } else {
                     triggerBackgroundRefresh(poiId, requestedDistance);
                     log.info("Returning stale cache for hotspot POI {}, background refresh triggered", poiId);
-                    return cacheService.getCache(poiId, requestedDistance);
+                    return cachedData;
                 }
             } else if (!isStale) {
                 log.debug("Cache hit (fresh) for POI {} at {}m", poiId, requestedDistance);
-                return cacheService.getCache(poiId, requestedDistance);
+                return cachedData;
             } else {
                 // 🔵 여기가 문제! 일반 POI + stale인 경우
                 log.info("Normal POI {} has stale cache, will refresh and lose stale state!", poiId);
@@ -117,7 +115,6 @@ public class SpatialSearchService {
             }
         }
 
-        log.info("Cache miss for POI {} at {}m, fetching from DB", poiId, requestedDistance);
         return refreshCache(poiId, requestedDistance);
     }
 
@@ -318,11 +315,6 @@ public class SpatialSearchService {
             log.debug("No stores found within {}m of POI {}, not caching", distanceBand, poi.getId());
             return results;  // 빈 리스트 반환, 캐싱하지 않음
         }
-
-        // 캐싱
-        cacheService.saveCache(poi.getId(), distanceBand, results);
-        log.debug("Cached {} stores for distance band {}m", results.size(), distanceBand);
-
         return results;
     }
 
@@ -330,16 +322,12 @@ public class SpatialSearchService {
         log.info("RefreshCache called for POI {} at {}m - this will reset metadata to fresh!",
                 poiId, distance);
 
-        // 기존 메타데이터 상태 확인
-        CacheMetadataService.CacheMetadata oldMetadata = cacheMetadataService.getMetadata(poiId, distance);
-        if (oldMetadata != null) {
-            log.warn("Overwriting existing metadata - was stale: {}, reason: {}",
-                    oldMetadata.isStale(), oldMetadata.staleReason());
-        }
         Poi poi = poiRepository.findById(poiId)
                 .orElseThrow(() -> new ApiException(ErrorCode.POI_NOT_FOUND));
 
         List<StoreDistanceResult> results = fetchAndCacheStores(poi, distance);
+
+        multiLevelCache.put(poiId, distance, results);
 
         cacheMetadataService.saveMetadata(poiId, distance,
                 CacheMetadataService.CacheMetadata.fresh());
