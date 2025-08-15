@@ -1,4 +1,7 @@
+// src/screens/Store/MenuPoster/services/api.ts
 import { getTokens } from "../../../Login/services/tokenStorage";
+import * as FileSystem from "expo-file-system";
+
 // const BASE_URL = "https://i13a609.p.ssafy.io/test";
 
 const BASE_HOST = "https://i13a609.p.ssafy.io";
@@ -82,12 +85,102 @@ const safeJsonParse = <T = any>(
   }
 };
 
+const fmtBytes = (bytes?: number | null) => {
+  if (bytes == null) return "unknown";
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  let n = bytes;
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
+  const fixed = i === 0 ? 0 : 2;
+  return `${n.toFixed(fixed)} ${units[i]}`;
+};
+
+async function getUriSizeSafe(uri: string): Promise<number | null> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri, { size: true });
+    if (info && typeof (info as any).size === "number") {
+      return (info as any).size as number;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 type FetchWithLogsOptions = {
   label: string;
   reqId?: string;
   expectJson?: boolean; // 응답 JSON 기대
   note?: AnyObj; // 추가 메타
+  // FormData 업로드 시 파일 사이즈를 로깅하고 싶으면 넘겨라
+  filesForLog?: Array<{ uri: string; name?: string; type?: string }>;
 };
+
+async function maybeBuildUploadSizesNote(
+  body: any,
+  filesForLog?: Array<{ uri: string; name?: string; type?: string }>
+) {
+  // 1순위: 명시적으로 넘어온 filesForLog
+  let items: Array<{
+    uri?: string;
+    name?: string;
+    type?: string;
+    size?: number | null;
+  }> = [];
+  if (Array.isArray(filesForLog) && filesForLog.length > 0) {
+    items = await Promise.all(
+      filesForLog.map(async (f) => {
+        const size = f.uri ? await getUriSizeSafe(f.uri) : null;
+        return { ...f, size };
+      })
+    );
+  } else if (body instanceof FormData) {
+    // 2순위: RN FormData의 비공식 _parts 스캔 (가능할 때만)
+    const parts = (body as any)?._parts;
+    if (Array.isArray(parts)) {
+      const imgRows = parts.filter(
+        (p) =>
+          Array.isArray(p) &&
+          typeof p[0] === "string" &&
+          String(p[0]).toLowerCase().includes("image")
+      );
+      for (const row of imgRows) {
+        const v = row[1];
+        if (v && typeof v === "object" && typeof v.uri === "string") {
+          const size = await getUriSizeSafe(v.uri);
+          items.push({ uri: v.uri, name: v.name, type: v.type, size });
+        } else if (v && typeof (v as any).size === "number") {
+          // Blob/File 케이스
+          items.push({ name: v.name, type: v.type, size: (v as any).size });
+        }
+      }
+    }
+  }
+
+  if (items.length === 0) return undefined;
+
+  const totalBytes =
+    items.reduce(
+      (acc, cur) => acc + (typeof cur.size === "number" ? cur.size : 0),
+      0
+    ) || 0;
+
+  return {
+    uploadFiles: items.map((it, idx) => ({
+      idx,
+      name: it.name ?? "(no-name)",
+      type: it.type ?? "(unknown)",
+      uriSnippet: it.uri ? snip(it.uri, 80) : undefined,
+      sizeBytes: typeof it.size === "number" ? it.size : null,
+      sizeHuman: typeof it.size === "number" ? fmtBytes(it.size) : "unknown",
+    })),
+    uploadTotalBytes: totalBytes,
+    uploadTotalHuman: fmtBytes(totalBytes),
+  };
+}
 
 async function fetchWithLogs(
   url: string,
@@ -97,6 +190,7 @@ async function fetchWithLogs(
     reqId = rid(label),
     expectJson = true,
     note = {},
+    filesForLog,
   }: FetchWithLogsOptions
 ) {
   const t0 = Date.now();
@@ -104,6 +198,9 @@ async function fetchWithLogs(
     ...init,
     headers: maskAuth(init?.headers),
   };
+
+  // 업로드 파일 사이즈 메타(가능하면 계산)
+  const uploadSizes = await maybeBuildUploadSizesNote(init?.body, filesForLog);
 
   metaLog(`[HTTP:${label}] REQUEST`, {
     reqId,
@@ -116,6 +213,7 @@ async function fetchWithLogs(
         : typeof init.body
       : "none",
     note,
+    ...(uploadSizes ? { upload: uploadSizes } : {}),
     ts: nowIso(),
   });
 
@@ -231,7 +329,14 @@ export type MenuPosterResponse = {
   menuPosterId: number;
 };
 
-export const requestMenuPosterAsset = async (formData: FormData) => {
+/**
+ * 업로드 파일 사이즈를 로깅하려면 두 번째 인자로 filesForLog를 넘겨라.
+ * 예) requestMenuPosterAsset(fd, { filesForLog: images })
+ */
+export const requestMenuPosterAsset = async (
+  formData: FormData,
+  opts?: { filesForLog?: Array<{ uri: string; name?: string; type?: string }> }
+) => {
   const { accessToken } = await getTokens();
   if (!accessToken) throw new Error("인증이 필요합니다.");
 
@@ -248,8 +353,9 @@ export const requestMenuPosterAsset = async (formData: FormData) => {
       label: "REQ_MENU_POSTER_ASSET",
       expectJson: true,
       note: {
-        bodyType: "FormData (image[], storeId, type, menuIds[], prompt)",
+        bodyType: "FormData (images[], storeId, type, menuIds[], prompt)",
       },
+      filesForLog: opts?.filesForLog,
     }
   );
 
@@ -258,7 +364,7 @@ export const requestMenuPosterAsset = async (formData: FormData) => {
   if (!res.ok) {
     const errMsg =
       (json && (json.message || json.error)) || text || `HTTP ${res.status}`;
-    // 스펙형 에러 출력을 원하면 아래처럼 찍어줌
+    // 스펙형 에러 출력
     specLog("[MENU_POSTER_ASSET ERROR]", {
       code:
         json?.code ||
@@ -334,7 +440,6 @@ export async function getMenuPosterResult(
     const { json } = safeJsonParse<any>(text);
     const errMsg = json?.message || text || `HTTP ${res.status}`;
 
-    // 명세 느낌의 에러 로그
     specLog("[POSTER_RESULT ERROR]", {
       code:
         json?.code ||
@@ -347,14 +452,24 @@ export async function getMenuPosterResult(
     throw new Error(errMsg);
   }
 
-  // 스웨거가 string 반환 명시 (READY면 URL 문자열, PENDING이면 빈 문자열/204 계열)
   const trimmed = (text || "").trim();
   if (!contentType.includes("application/json")) {
     if (trimmed) {
-      metaLog("[GET_ASSET_RESULT READY(plain)]", { assetId, url: trimmed });
+      metaLog("[GET_ASSET_RESULT READY(plain)]", {
+        assetId,
+        url: trimmed,
+        status: res.status,
+        contentType,
+        ts: nowIso(),
+      });
       return { assetUrl: trimmed };
     }
-    metaLog("[GET_ASSET_RESULT PENDING(plain)]", { assetId });
+    metaLog("[GET_ASSET_RESULT PENDING(plain)]", {
+      assetId,
+      status: res.status,
+      contentType,
+      ts: nowIso(),
+    });
     return null;
   }
 
@@ -371,11 +486,19 @@ export async function getMenuPosterResult(
       assetId,
       url: maybeUrl,
       type: maybeType,
+      status: res.status,
+      contentType,
+      ts: nowIso(),
     });
     return { assetUrl: String(maybeUrl), type: maybeType };
   }
 
-  metaLog("[GET_ASSET_RESULT PENDING(json)]", { assetId });
+  metaLog("[GET_ASSET_RESULT PENDING(json)]", {
+    assetId,
+    status: res.status,
+    contentType,
+    ts: nowIso(),
+  });
   return null;
 }
 
@@ -395,14 +518,29 @@ export const waitForAssetReady = async (
   const started = Date.now();
   const pollId = rid("POSTER_POLL");
   let attempt = 0;
+  let lastUrl: string | undefined;
+
+  metaLog("[POSTER_POLL START]", {
+    pollId,
+    assetId,
+    intervalMs,
+    maxWaitMs,
+    startedAt: new Date(started).toISOString(),
+  });
 
   while (true) {
     attempt += 1;
-    const elapsed = Date.now() - started;
+    const now = Date.now();
+    const elapsed = now - started;
+    const remaining = Math.max(0, maxWaitMs - elapsed);
 
     try {
       const res = await getMenuPosterResult(assetId);
       const ready = !!res?.assetUrl;
+      const changed = ready && res!.assetUrl !== lastUrl;
+
+      if (ready) lastUrl = res!.assetUrl;
+
       onTick?.(ready ? "READY" : "WAITING", res?.assetUrl);
 
       metaLog("[POSTER_POLL TICK]", {
@@ -410,11 +548,26 @@ export const waitForAssetReady = async (
         assetId,
         attempt,
         elapsedMs: elapsed,
+        remainingMs: remaining,
+        nextPollInMs: ready ? 0 : intervalMs,
         status: ready ? "READY" : "WAITING",
         hasAssetUrl: !!res?.assetUrl,
+        assetUrlChanged: changed || false,
+        assetUrl: res?.assetUrl ? snip(res.assetUrl, 120) : undefined,
+        ts: nowIso(),
       });
 
-      if (ready) return { assetUrl: res!.assetUrl!, assetId };
+      if (ready) {
+        metaLog("[POSTER_POLL COMPLETE]", {
+          pollId,
+          assetId,
+          attempt,
+          totalElapsedMs: elapsed,
+          finalUrl: res!.assetUrl,
+          ts: nowIso(),
+        });
+        return { assetUrl: res!.assetUrl!, assetId };
+      }
     } catch (e: any) {
       metaLog("[POSTER_POLL ERROR]", {
         pollId,
@@ -422,6 +575,8 @@ export const waitForAssetReady = async (
         attempt,
         elapsedMs: elapsed,
         error: e?.message || String(e),
+        nextPollInMs: intervalMs,
+        ts: nowIso(),
       });
       // 계속 대기
     }
