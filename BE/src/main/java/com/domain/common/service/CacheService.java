@@ -41,8 +41,10 @@ public class CacheService {
      */
     public boolean hasCache(Long poiId, int distance) {
         String cacheKey = generateCacheKey(poiId, distance);
+        log.info("Cache key: {}", cacheKey);
 
         Boolean exists = redisTemplate.hasKey(cacheKey);
+        log.info("Cache exists: {}", exists);
         if (exists) {
             Long size = redisTemplate.opsForZSet().size(cacheKey);
             return size != null && size > 0;

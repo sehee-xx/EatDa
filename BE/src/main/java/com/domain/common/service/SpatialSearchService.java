@@ -125,7 +125,7 @@ public class SpatialSearchService {
     }
 
     public List<StoreInfo> getNearbyStores(Long poiId, int requestedDistance) {
-        log.debug("Getting stores near POI {} within {}m", poiId, requestedDistance);
+        log.info("Getting stores near POI {} within {}m", poiId, requestedDistance);
 
         // 1. 요청 거리 검증 (거리 밴드만 허용)
         validDistance(requestedDistance);
