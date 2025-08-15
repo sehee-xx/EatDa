@@ -45,18 +45,30 @@ export default function MenuSelectStep({
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    let cancelled = false;
+    console.log("[REVIEW-MENU][SCREEN] mount", {
+      storeId,
+      accessTokenLen: accessToken?.length ?? 0,
+      typeOfStoreId: typeof storeId,
+    });
 
     const fetchMenuData = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const menus = await getStoreMenus(storeId, accessToken);
-        if (cancelled) return;
+        const sid = typeof storeId === "string" ? Number(storeId) : storeId;
+        if (!Number.isFinite(sid)) {
+          console.warn("[REVIEW-MENU][SCREEN] invalid storeId:", storeId);
+          setMenuData([]);
+          return;
+        }
 
-        // id가 없거나 0이면 UI용으로 index+1 부여(표시/토글용)
-        const adjustedMenus = menus.map((menu, index) => ({
+        console.log("[REVIEW-MENU][SCREEN] call getStoreMenus", {
+          storeId: sid,
+        });
+        const menus = await getStoreMenus(sid, accessToken);
+
+        const adjusted = menus.map((menu, index) => ({
           ...menu,
           id:
             menu.id === undefined || menu.id === null || menu.id === 0
@@ -64,27 +76,24 @@ export default function MenuSelectStep({
               : menu.id,
         }));
 
-        setMenuData(adjustedMenus);
-      } catch (e: any) {
-        if (cancelled) return;
-        console.error("메뉴 데이터 가져오기 실패:", e);
-        setError(e?.message || "메뉴를 불러오는데 실패했습니다.");
+        console.log("[REVIEW-MENU][SCREEN] received", {
+          count: adjusted.length,
+          sample: adjusted[0],
+        });
+        setMenuData(adjusted);
+      } catch (error: any) {
+        console.error("[REVIEW-MENU][SCREEN] fetch error:", error);
+        setError(error.message || "메뉴를 불러오는데 실패했습니다.");
         Alert.alert(
           "오류",
           "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요."
         );
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     };
 
-    if (storeId && accessToken) {
-      fetchMenuData();
-    }
-
-    return () => {
-      cancelled = true;
-    };
+    if (storeId && accessToken) fetchMenuData();
   }, [storeId, accessToken]);
 
   if (loading) {

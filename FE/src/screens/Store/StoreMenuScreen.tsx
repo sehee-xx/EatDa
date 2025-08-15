@@ -20,37 +20,57 @@ export default function StoreMenuScreen({ storeId, accessToken }: Props) {
   const [error, setError] = useState<string>("");
 
   // 실제 메뉴 데이터 가져오기
-    useEffect(() => {
-      const fetchMenuData = async () => {
-        try {
-          setLoading(true);
-          setError("");
-          
-          const menus = await getStoreMenus(storeId, accessToken);
-          console.log("[MenuSelectStep] 받은 메뉴 데이터:", menus);
-          
-          // ⭐ 메뉴 ID를 1부터 시작하도록 변환 (undefined나 0 처리)
-          const adjustedMenus = menus.map((menu, index) => ({
-            ...menu,
-            id: (menu.id === undefined || menu.id === null || menu.id === 0) ? index + 1 : menu.id
-          }));
-          
-          console.log("[MenuSelectStep] 조정된 메뉴 데이터:", adjustedMenus);
-          setMenuData(adjustedMenus);
-          
-        } catch (error: any) {
-          console.error("메뉴 데이터 가져오기 실패:", error);
-          setError(error.message || "메뉴를 불러오는데 실패했습니다.");
-          Alert.alert("오류", "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요.");
-        } finally {
-          setLoading(false);
+  useEffect(() => {
+    console.log("[STORE-MENU][SCREEN] mount", {
+      storeId,
+      accessTokenLen: accessToken?.length ?? 0,
+      typeOfStoreId: typeof storeId,
+    });
+
+    const fetchMenuData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const sid = typeof storeId === "string" ? Number(storeId) : storeId;
+        if (!Number.isFinite(sid)) {
+          console.warn("[STORE-MENU][SCREEN] invalid storeId:", storeId);
+          setMenuData([]);
+          return;
         }
-      };
-  
-      if (storeId && accessToken) {
-        fetchMenuData();
+
+        console.log("[STORE-MENU][SCREEN] call getStoreMenus", {
+          storeId: sid,
+        });
+        const menus = await getStoreMenus(sid, accessToken);
+
+        const adjusted = menus.map((menu, index) => ({
+          ...menu,
+          id:
+            menu.id === undefined || menu.id === null || menu.id === 0
+              ? index + 1
+              : menu.id,
+        }));
+
+        console.log("[STORE-MENU][SCREEN] received", {
+          count: adjusted.length,
+          sample: adjusted[0],
+        });
+        setMenuData(adjusted);
+      } catch (error: any) {
+        console.error("[STORE-MENU][SCREEN] fetch error:", error);
+        setError(error.message || "메뉴를 불러오는데 실패했습니다.");
+        Alert.alert(
+          "오류",
+          "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요."
+        );
+      } finally {
+        setLoading(false);
       }
-    }, [storeId, accessToken]);
+    };
+
+    if (storeId && accessToken) fetchMenuData();
+  }, [storeId, accessToken]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
