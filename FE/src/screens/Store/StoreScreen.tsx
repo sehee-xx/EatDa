@@ -1,6 +1,13 @@
 // src/screens/Store/StoreScreen.tsx
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -43,9 +50,11 @@ export default function StoreScreen() {
   const isEater = isLoggedIn && userRole === "EATER";
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [bottomActiveScreen, setBottomActiveScreen] = useState<string | null>(null);
+  const [bottomActiveScreen, setBottomActiveScreen] = useState<string | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState("menu");
-  
+
   // 가게 정보 상태
   const [storeInfo, setStoreInfo] = useState<{
     name: string;
@@ -105,7 +114,10 @@ export default function StoreScreen() {
         }
 
         if (response.status === 500) {
-          Alert.alert("서버 오류", "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+          Alert.alert(
+            "서버 오류",
+            "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+          );
           return;
         }
 
@@ -122,7 +134,10 @@ export default function StoreScreen() {
         });
         console.log("가게 정보 설정 완료:", data.data);
       } else {
-        Alert.alert("오류", data.message || "가게 정보를 불러오는데 실패했습니다.");
+        Alert.alert(
+          "오류",
+          data.message || "가게 정보를 불러오는데 실패했습니다."
+        );
       }
     } catch (error: any) {
       console.error("가게 정보 조회 실패:", error);
@@ -132,7 +147,9 @@ export default function StoreScreen() {
     }
   };
 
-  const convertUserRole = (role: string | null | undefined): "eater" | "maker" => {
+  const convertUserRole = (
+    role: string | null | undefined
+  ): "eater" | "maker" => {
     if (role === "EATER") return "eater";
     if (role === "MAKER") return "maker";
     return "eater";
@@ -174,7 +191,11 @@ export default function StoreScreen() {
     if (bottomActiveScreen) {
       switch (bottomActiveScreen) {
         case "review":
-          navigation.navigate("ReviewWriteScreen");
+          navigation.navigate("ReviewWriteScreen", {
+            storeId,
+            storeName: storeInfo?.name || "가게 이름",
+            address: storeInfo?.address || "주소 정보 없음",
+          });
           break;
         case "map":
           navigation.navigate("MapScreen", {}); // 빈 객체 전달
@@ -239,9 +260,7 @@ export default function StoreScreen() {
       </View>
 
       <View style={styles.storeInfoContainer}>
-        <Text style={styles.storeName}>
-          {storeInfo?.name || "가게 이름"}
-        </Text>
+        <Text style={styles.storeName}>{storeInfo?.name || "가게 이름"}</Text>
         <Text style={styles.storeAddress}>
           📍 {storeInfo?.address || "주소 정보 없음"}
         </Text>

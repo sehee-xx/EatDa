@@ -78,7 +78,7 @@ export type AuthStackParamList = {
   };
   MenuSelectStep: undefined;
   OCRStep: undefined;
-  ReviewWriteScreen: undefined;
+  ReviewWriteScreen: { storeId: number; storeName?: string; address?: string };
 
   // ✅ 여기 수정: assetId는 필수, menuPosterId와 storeName은 선택
   MenuPosterWriteStep: {
