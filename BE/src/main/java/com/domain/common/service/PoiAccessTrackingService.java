@@ -23,8 +23,9 @@ public class PoiAccessTrackingService {
     // 마지막 접근 시간 - poi:last_access:123, "2023-10-05" (poi 123번에 마지막 조회 시간)
     private static final String LAST_ACCESS_KEY = "poi:last_access:";
 
-    // 핫스팟 판정 기준
-    private static final int HOTSPOT_THRESHOLD_PER_HOUR = 100;
+    // 핫스팟 판정 기준 원래 100개인데 10개로 줄임(test를 위해)
+//    private static final int HOTSPOT_THRESHOLD_PER_HOUR = 100;
+    private static final int HOTSPOT_THRESHOLD_PER_HOUR = 10;
     private static final Duration ACCESS_COUNT_TTL = Duration.ofHours(1);
     private static final Duration HOTSPOT_STATUS_TTL = Duration.ofHours(24);
 
