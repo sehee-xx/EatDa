@@ -27,6 +27,82 @@ function buildQuery(params?: Record<string, string | number | undefined>) {
 }
 // ====================================================== //
 
+// Eater 마이페이지 상단 정보 조회용
+export interface UserStats {
+  reviewCount: number;
+  scrapCount: number;
+  menuPosterCount: number;
+}
+
+function extractUserStatsFromAny(json: any): UserStats {
+  const data = json?.data ?? json;
+  return {
+    reviewCount: Number(data?.reviewCount ?? data?.countReview ?? 0),
+    scrapCount: Number(data?.scrapCount ?? data?.countScrapReview ?? 0),
+    menuPosterCount: Number(data?.menuPosterCount ?? data?.countMenuPost ?? 0),
+  };
+}
+
+export async function getMyUserStats(params?: {
+  since?: string;
+}): Promise<UserStats> {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요.");
+
+  const qs = buildQuery({ since: params?.since });
+  const url = `${BASE_API_URL}/eaters/me${qs}`;
+
+  // ── 요청 로그
+  console.log(`[USER-STATS][REQ] GET ${url}`);
+  console.log(
+    `[USER-STATS][REQ] Authorization: Bearer ****(len=${accessToken.length})`
+  );
+
+  const started = Date.now();
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const status = res.status;
+  const raw = await res.text();
+
+  let json: any = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    // JSON 아님 → 그대로 에러 메시지 구성
+  }
+
+  if (!res.ok) {
+    if (status === 401) throw new Error("인증이 필요합니다.");
+    if (status === 400) {
+      const msg =
+        (json && (json.message || json.error)) ||
+        "요청 파라미터가 올바르지 않습니다.";
+      throw new Error(msg);
+    }
+    const msg =
+      (json && (json.message || json.error)) || raw || `HTTP ${status}`;
+    console.error("[USER-STATS][ERR]", { status, raw });
+    throw new Error(msg);
+  }
+
+  const elapsed = Date.now() - started;
+  console.log(`[USER-STATS][RES] ${status} in ${elapsed}ms`);
+
+  // ★ 응답 전체 구조 확인용 로그 추가
+  console.log("[USER-STATS][RAW-JSON]", JSON.stringify(json, null, 2));
+
+  return extractUserStatsFromAny(json);
+}
+
+// Maker 마이페이지 상단 정보 조회용
+
 // 내 가게 리뷰 조회(Eater -> Maker)
 export interface ReceivedReview {
   description: string;
