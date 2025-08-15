@@ -14,6 +14,7 @@ import {
   ViewToken,
   StyleProp,
   ViewStyle,
+  ImageStyle,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { COLORS, SPACING } from "../../constants/theme";
@@ -255,9 +256,7 @@ export default function MakerMypageDetail({
                 {item.type === "image" ? (
                   <Image
                     source={{ uri: item.uri }}
-                    style={
-                      StyleSheet.absoluteFillObject as StyleProp<ViewStyle>
-                    }
+                    style={styles.imageFill}
                     resizeMode="cover"
                   />
                 ) : (
@@ -471,4 +470,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: SPACING.xs,
   },
+  imageFill: {
+    ...StyleSheet.absoluteFillObject,
+  } as ImageStyle,
 });
