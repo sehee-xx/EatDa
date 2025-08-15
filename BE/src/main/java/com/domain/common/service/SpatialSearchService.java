@@ -20,6 +20,7 @@ import com.global.utils.geo.H3Utils;
 import com.global.utils.geo.HaversineCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -32,6 +33,8 @@ public class SpatialSearchService {
     private final StoreRepository storeRepository;
     private final HaversineCalculator haversineCalculator;
     private final CacheService cacheService;
+    private final CacheMetadataService cacheMetadataService;
+    private final PoiAccessTrackingService poiAccessTrackingService;
 
     // ===== Public APIs =====
 
@@ -85,23 +88,34 @@ public class SpatialSearchService {
 
         // 1. 요청 거리 검증 (거리 밴드만 허용)
         validDistance(requestedDistance);
+        poiAccessTrackingService.recordAccess(poiId);
 
         // 2. 캐시 확인
         if (cacheService.hasCache(poiId, requestedDistance)) {
-            log.debug("Cache hit for POI {} at {}m band", poiId, requestedDistance);
-            return cacheService.getCache(poiId, requestedDistance);
+            boolean isHotspot = poiAccessTrackingService.isHotspot(poiId);
+            boolean isStale = cacheMetadataService.isStale(poiId, requestedDistance);
+
+            if (isHotspot && isStale) {
+                if (cacheMetadataService.isTooStale(poiId, requestedDistance)) {
+                    log.info("Hotspot POI {} cache too stale, refreshing immediately", poiId);
+                    return refreshCache(poiId, requestedDistance);
+                } else {
+                    triggerBackgroundRefresh(poiId, requestedDistance);
+                    log.debug("Returning stale cache for hotspot POI {}, background refresh triggered", poiId);
+                    return cacheService.getCache(poiId, requestedDistance);
+                }
+            } else if (!isStale) {
+                log.debug("Cache hit (fresh) for POI {} at {}m", poiId, requestedDistance);
+                return cacheService.getCache(poiId, requestedDistance);
+            } else {
+                log.debug("Normal POI {} cache is stale, refreshing", poiId);
+                return refreshCache(poiId, requestedDistance);
+            }
+
         }
 
-        // 3. 캐시 미스 - POI 정보 조회
-        log.debug("Cache miss for POI {} at {}m band, fetching from DB", poiId, requestedDistance);
-        Poi poi = poiRepository.findById(poiId)
-                .orElseThrow(() -> new NoSuchElementException("POI not found: " + poiId));
-
-        // 4. DB에서 조회 및 캐싱
-        List<StoreDistanceResult> results = fetchAndCacheStores(poi, requestedDistance);
-
-        log.info("Found {} stores near POI {} within {}m", results.size(), poiId, requestedDistance);
-        return results;
+        log.debug("Cache miss for POI {} at {}m, fetching from DB", poiId, requestedDistance);
+        return refreshCache(poiId, requestedDistance);
     }
 
     public List<StoreInfo> getNearbyStores(Long poiId, int requestedDistance) {
@@ -309,9 +323,33 @@ public class SpatialSearchService {
         return results;
     }
 
+    private List<StoreDistanceResult> refreshCache(Long poiId, int distance) {
+        Poi poi = poiRepository.findById(poiId)
+                .orElseThrow(() -> new ApiException(ErrorCode.POI_NOT_FOUND));
+
+        List<StoreDistanceResult> results = fetchAndCacheStores(poi, distance);
+
+        cacheMetadataService.saveMetadata(poiId, distance,
+                CacheMetadataService.CacheMetadata.fresh());
+
+        return results;
+    }
+
     private void validDistance(int distance) {
         if (!SearchDistance.isValid(distance)) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    @Async
+    protected void triggerBackgroundRefresh(Long poiId, int distance) {
+        try {
+            log.debug("Starting background refresh for POI {} at {}m", poiId, distance);
+            refreshCache(poiId, distance);
+            log.debug("Background refresh completed for POI {} at {}m", poiId, distance);
+        } catch (Exception e) {
+            log.error("Background refresh failed for POI {} at {}m: {}",
+                    poiId, distance, e.getMessage());
         }
     }
 }

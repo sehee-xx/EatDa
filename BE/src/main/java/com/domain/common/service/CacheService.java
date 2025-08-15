@@ -4,6 +4,7 @@ import com.domain.common.entity.Poi;
 import com.domain.common.repository.PoiRepository;
 import com.domain.review.dto.response.StoreDistanceResult;
 import com.domain.store.event.StoreCreatedEvent;
+import com.global.constants.SearchDistance;
 import com.global.redis.constants.RedisConstants;
 import com.global.utils.geo.H3SearchStrategy;
 import com.global.utils.geo.H3Utils;
@@ -32,6 +33,8 @@ public class CacheService {
     private final H3Utils h3Utils;
     private final PoiRepository poiRepository;
     private final HaversineCalculator haversineCalculator;
+    private final PoiAccessTrackingService poiAccessTrackingService;
+    private final CacheMetadataService metadataService;
 
     /**
      * 특정 거리 밴드의 캐시 존재 여부 확인
@@ -116,18 +119,25 @@ public class CacheService {
                     event.longitude()
             );
 
-            log.info("Found {} POIs affected by new store {}",
-                    affectedPois.size(), event.storeId());
+            int immediateInvalidations = 0;
+            int staleMarkings = 0;
 
-            // 2. 각 POI의 캐시 삭제
-            int deletedCount = 0;
             for (Poi poi : affectedPois) {
-                deleteCache(poi.getId());
-                deletedCount++;
+                if (poiAccessTrackingService.isHotspot(poi.getId())) {
+                    // 핫스팟: stale 마킹만, reason은 어떤 역할?
+                    markCacheAsStale(poi.getId(), "new_store_added");
+                    staleMarkings++;
+                    log.debug("Marked hotspot POI {} as stale", poi.getId());
+                } else {
+                    // 일반 POI: 즉시 삭제
+                    deleteCache(poi.getId());
+                    immediateInvalidations++;
+                    log.debug("Invalidated cache for normal POI {}", poi.getId());
+                }
             }
 
-            log.info("Successfully invalidated {} POI caches for new store {}",
-                    deletedCount, event.storeId());
+            log.info("Cache invalidation completed - Immediate: {}, Stale marked: {}, Total POIs: {}",
+                    immediateInvalidations, staleMarkings, affectedPois.size());
 
         } catch (Exception e) {
             log.error("Failed to invalidate cache for store {}: {}",
@@ -171,5 +181,16 @@ public class CacheService {
                         .build())
                 .sorted(Comparator.comparingInt(StoreDistanceResult::distance))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 모든 거리 밴드의 캐시를 stale로 마킹
+     */
+    private void markCacheAsStale(Long poiId, String reason) {
+        for (SearchDistance distance : SearchDistance.values()) {
+            if (hasCache(poiId, distance.getMeters())) {
+                metadataService.markAsStale(poiId, distance.getMeters(), reason);
+            }
+        }
     }
 }
