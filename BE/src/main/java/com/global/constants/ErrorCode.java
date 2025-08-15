@@ -85,6 +85,9 @@ public enum ErrorCode {
     EVENT_INVALID_DATE_RANGE("EVENT_INVALID_DATE_RANGE", "시작 날짜가 종료 날짜보다 늦을 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
     EVENT_START_DATE_IN_PAST("EVENT_START_DATE_IN_PAST", "시작 날짜는 과거일 수 없습니다.", HttpStatus.BAD_REQUEST.value()),
 
+    // geo 관련
+    POI_NOT_FOUND("POI_NOT_FOUND", "근처 역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND.value()),
+
     // asset 관련
     ASSET_NOT_FOUND("ASSET_NOT_FOUND", "해당 에셋이 존재하지 않습니다.", HttpStatus.NOT_FOUND.value()),
     ASSET_NOT_SUCCESS("ASSET_NOT_SUCCESS", "해당 에셋은 성공 상태가 아닙니다.", HttpStatus.BAD_REQUEST.value()),

@@ -20,6 +20,7 @@ import com.global.utils.geo.H3Utils;
 import com.global.utils.geo.HaversineCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -32,6 +33,8 @@ public class SpatialSearchService {
     private final StoreRepository storeRepository;
     private final HaversineCalculator haversineCalculator;
     private final CacheService cacheService;
+    private final CacheMetadataService cacheMetadataService;
+    private final PoiAccessTrackingService poiAccessTrackingService;
 
     // ===== Public APIs =====
 
@@ -83,25 +86,41 @@ public class SpatialSearchService {
     public List<StoreDistanceResult> getNearbyStoresWithDistance(Long poiId, int requestedDistance) {
         log.debug("Getting stores near POI {} within {}m", poiId, requestedDistance);
 
-        // 1. 요청 거리 검증 (거리 밴드만 허용)
         validDistance(requestedDistance);
+        // 각 POI의 시간당 조회 횟수 추적 - 핫스팟이면 자동 승격, 최근 접근 시간 갱신
+        poiAccessTrackingService.recordAccess(poiId);
 
-        // 2. 캐시 확인
+        // 캐시 존재 여부 확인
         if (cacheService.hasCache(poiId, requestedDistance)) {
-            log.debug("Cache hit for POI {} at {}m band", poiId, requestedDistance);
-            return cacheService.getCache(poiId, requestedDistance);
+            boolean isHotspot = poiAccessTrackingService.isHotspot(poiId);
+            boolean isStale = cacheMetadataService.isStale(poiId, requestedDistance);
+
+            // 핫스팟 + 스테일 캐시라면: 핫스팟은 캐시 히트율을 우선으로 보장하기 때문에 스테일 캐시라도 사용자에게 즉시 제공 + 백그라운드 갱신
+            if (isHotspot && isStale) {
+                // 기존 캐시가 너무 오래됐으면(30분)
+                if (cacheMetadataService.isTooStale(poiId, requestedDistance)) {
+                    log.info("Hotspot POI {} cache too stale, refreshing immediately", poiId);
+                    // DB에 접근해서 데이터 조회후 redis 갱신
+                    return refreshCache(poiId, requestedDistance);
+                } else {
+                    // 비동기 캐시 갱신 요청(사용자 대기 시간 없음)
+                    triggerBackgroundRefresh(poiId, requestedDistance);
+                    log.debug("Returning stale cache for hotspot POI {}, background refresh triggered", poiId);
+                    return cacheService.getCache(poiId, requestedDistance);
+                }
+            } else if (!isStale) {
+                // 핫스팟 + 프레시 캐시면 바로 캐시 사용
+                log.debug("Cache hit (fresh) for POI {} at {}m", poiId, requestedDistance);
+                return cacheService.getCache(poiId, requestedDistance);
+            } else {
+                // 핫스팟이 아니면, DB에 접근해서 데이터 조회후 redis 갱신
+                log.debug("Normal POI {} cache is stale, refreshing", poiId);
+                return refreshCache(poiId, requestedDistance);
+            }
         }
 
-        // 3. 캐시 미스 - POI 정보 조회
-        log.debug("Cache miss for POI {} at {}m band, fetching from DB", poiId, requestedDistance);
-        Poi poi = poiRepository.findById(poiId)
-                .orElseThrow(() -> new NoSuchElementException("POI not found: " + poiId));
-
-        // 4. DB에서 조회 및 캐싱
-        List<StoreDistanceResult> results = fetchAndCacheStores(poi, requestedDistance);
-
-        log.info("Found {} stores near POI {} within {}m", results.size(), poiId, requestedDistance);
-        return results;
+        log.debug("Cache miss for POI {} at {}m, fetching from DB", poiId, requestedDistance);
+        return refreshCache(poiId, requestedDistance);
     }
 
     public List<StoreInfo> getNearbyStores(Long poiId, int requestedDistance) {
@@ -309,9 +328,33 @@ public class SpatialSearchService {
         return results;
     }
 
+    private List<StoreDistanceResult> refreshCache(Long poiId, int distance) {
+        Poi poi = poiRepository.findById(poiId)
+                .orElseThrow(() -> new ApiException(ErrorCode.POI_NOT_FOUND));
+
+        List<StoreDistanceResult> results = fetchAndCacheStores(poi, distance);
+
+        cacheMetadataService.saveMetadata(poiId, distance,
+                CacheMetadataService.CacheMetadata.fresh());
+
+        return results;
+    }
+
     private void validDistance(int distance) {
         if (!SearchDistance.isValid(distance)) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR);
+        }
+    }
+
+    @Async
+    protected void triggerBackgroundRefresh(Long poiId, int distance) {
+        try {
+            log.debug("Starting background refresh for POI {} at {}m", poiId, distance);
+            refreshCache(poiId, distance);
+            log.debug("Background refresh completed for POI {} at {}m", poiId, distance);
+        } catch (Exception e) {
+            log.error("Background refresh failed for POI {} at {}m: {}",
+                    poiId, distance, e.getMessage());
         }
     }
 }
