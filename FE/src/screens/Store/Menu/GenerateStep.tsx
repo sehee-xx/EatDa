@@ -102,7 +102,7 @@ export default function GenerateStep() {
       formData.append("prompt", prompt);
 
       files.forEach((f: any, i: number) => {
-        formData.append("images", {
+        formData.append("image", {
           uri: f.uri,
           name: f.name ?? `image_${i}.jpg`,
           type: f.type ?? "image/jpeg",
@@ -128,34 +128,19 @@ export default function GenerateStep() {
         res?.raw?.data?.menuPosterId ??
         res?.raw?.menuPosterId;
 
-      const assetId: number | undefined =
-        res?.menuPosterAssetId ??
-        res?.raw?.data?.menuPosterAssetId ??
-        res?.raw?.assetId;
-
       console.log("[GenerateStep] RESPONSE", {
         menuPosterId,
-        assetId,
         rawHasData: !!res?.raw,
       });
 
       if (typeof menuPosterId !== "number") {
-        Alert.alert(
-          "오류",
-          "생성 요청은 성공했지만 menuPosterId를 찾지 못했습니다."
-        );
+        Alert.alert("오류", "menuPosterId를 찾지 못했습니다.");
         return;
       }
-      if (typeof assetId !== "number") {
-        Alert.alert(
-          "오류",
-          "생성 요청은 성공했지만 assetId를 찾지 못했습니다."
-        );
-        return;
-      }
+      
 
       // 5) 다음 화면으로: 반드시 assetId와 함께
-      navigation.navigate("MenuPosterWriteStep", { menuPosterId, assetId });
+      navigation.navigate("MenuPosterWriteStep", { menuPosterId });
     } catch (err: any) {
       console.error("[GenerateStep] Asset Request Error:", err);
       Alert.alert(

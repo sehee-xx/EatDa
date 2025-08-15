@@ -329,10 +329,6 @@ export type MenuPosterResponse = {
   menuPosterId: number;
 };
 
-/**
- * 업로드 파일 사이즈를 로깅하려면 두 번째 인자로 filesForLog를 넘겨라.
- * 예) requestMenuPosterAsset(fd, { filesForLog: images })
- */
 export const requestMenuPosterAsset = async (
   formData: FormData,
   opts?: { filesForLog?: Array<{ uri: string; name?: string; type?: string }> }
@@ -347,13 +343,14 @@ export const requestMenuPosterAsset = async (
     {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
-      body: formData, // multipart는 Content-Type 직접 지정하지 않음
+      body: formData,
     },
     {
       label: "REQ_MENU_POSTER_ASSET",
       expectJson: true,
       note: {
-        bodyType: "FormData (images[], storeId, type, menuIds[], prompt)",
+        // ▼ Swagger가 image(단수) 키를 기대하므로 문구도 image[]로 정정
+        bodyType: "FormData (image[], storeId, type, menuIds[], prompt)",
       },
       filesForLog: opts?.filesForLog,
     }
@@ -364,7 +361,6 @@ export const requestMenuPosterAsset = async (
   if (!res.ok) {
     const errMsg =
       (json && (json.message || json.error)) || text || `HTTP ${res.status}`;
-    // 스펙형 에러 출력
     specLog("[MENU_POSTER_ASSET ERROR]", {
       code:
         json?.code ||
@@ -406,6 +402,120 @@ export const requestMenuPosterAsset = async (
 
   return { menuPosterId, menuPosterAssetId, raw: json };
 };
+
+export async function peekMenuPosterAssetId(
+  menuPosterId: number
+): Promise<number | null> {
+  const { accessToken } = await getTokens();
+  if (!accessToken) throw new Error("인증이 필요합니다.");
+  if (!Number.isFinite(menuPosterId))
+    throw new Error("유효한 menuPosterId가 필요합니다.");
+
+  // 필요 시 아래 URL을 실제 스펙에 맞게 조정하세요.
+  const url = `${BASE_API_URL}/menu-posters/${menuPosterId}`;
+
+  const { res, text } = await fetchWithLogs(
+    url,
+    { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } },
+    {
+      label: "GET_MENU_POSTER_DETAIL",
+      expectJson: true,
+      note: { menuPosterId },
+    }
+  );
+
+  const { json } = safeJsonParse<any>(text);
+  if (!res.ok) {
+    throw new Error((json && json.message) || text || `HTTP ${res.status}`);
+  }
+  const d = (json && (json.data ?? json)) || {};
+
+  const candidates = [
+    d?.menuPosterAssetId,
+    d?.assetId,
+    d?.asset?.id,
+    d?.menuPosterAsset?.id,
+    Array.isArray(d?.assets) ? d.assets[0]?.id : undefined,
+  ];
+  const found = candidates.find((v) => typeof v === "number");
+  return typeof found === "number" ? (found as number) : null;
+}
+
+export async function waitForAssetIdByMenuPoster(
+  menuPosterId: number,
+  {
+    intervalMs = 5000,
+    maxWaitMs = 120000,
+    onTick,
+  }: {
+    intervalMs?: number;
+    maxWaitMs?: number;
+    onTick?: (status: "FOUND" | "WAITING", assetId?: number) => void;
+  } = {}
+): Promise<number> {
+  const started = Date.now();
+  const pollId = rid("ASSETID_POLL");
+  let attempt = 0;
+
+  metaLog("[ASSETID_POLL START]", {
+    pollId,
+    menuPosterId,
+    intervalMs,
+    maxWaitMs,
+    startedAt: nowIso(),
+  });
+
+  while (true) {
+    attempt += 1;
+    const elapsed = Date.now() - started;
+    const remaining = Math.max(0, maxWaitMs - elapsed);
+
+    try {
+      const assetId = await peekMenuPosterAssetId(menuPosterId);
+      const found = typeof assetId === "number" && Number.isFinite(assetId);
+      onTick?.(found ? "FOUND" : "WAITING", assetId || undefined);
+
+      metaLog("[ASSETID_POLL TICK]", {
+        pollId,
+        menuPosterId,
+        attempt,
+        elapsedMs: elapsed,
+        remainingMs: remaining,
+        status: found ? "FOUND" : "WAITING",
+        assetId,
+        nextPollInMs: found ? 0 : intervalMs,
+        ts: nowIso(),
+      });
+
+      if (found) {
+        metaLog("[ASSETID_POLL COMPLETE]", {
+          pollId,
+          menuPosterId,
+          assetId,
+          totalElapsedMs: elapsed,
+          ts: nowIso(),
+        });
+        return assetId!;
+      }
+    } catch (e: any) {
+      metaLog("[ASSETID_POLL ERROR]", {
+        pollId,
+        menuPosterId,
+        attempt,
+        elapsedMs: elapsed,
+        error: e?.message || String(e),
+        nextPollInMs: intervalMs,
+        ts: nowIso(),
+      });
+      // 에러가 떠도 일정 시간 재시도
+    }
+
+    if (elapsed >= maxWaitMs) {
+      throw new Error("assetId 배정 대기 시간이 초과되었습니다.");
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
 
 // ==================== 포스터 생성 상태 조회 (자원: assetId) ====================
 
