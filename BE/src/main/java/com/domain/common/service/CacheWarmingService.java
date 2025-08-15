@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -19,10 +18,6 @@ public class CacheWarmingService {
     private final PoiRepository poiRepository;
     private final SpatialSearchService spatialSearchService;
     private final PoiAccessTrackingService accessTrackingService;
-
-    private static final Set<String> MAJOR_AREAS = Set.of(
-            "신논현역", "홍대입구역", "명동역", "종로3가역", "종로5가역", "신촌역"
-    );
 
     /**
      * 출근 시간 전 캐시 예열 (오전 7시)
@@ -50,6 +45,33 @@ public class CacheWarmingService {
         log.info("Starting dinner time cache warming");
         warmCacheForAreas(List.of("신논현역", "홍대입구역", "명동역", "종로3가역", "종로5가역", "신촌역"));
     }
+
+    @Scheduled(fixedDelay = 1800000) // 30분
+    public void warmHotspotCaches() {
+        log.info("Warming hotspot POI caches");
+
+        // 핫스팟 POI들 조회
+        List<Poi> hotspotPois = poiRepository.findAll().stream()
+                .filter(poi -> accessTrackingService.isHotspot(poi.getId()))
+                .limit(10) // 상위 50개만
+                .toList();
+
+        int warmedCount = 0;
+        for (Poi poi : hotspotPois) {
+            for (SearchDistance distance : SearchDistance.values()) {
+                try {
+                    spatialSearchService.getNearbyStoresWithDistance(poi.getId(), distance.getMeters());
+                    warmedCount++;
+                } catch (Exception e) {
+                    log.error("Failed to warm cache for POI {} at {}m: {}",
+                            poi.getId(), distance, e.getMessage());
+                }
+            }
+        }
+
+        log.info("Warmed {} hotspot caches", warmedCount);
+    }
+
 
     private void warmCacheForAreas(List<String> areas) {
         for (String area : areas) {
