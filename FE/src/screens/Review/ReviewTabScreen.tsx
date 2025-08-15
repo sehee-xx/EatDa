@@ -1078,7 +1078,7 @@ export default function Reviews(props?: ReviewProps) {
             <Text style={styles.emptyText}>표시할 리뷰가 없습니다.</Text>
             <TouchableOpacity
               style={styles.refreshButton}
-              onPress={loadInitialReviews}
+              onPress={() => loadInitialReviews}
             >
               <Text style={styles.refreshButtonText}>새로고침</Text>
             </TouchableOpacity>
