@@ -1,3 +1,4 @@
+// src/screens/Mypage/EaterMypage.tsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -20,6 +21,7 @@ import MypageGridComponent, {
 import TabNavigation from "../../components/TabNavigation";
 import CloseBtn from "../../../assets/closeBtn.svg";
 import DustBox from "../../../assets/dustbox.svg";
+import ResultModal from "../../components/ResultModal";
 import { getScrappedReviews } from "./services/api";
 import {
   getMyReviews,
@@ -60,6 +62,14 @@ export default function EaterMypage({
   const { width, height } = useWindowDimensions();
   const screenHeight = Dimensions.get("window").height;
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+
+  // ── ResultModal (삭제 결과 안내)
+  const [resModalVisible, setResModalVisible] = useState(false);
+  const [resModalType, setResModalType] = useState<"success" | "failure">(
+    "success"
+  );
+  const [resModalTitle, setResModalTitle] = useState("");
+  const [resModalMessage, setResModalMessage] = useState("");
 
   // 내 리뷰
   const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
@@ -173,7 +183,11 @@ export default function EaterMypage({
 
     const reviewId = Number.parseInt(selectedItem.id, 10);
     if (!Number.isFinite(reviewId) || reviewId <= 0) {
-      Alert.alert("삭제 실패", "유효한 리뷰 ID를 확인할 수 없습니다.");
+      // 입력 오류는 실패 모달로 표시
+      setResModalType("failure");
+      setResModalTitle("삭제 실패");
+      setResModalMessage("유효한 리뷰 ID를 확인할 수 없습니다.");
+      setResModalVisible(true);
       return;
     }
 
@@ -189,12 +203,23 @@ export default function EaterMypage({
       setMyReviews((prev) => prev.filter((i) => i.id !== String(reviewId)));
       setDetailList((prev) => prev.filter((i) => i.id !== String(reviewId)));
 
-      // ✅ 요구사항: 항상 상세 닫고 마이페이지(그리드)로 복귀
+      // 상세는 닫고, 헤더 복원
       setSelectedItem(null);
       setHeaderVisible?.(true);
+
+      // ✅ 성공 모달
+      setResModalType("success");
+      setResModalTitle("삭제 완료");
+      setResModalMessage("리뷰가 성공적으로 삭제되었습니다.");
+      setResModalVisible(true);
     } catch (e: any) {
       console.error("[UI][DELETE] error", e);
-      Alert.alert("삭제 실패", e?.message || "삭제 중 오류가 발생했습니다.");
+
+      // ✅ 실패 모달
+      setResModalType("failure");
+      setResModalTitle("삭제 실패");
+      setResModalMessage(e?.message || "삭제 중 오류가 발생했습니다.");
+      setResModalVisible(true);
     } finally {
       setDeleting(false);
     }
@@ -267,7 +292,7 @@ export default function EaterMypage({
                   />
                 )}
 
-                {/* 닫기 버튼은 그대로 유지 */}
+                {/* 닫기 */}
                 <TouchableOpacity
                   style={styles.closeBtn}
                   onPress={() => {
@@ -278,8 +303,7 @@ export default function EaterMypage({
                   <CloseBtn />
                 </TouchableOpacity>
 
-                {/* ✅ 리뷰/스크랩 탭에서만 텍스트 오버레이 보이기
-        메뉴판 탭(myMenuBoard)에서는 이미지 단독 렌더링 */}
+                {/* 리뷰/스크랩 탭에만 텍스트 오버레이 */}
                 {activeTab !== "myMenuBoard" && (
                   <View style={[styles.textOverlay, { bottom: height * 0.1 }]}>
                     <Text style={styles.titleText}>#{item.title}</Text>
@@ -287,7 +311,7 @@ export default function EaterMypage({
                   </View>
                 )}
 
-                {/* ✅ 리뷰 탭에서만 삭제 아이콘 노출 */}
+                {/* 리뷰 탭에서만 삭제 아이콘 */}
                 {activeTab === "myReviews" && (
                   <TouchableOpacity
                     style={styles.dustbox}
@@ -405,6 +429,15 @@ export default function EaterMypage({
           </View>
         </ScrollView>
       )}
+
+      {/* ✅ 삭제 결과 안내 모달 */}
+      <ResultModal
+        visible={resModalVisible}
+        type={resModalType}
+        title={resModalTitle}
+        message={resModalMessage}
+        onClose={() => setResModalVisible(false)}
+      />
     </View>
   );
 }

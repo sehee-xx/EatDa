@@ -673,7 +673,6 @@ export function mapReceivedPostersToGridItems(
     }));
 }
 
-// 내가 작성한 리뷰 삭제
 // 리뷰 삭제(Eater 본인이 작성한 자신의 리뷰를 삭제)
 
 export type DeleteReviewResult = ApiEnvelope<null>;
