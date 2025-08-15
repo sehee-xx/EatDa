@@ -53,6 +53,12 @@ interface NearbyStoresResponse {
       latitude: number;
       longitude: number;
     };
+    // 백엔드에서 POI로 찾은 역 정보 추가
+    stationInfo?: {
+      latitude: number;
+      longitude: number;
+      name?: string;
+    };
   };
   timestamp: string;
 }
@@ -67,14 +73,21 @@ const INITIAL_REGION = {
   longitude: 126.978,
 };
 
-const KAKAO_API_KEY = Constants.expoConfig?.extra?.kakaoApiKey || "8e8f365a52aa8fbcee64e49c01552c71";
+const KAKAO_API_KEY =
+  Constants.expoConfig?.extra?.kakaoApiKey ||
+  "8e8f365a52aa8fbcee64e49c01552c71";
 
 export default function StoreClusteringScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userRole } = useAuth();
   const webViewRef = useRef<WebView>(null);
 
-  const [currentLocation, setCurrentLocation] = useState<LocationType | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<LocationType | null>(
+    null
+  );
+  const [stationLocation, setStationLocation] = useState<LocationType | null>(
+    null
+  );
   const [selectedDistance, setSelectedDistance] = useState(300);
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,22 +100,43 @@ export default function StoreClusteringScreen() {
 
   console.log("🔑 카카오 API 키:", KAKAO_API_KEY);
 
-  const convertUserRole = (role: string | null | undefined): "eater" | "maker" => {
+  const convertUserRole = (
+    role: string | null | undefined
+  ): "eater" | "maker" => {
     if (role === "EATER") return "eater";
     if (role === "MAKER") return "maker";
     return "eater";
   };
 
+  // 거리 계산 함수 추가 (하버사인 공식)
+  const calculateDistance = (
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number => {
+    const R = 6371000; // 지구 반지름 (미터)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
   const requestLocationPermission = async (): Promise<boolean> => {
     try {
       // 먼저 현재 권한 상태 확인
-      const { status: currentStatus } = await Location.getForegroundPermissionsAsync();
+      const { status: currentStatus } =
+        await Location.getForegroundPermissionsAsync();
       console.log("🔍 현재 위치 권한 상태:", currentStatus);
-      
-      if (currentStatus === 'granted') {
+
+      if (currentStatus === "granted") {
         return true;
       }
-      
+
       // 권한 요청
       const { status } = await Location.requestForegroundPermissionsAsync();
       console.log("📍 위치 권한 요청 결과:", status);
@@ -119,11 +153,11 @@ export default function StoreClusteringScreen() {
   }> => {
     try {
       console.log("🔍 사용자 위치 가져오기 시작...");
-      
+
       // GPS 서비스 활성화 확인
       const isEnabled = await Location.hasServicesEnabledAsync();
       console.log("📡 GPS 서비스 활성화:", isEnabled);
-      
+
       if (!isEnabled) {
         throw new Error("GPS 서비스가 비활성화되어 있습니다.");
       }
@@ -131,14 +165,17 @@ export default function StoreClusteringScreen() {
       // 여러 번 시도해서 위치 가져오기
       const maxAttempts = 3;
       let lastError: Error | null = null;
-      
+
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           console.log(`📍 위치 가져오기 시도 ${attempt}/${maxAttempts}`);
-          
+
           const location = await Location.getCurrentPositionAsync({
-            accuracy: attempt === 1 ? Location.Accuracy.High : Location.Accuracy.Balanced,
-            timeInterval: 15000 + (attempt * 5000), // 시도할 때마다 타임아웃 증가
+            accuracy:
+              attempt === 1
+                ? Location.Accuracy.High
+                : Location.Accuracy.Balanced,
+            timeInterval: 15000 + attempt * 5000, // 시도할 때마다 타임아웃 증가
             distanceInterval: 1,
           });
 
@@ -146,12 +183,17 @@ export default function StoreClusteringScreen() {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
             accuracy: location.coords.accuracy,
-            timestamp: new Date(location.timestamp).toLocaleString()
+            timestamp: new Date(location.timestamp).toLocaleString(),
           });
 
           // 서울 근처인지 확인 (한국 내 위치인지 대략적으로 체크)
           const { latitude, longitude } = location.coords;
-          if (latitude >= 33 && latitude <= 39 && longitude >= 124 && longitude <= 132) {
+          if (
+            latitude >= 33 &&
+            latitude <= 39 &&
+            longitude >= 124 &&
+            longitude <= 132
+          ) {
             console.log("🇰🇷 한국 내 위치 확인됨");
           } else {
             console.log("🌍 한국 외 위치:", latitude, longitude);
@@ -163,14 +205,14 @@ export default function StoreClusteringScreen() {
           };
         } catch (attemptError) {
           console.error(`❌ 시도 ${attempt} 실패:`, attemptError);
-          
+
           if (attempt < maxAttempts) {
             console.log("⏳ 2초 후 다시 시도...");
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
         }
       }
-      
+
       throw lastError || new Error("모든 위치 가져오기 시도 실패");
     } catch (error) {
       console.error("❌ 위치 가져오기 최종 실패:", error);
@@ -178,7 +220,11 @@ export default function StoreClusteringScreen() {
     }
   };
 
-  const fetchNearbyStores = async (lat: number, lng: number, distance: number) => {
+  const fetchNearbyStores = async (
+    lat: number,
+    lng: number,
+    distance: number
+  ) => {
     try {
       console.log("=== API 호출 시작 ===");
 
@@ -236,7 +282,7 @@ export default function StoreClusteringScreen() {
       console.log("성공 응답 데이터:", data);
 
       if (data.status === 200) {
-        const convertedStores: Store[] = data.data.stores.map(store => ({
+        let convertedStores: Store[] = data.data.stores.map((store) => ({
           storeId: store.id,
           storeName: store.name?.replace(/\s{2,}/g, " ").trim(),
           latitude: store.latitude,
@@ -244,11 +290,44 @@ export default function StoreClusteringScreen() {
           distance: store.distance,
         }));
 
-        console.log("변환된 가게 데이터:", convertedStores);
+        // 🔍 거리 기준으로 한 번 더 필터링 (백엔드 검증)
+        const baseLocation = data.data.searchLocation;
+        if (baseLocation) {
+          convertedStores = convertedStores.filter(store => {
+            const actualDistance = calculateDistance(
+              baseLocation.latitude,
+              baseLocation.longitude,
+              store.latitude,
+              store.longitude
+            );
+            console.log(`🏪 ${store.storeName}: 계산된 거리 ${Math.round(actualDistance)}m vs 요청 거리 ${distance}m`);
+            return actualDistance <= distance + 50; // 50m 오차 허용
+          });
+        }
+
+        console.log("필터링된 가게 데이터:", convertedStores.length, "개");
         setStores(convertedStores);
-        
+
+        // 🔍 여기서 백엔드 응답을 자세히 확인
+        console.log("🔍 전체 data.data:", data.data);
+        console.log("🚉 백엔드에서 POI로 변환된 역 위치:", data.data.searchLocation);
+
+        // 백엔드에서 받은 POI 역 정보 설정 (searchLocation이 POI로 변환된 역 위치)
+        if (data.data.searchLocation) {
+          console.log("🚉 POI 역 위도:", data.data.searchLocation.latitude);
+          console.log("🚉 POI 역 경도:", data.data.searchLocation.longitude);
+          setStationLocation({
+            latitude: data.data.searchLocation.latitude,
+            longitude: data.data.searchLocation.longitude,
+          });
+        } else {
+          // 역 정보가 없으면 기존 위치 사용
+          console.log("❌ 백엔드에서 searchLocation을 주지 않음");
+          setStationLocation(null);
+        }
+
         if (webViewLoaded) {
-          updateMapMarkers(convertedStores);
+          updateMapMarkers(convertedStores, data.data.searchLocation);
         }
       } else {
         Alert.alert("오류", data.message || "가게 정보를 불러오는데 실패했습니다.");
@@ -259,24 +338,39 @@ export default function StoreClusteringScreen() {
     }
   };
 
-  const updateMapMarkers = (storeList: Store[]) => {
+  const updateMapMarkers = (
+    storeList: Store[],
+    searchLocation?: { latitude: number; longitude: number }
+  ) => {
     if (webViewRef.current && currentLocation && webViewLoaded) {
       console.log("🗺️ 웹뷰에 마커 업데이트 전송:", storeList.length, "개");
-      
+
       const message = JSON.stringify({
-        type: 'updateMarkers',
+        type: "updateMarkers",
         stores: storeList,
         centerLat: currentLocation.latitude,
         centerLng: currentLocation.longitude,
-        radius: selectedDistance
+        radius: selectedDistance,
+        // searchLocation이 POI로 변환된 역 위치
+        stationLat: searchLocation?.latitude,
+        stationLng: searchLocation?.longitude,
       });
-      
+
+      console.log("📤 웹뷰로 전송하는 메시지:", {
+        사용자실제위치: `${currentLocation.latitude}, ${currentLocation.longitude}`,
+        POI역위치: searchLocation
+          ? `${searchLocation.latitude}, ${searchLocation.longitude}`
+          : "없음",
+        반경: selectedDistance,
+        가게수: storeList.length,
+      });
+
       webViewRef.current.postMessage(message);
     } else {
       console.log("❌ 웹뷰 업데이트 조건 미충족:", {
         hasWebView: !!webViewRef.current,
         hasLocation: !!currentLocation,
-        webViewLoaded
+        webViewLoaded,
       });
     }
   };
@@ -315,16 +409,23 @@ export default function StoreClusteringScreen() {
         console.log("✅ 위치 권한 확인 완료 - 실제 위치 가져오기 시도");
         const location = await getCurrentLocation();
         console.log("🎯 최종 사용자 위치 설정:", location);
-        console.log("📤 백엔드로 전송할 좌표:", `위도: ${location.latitude}, 경도: ${location.longitude}`);
-        
+        console.log(
+          "📤 백엔드로 전송할 좌표:",
+          `위도: ${location.latitude}, 경도: ${location.longitude}`
+        );
+
         setCurrentLocation(location);
-        await fetchNearbyStores(location.latitude, location.longitude, selectedDistance);
+        await fetchNearbyStores(
+          location.latitude,
+          location.longitude,
+          selectedDistance
+        );
       } catch (error) {
         console.error("❌ 위치 초기화 최종 실패:", error);
         console.log("🔄 기본 위치(서울시청)로 대체");
-        
+
         Alert.alert(
-          "위치 가져오기 실패", 
+          "위치 가져오기 실패",
           "현재 위치를 가져올 수 없어서 서울시청 기준으로 검색합니다. GPS가 켜져있는지 확인해주세요.",
           [
             {
@@ -351,16 +452,20 @@ export default function StoreClusteringScreen() {
 
   useEffect(() => {
     if (currentLocation) {
-      fetchNearbyStores(currentLocation.latitude, currentLocation.longitude, selectedDistance);
+      fetchNearbyStores(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        selectedDistance
+      );
     }
   }, [selectedDistance]);
 
   useEffect(() => {
     if (webViewLoaded && stores.length > 0 && currentLocation) {
       console.log("🗺️ 웹뷰 로드 완료 후 마커 업데이트");
-      updateMapMarkers(stores);
+      updateMapMarkers(stores, stationLocation || undefined);
     }
-  }, [webViewLoaded, stores]);
+  }, [webViewLoaded, stores, stationLocation]);
 
   const handleDistanceChange = (distance: number) => {
     setSelectedDistance(distance);
@@ -381,7 +486,7 @@ export default function StoreClusteringScreen() {
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      
+
       if (data.type === "markerClick") {
         const store = stores.find((s) => s.storeId === data.storeId);
         console.log("🏪 마커 클릭된 가게:", store);
@@ -403,9 +508,8 @@ export default function StoreClusteringScreen() {
     }
   };
 
-  // 예쁘게 개선된 카카오맵 HTML (로그 함수 포함)
-// 개선된 카카오맵 HTML (기존 스타일 유지, 로직만 완전 수정)
-const kakaoMapHtml = `
+  // 개선된 카카오맵 HTML - 지도 범위 조정 개선
+  const kakaoMapHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -748,67 +852,160 @@ const kakaoMapHtml = `
     }
   }
 
-  // ====== 지도 범위 조정 ======
-  function fitMapBounds(centerLat, centerLng, stores) {
-    if (!map || stores.length === 0) return;
+  // ====== 개선된 지도 범위 조정 ======
+  function fitMapBounds(centerLat, centerLng, stores, radius) {
+    if (!map) return;
 
     try {
+      // 🔑 반경 기반으로 적절한 줌 레벨 설정
+      if (stores.length === 0) {
+        // 가게가 없으면 중심점 기준으로 반경에 맞는 줌 레벨 설정
+        map.setCenter(new kakao.maps.LatLng(centerLat, centerLng));
+        
+        // 반경에 따른 적절한 줌 레벨 계산
+        let level;
+        if (radius <= 300) level = 5;
+        else if (radius <= 500) level = 6;
+        else if (radius <= 1000) level = 7;
+        else level = 8;
+        
+        map.setLevel(level);
+        log('✅ 반경 기반 줌 레벨 설정: ' + level + ' (반경: ' + radius + 'm)');
+        return;
+      }
+
+      // 가게가 있으면 기존 로직 사용하되, 반경을 고려하여 조정
       const bounds = new kakao.maps.LatLngBounds();
       
       // 중심점 추가
       bounds.extend(new kakao.maps.LatLng(centerLat, centerLng));
       
-      // 모든 가게 위치 추가
-      stores.forEach(store => {
-        bounds.extend(new kakao.maps.LatLng(store.latitude, store.longitude));
-      });
-
-      // 지도 범위 설정 (패딩 50px)
-      map.setBounds(bounds, 50);
+      // 반경 경계점들 추가 (동서남북 4개 점)
+      const earthRadius = 6371000; // 지구 반지름 (미터)
+      const latOffset = (radius / earthRadius) * (180 / Math.PI);
+      const lngOffset = (radius / earthRadius) * (180 / Math.PI) / Math.cos(centerLat * Math.PI / 180);
       
-      // 최대 줌 레벨 제한
-      if (map.getLevel() > 12) {
+      bounds.extend(new kakao.maps.LatLng(centerLat + latOffset, centerLng)); // 북쪽
+      bounds.extend(new kakao.maps.LatLng(centerLat - latOffset, centerLng)); // 남쪽  
+      bounds.extend(new kakao.maps.LatLng(centerLat, centerLng + lngOffset)); // 동쪽
+      bounds.extend(new kakao.maps.LatLng(centerLat, centerLng - lngOffset)); // 서쪽
+
+      // 지도 범위 설정 (패딩 30px)
+      map.setBounds(bounds, 30);
+      
+      // 최대/최소 줌 레벨 제한
+      const currentLevel = map.getLevel();
+      if (currentLevel > 12) {
         map.setLevel(12);
+      } else if (currentLevel < 3) {
+        map.setLevel(3);
       }
 
-      log('✅ 지도 범위 조정 완료');
+      log('✅ 반경 고려한 지도 범위 조정 완료 (줌 레벨: ' + map.getLevel() + ')');
     } catch (error) {
       log('❌ 지도 범위 조정 오류: ' + error.message);
     }
   }
 
-  // ====== 메인 업데이트 함수 ======
-  function updateMapData(stores, centerLat, centerLng, radius) {
+  // ====== 모든 마커 완전 정리 함수 ======
+  function clearAllMarkers() {
+    try {
+      log('🧹 모든 마커 정리 시작');
+      
+      // 클러스터 마커 정리
+      if (clusterer) {
+        clusterer.clear();
+        clusterer.setMap(null);
+      }
+      
+      // 커스텀 오버레이 정리
+      storeOverlays.forEach(overlay => {
+        if (overlay && overlay.setMap) {
+          overlay.setMap(null);
+        }
+      });
+      storeOverlays = [];
+      
+      // 기본 마커 정리
+      baseMarkers.forEach(marker => {
+        if (marker && marker.setMap) {
+          marker.setMap(null);
+        }
+      });
+      baseMarkers = [];
+      
+      // 모드 초기화
+      currentMode = null;
+      
+      log('✅ 모든 마커 정리 완료');
+    } catch (error) {
+      log('❌ 마커 정리 오류: ' + error.message);
+    }
+  }
+
+  // ====== 메인 업데이트 함수 - 강화된 버전 ======
+  function updateMapData(stores, centerLat, centerLng, radius, stationLat, stationLng) {
     try {
       log('🔄 지도 데이터 업데이트 시작');
-      log('📍 중심점: ' + centerLat + ', ' + centerLng);
+      log('📍 사용자 실제 위치: ' + centerLat + ', ' + centerLng);
+      log('🚉 POI 역 위치: ' + stationLat + ', ' + stationLng);
       log('📏 반경: ' + radius + 'm');
       log('🏪 가게 수: ' + stores.length + '개');
+
+      // 🔑 핵심: 모든 기존 마커를 완전히 정리
+      clearAllMarkers();
 
       // 전역 상태 업데이트
       currentStores = stores || [];
       currentCenter = { lat: centerLat, lng: centerLng };
       currentRadius = radius;
 
-      // 지도 중심 이동
-      map.setCenter(new kakao.maps.LatLng(centerLat, centerLng));
+      // POI 역 위치가 있으면 역 위치를, 없으면 사용자 위치를 기준으로 설정
+      const baseLocationLat = stationLat || centerLat;
+      const baseLocationLng = stationLng || centerLng;
 
-      // 사용자 위치 마커 업데이트
-      updateUserMarker(centerLat, centerLng);
+      log('🎯 기준 위치 (마커/원): ' + baseLocationLat + ', ' + baseLocationLng);
+      
+      if (stationLat && stationLng) {
+        log('✅ POI 역 위치 사용함');
+      } else {
+        log('❌ POI 역 위치 없음, 사용자 실제 위치 사용');
+      }
 
-      // 반경 원 업데이트
-      updateCircle(centerLat, centerLng, radius);
+      // 지도 중심을 POI 역 위치(또는 사용자 위치)로 이동
+      map.setCenter(new kakao.maps.LatLng(baseLocationLat, baseLocationLng));
 
-      // 기본 마커 생성 (클러스터용)
-      createBaseMarkers(currentStores);
+      // 사용자 위치 마커를 POI 역 위치에 업데이트
+      updateUserMarker(baseLocationLat, baseLocationLng);
 
-      // 지도 범위 조정
-      fitMapBounds(centerLat, centerLng, currentStores);
+      // 반경 원을 POI 역 위치 기준으로 업데이트
+      updateCircle(baseLocationLat, baseLocationLng, radius);
 
-      // 현재 줌 레벨에 따라 적절한 모드 적용
-      setTimeout(() => {
-        handleZoomChange();
-      }, 200);
+      // 🔑 개선된 지도 범위 조정 (반경 고려)
+      fitMapBounds(baseLocationLat, baseLocationLng, currentStores, radius);
+
+      // 가게가 있을 때만 마커 생성
+      if (currentStores.length > 0) {
+        // 기본 마커 생성 (클러스터용)
+        createBaseMarkers(currentStores);
+
+        // 🔑 핵심: 현재 줌 레벨에 따라 즉시 적절한 마커 표시
+        setTimeout(() => {
+          const level = map.getLevel();
+          const mode = level <= LEVEL_THRESHOLD ? 'detail' : 'cluster';
+          log('🎯 즉시 모드 적용: ' + mode + ' (줌 레벨: ' + level + ')');
+          
+          if (mode === 'detail') {
+            showCustomMarkers();
+          } else {
+            showClusterMarkers();
+          }
+          
+          currentMode = mode;
+        }, 200); // 약간의 지연으로 안정성 확보
+      } else {
+        log('ℹ️ 표시할 가게가 없음');
+      }
 
       log('✅ 지도 데이터 업데이트 완료');
     } catch (error) {
@@ -823,7 +1020,8 @@ const kakaoMapHtml = `
       log('📨 메시지 수신: ' + data.type);
       
       if (data.type === 'updateMarkers') {
-        updateMapData(data.stores, data.centerLat, data.centerLng, data.radius);
+        // stationLat, stationLng 파라미터 추가로 받기
+        updateMapData(data.stores, data.centerLat, data.centerLng, data.radius, data.stationLat, data.stationLng);
       }
     } catch (error) {
       log('❌ 메시지 처리 오류: ' + error.message);
@@ -890,12 +1088,12 @@ const kakaoMapHtml = `
           onMessage={handleWebViewMessage}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          originWhitelist={['*']}
+          originWhitelist={["*"]}
           allowsInlineMediaPlayback={true}
           mixedContentMode="compatibility"
-          onLoadStart={() => console.log('🔄 웹뷰 로드 시작')}
-          onLoadEnd={() => console.log('✅ 웹뷰 로드 완료')}
-          onError={(e) => console.error('❌ 웹뷰 오류:', e.nativeEvent)}
+          onLoadStart={() => console.log("🔄 웹뷰 로드 시작")}
+          onLoadEnd={() => console.log("✅ 웹뷰 로드 완료")}
+          onError={(e) => console.error("❌ 웹뷰 오류:", e.nativeEvent)}
         />
       </View>
 
@@ -903,7 +1101,10 @@ const kakaoMapHtml = `
         <View style={styles.storeInfoCard}>
           <View style={styles.storeInfoHeader}>
             <Text style={styles.storeInfoTitle}>{selectedStore.storeName}</Text>
-            <TouchableOpacity onPress={closeStoreInfo} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={closeStoreInfo}
+              style={styles.closeButton}
+            >
               <Text style={styles.closeButtonText}>×</Text>
             </TouchableOpacity>
           </View>
@@ -918,6 +1119,12 @@ const kakaoMapHtml = `
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.infoContainer}>
+        <Text style={styles.infoText}>
+          {selectedDistance}m 반경 내 가게 {stores.length}개
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
