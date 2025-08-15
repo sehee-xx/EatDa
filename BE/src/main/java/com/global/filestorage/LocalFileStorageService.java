@@ -23,6 +23,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
@@ -226,6 +227,13 @@ public class LocalFileStorageService implements FileStorageService {
             try (InputStream in = resp.body()) {
                 pipeWithLimit(in, tempFile, videoProps.getMaxSizeBytes());
                 Files.move(tempFile, finalPath);
+
+                // OS가 Unix 계열일 때만 권한 변경
+                String osName = System.getProperty("os.name").toLowerCase();
+                if (!osName.contains("win")) {
+                    Files.setPosixFilePermissions(finalPath,
+                            PosixFilePermissions.fromString("rw-r--r--"));
+                }
             } catch (IOException ex) {
                 try {
                     Files.deleteIfExists(tempFile);
