@@ -1,4 +1,3 @@
-// src/screens/Store/Menu/WriteStep.tsx
 import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
@@ -16,27 +15,34 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import LottieView from "lottie-react-native";
-import { waitForAssetReady, finalizeMenuPoster } from "./services/api";
-import LoadingSpinner from "../../../components/LoadingSpinner";
+import {
+  waitForAssetReady,
+  finalizeMenuPoster,
+  waitForAssetIdByMenuPoster,
+} from "./services/api";
 
-// NOTE: 프로젝트 경로에 맞춰 필요 시 조정
 const LOADING_JSON = require("../../../../assets/AI-loading.json");
 
 type RouteParams = {
-  menuPosterId: number;
-  assetId: number; // 폴링은 assetId 기준
-  storeName?: string; // 선택: 타이틀에 쓰고 싶으면 넘겨도 됨
+  menuPosterId?: number;
+  assetId?: number;
+  storeName?: string;
 };
 
 export default function WriteStep() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { menuPosterId, assetId, storeName } = (route?.params ||
-    {}) as RouteParams;
+  const {
+    menuPosterId,
+    assetId: assetIdFromRoute,
+    storeName,
+  } = (route?.params || {}) as RouteParams;
 
   const { width } = useWindowDimensions();
 
-  // 내부 상태 (프레젠테이셔널 + 로직 통합)
+  const [assetId, setAssetId] = useState<number | null>(
+    assetIdFromRoute ?? null
+  );
   const [isGenerating, setIsGenerating] = useState(true);
   const [aiDone, setAiDone] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(
@@ -46,25 +52,61 @@ export default function WriteStep() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // 폴링 시작
   useEffect(() => {
-    if (typeof assetId !== "number") {
-      setErrorMsg("유효한 assetId가 없습니다.");
-      setIsGenerating(false);
-      return;
+    let cancelled = false;
+
+    async function ensureAssetId() {
+      if (typeof assetId === "number") return;
+
+      if (typeof menuPosterId !== "number") {
+        setErrorMsg("assetId가 없고 menuPosterId도 없어 대기할 수 없습니다.");
+        setIsGenerating(false);
+        return;
+      }
+
+      setErrorMsg(null);
+      setIsGenerating(true);
+      try {
+        const got = await waitForAssetIdByMenuPoster(menuPosterId, {
+          intervalMs: 3000,
+          maxWaitMs: 120000,
+          onTick: (status, id) => {
+            console.log("[WriteStep][ASSETID_POLL TICK]", { status, id });
+          },
+        });
+        if (cancelled) return;
+        setAssetId(got);
+      } catch (e: any) {
+        if (cancelled) return;
+        setErrorMsg(e?.message || "assetId를 가져오는 중 오류가 발생했습니다.");
+        setIsGenerating(false);
+      }
     }
+
+    ensureAssetId();
+    return () => {
+      cancelled = true;
+    };
+  }, [menuPosterId, assetId]);
+
+  useEffect(() => {
+    const id = assetId;
+    if (id == null) return;
 
     let cancelled = false;
 
-    async function run() {
+    async function pollResult(aid: number) {
       setIsGenerating(true);
       setAiDone(false);
       setGeneratedImageUrl(null);
       setErrorMsg(null);
 
       try {
-        console.log("[WriteStep] START POLLING", { menuPosterId, assetId });
-        const res = await waitForAssetReady(assetId, {
+        console.log("[WriteStep] START POLLING", {
+          menuPosterId,
+          assetId: aid,
+        });
+        const res = await waitForAssetReady(aid, {
           intervalMs: 4000,
           maxWaitMs: 120000,
           onTick: (status, url) => {
@@ -79,21 +121,8 @@ export default function WriteStep() {
 
         setGeneratedImageUrl(res.assetUrl);
         setAiDone(true);
-        console.log("[WriteStep] READY", res);
-
-        // 접근성/유효성 간단 프로브
-        try {
-          const probe = await fetch(res.assetUrl, { method: "GET" });
-          console.log("[WriteStep][PROBE]", {
-            status: probe.status,
-            contentType: probe.headers.get("content-type"),
-          });
-        } catch (e: any) {
-          console.log("[WriteStep][PROBE ERROR]", e?.message || String(e));
-        }
       } catch (e: any) {
         if (cancelled) return;
-        console.log("[WriteStep] POLLING ERROR", e?.message || String(e));
         setErrorMsg(
           e?.message || "생성 결과를 가져오는 중 오류가 발생했습니다."
         );
@@ -102,16 +131,16 @@ export default function WriteStep() {
       }
     }
 
-    run();
+    pollResult(id);
     return () => {
       cancelled = true;
     };
   }, [assetId, menuPosterId]);
 
-  const canComplete = aiDone && text.trim().length > 30 && !!generatedImageUrl;
+  const canComplete = aiDone && text.trim().length >= 30 && !!generatedImageUrl;
 
   const handleComplete = async () => {
-    if (!canComplete) {
+    if (!canComplete || typeof assetId !== "number") {
       if (!aiDone || !generatedImageUrl) {
         Alert.alert("대기", "이미지 준비가 아직 완료되지 않았습니다.");
       } else {
@@ -120,17 +149,25 @@ export default function WriteStep() {
       return;
     }
 
+    // 핵심: menuPosterId가 없으면 assetId를 menuPosterId로 사용
+    const posterIdForFinalize =
+      typeof menuPosterId === "number" ? menuPosterId : assetId;
+
+    if (typeof posterIdForFinalize !== "number") {
+      Alert.alert("오류", "menuPosterId를 확인할 수 없습니다.");
+      return;
+    }
+
     try {
       setSaving(true);
       console.log("[WriteStep][FINALIZE] request", {
-        menuPosterId,
+        menuPosterId: posterIdForFinalize,
         assetId,
         descLen: text.trim().length,
       });
 
       await finalizeMenuPoster({
-        menuPosterId,
-        menuPosterAssetId: assetId,
+        menuPosterId: posterIdForFinalize, // ← fallback 적용됨
         description: text.trim(),
         type: "IMAGE",
       });
@@ -147,17 +184,15 @@ export default function WriteStep() {
   };
 
   const handleRetry = () => {
-    // 화면 다시 띄워 폴링 재시작
     navigation.replace("MenuPosterWriteStep", {
       menuPosterId,
-      assetId,
       storeName,
+      assetId: assetIdFromRoute,
     });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 상단 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -174,13 +209,10 @@ export default function WriteStep() {
         </TouchableOpacity>
       </View>
 
-      {/* 메인 콘텐츠 */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 상태 섹션 */}
         <View style={styles.aiSection}>
           <Text style={styles.sectionTitle}>AI 포스터 생성</Text>
 
-          {/* 에러 */}
           {!!errorMsg && (
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
               <Text style={{ color: "#D00", marginBottom: 10 }}>
@@ -192,7 +224,6 @@ export default function WriteStep() {
             </View>
           )}
 
-          {/* 대기(Lottie) */}
           {isGenerating && !errorMsg && (
             <View style={styles.loadingContainer}>
               <LottieView
@@ -202,7 +233,9 @@ export default function WriteStep() {
                 style={styles.lottie}
               />
               <Text style={styles.loadingText}>
-                AI 포스터를 생성중입니다...
+                {typeof assetId === "number"
+                  ? "AI 포스터를 생성중입니다..."
+                  : "요청 접수 완료, 대기 중..."}
               </Text>
               <Text style={styles.loadingSubText}>
                 약간의 시간이 소요됩니다
@@ -210,7 +243,6 @@ export default function WriteStep() {
             </View>
           )}
 
-          {/* 완료(이미지) */}
           {aiDone && generatedImageUrl && (
             <View style={styles.aiCompleteContainer}>
               <Image
@@ -227,7 +259,6 @@ export default function WriteStep() {
           )}
         </View>
 
-        {/* 설명 입력 */}
         <View style={styles.textSection}>
           <Text style={styles.sectionTitle}>메뉴판 설명 작성</Text>
           <TextInput
@@ -246,7 +277,6 @@ export default function WriteStep() {
         </View>
       </ScrollView>
 
-      {/* 하단 버튼 */}
       <View style={styles.bottom}>
         <TouchableOpacity
           style={[
@@ -262,8 +292,10 @@ export default function WriteStep() {
           ) : (
             <Text style={styles.completeButtonText}>
               {!aiDone
-                ? "AI 포스터 생성 중..."
-                : text.trim().length <= 30
+                ? typeof assetId === "number"
+                  ? "AI 포스터 생성 중..."
+                  : "대기 중..."
+                : text.trim().length < 30
                 ? "설명을 30자 이상 작성해주세요"
                 : "작성 완료"}
             </Text>
@@ -274,7 +306,6 @@ export default function WriteStep() {
   );
 }
 
-// --- 스타일 ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
