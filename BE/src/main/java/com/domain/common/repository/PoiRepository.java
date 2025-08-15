@@ -62,4 +62,7 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
      */
     @Query("SELECT p FROM Poi p WHERE p.h3Index7 IN :h3Indexes OR p.h3Index8 IN :h3Indexes OR p.h3Index9 IN :h3Indexes OR p.h3Index10 IN :h3Indexes")
     List<Poi> findByH3IndexIn(@Param("h3Indexes") List<Long> h3Indexes);
+
+    @Query("SELECT p FROM Poi p WHERE p.name = :name")
+    List<Poi> findByName(@Param("areaName") String name);
 }
