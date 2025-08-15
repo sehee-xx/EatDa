@@ -58,15 +58,13 @@ public class StoreController {
 
     @GetMapping("/nearby")
     public ResponseEntity<BaseResponse> getNearbyStores(
-            @RequestParam Double latitude,
-            @RequestParam Double longitude,
+            @Valid StoreNearbyRequest request,
             @RequestParam(required = false) Integer distance,
             @AuthenticationPrincipal final String email
     ) {
         // 로그 추가
-        log.info("Received params - lat: {}, lon: {}, dist: {}", latitude, longitude, distance);
+        log.info("Received params - lat: {}, lon: {}, dist: {}", request.latitude(), request.longitude(), distance);
 
-        StoreNearbyRequest request = new StoreNearbyRequest(latitude, longitude, distance);
         StoreNearbyResponse response = storeService.getNearbyStores(request, email);
         return ApiResponseFactory.success(SuccessCode.NEARBY_STORES_FOUND, response);
     }
