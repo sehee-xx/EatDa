@@ -435,14 +435,17 @@ export const finalizeReview = async (
   accessToken: string
 ): Promise<{ reviewId: number }> => {
   const url = `${BASE_API_URL}/reviews/finalize`;
-  
+
   // ⭐ 더 자세한 요청 로깅
   console.log("[finalizeReview] POST", url);
   console.log("[finalizeReview] Request Headers:", {
     Authorization: `Bearer ${accessToken.substring(0, 20)}...`,
     "Content-Type": "application/json",
   });
-  console.log("[finalizeReview] Request Body:", JSON.stringify(request, null, 2));
+  console.log(
+    "[finalizeReview] Request Body:",
+    JSON.stringify(request, null, 2)
+  );
 
   // 요청 전 검증
   if (!request.reviewId || request.reviewId <= 0) {
@@ -469,7 +472,7 @@ export const finalizeReview = async (
     throw new Error("최소 하나의 메뉴를 선택해주세요.");
   }
 
-  if (!request.menuIds.every(id => typeof id === 'number' && id > 0)) {
+  if (!request.menuIds.every((id) => typeof id === "number" && id > 0)) {
     console.error("[finalizeReview] 잘못된 menuIds:", request.menuIds);
     throw new Error("유효하지 않은 메뉴 ID가 포함되어 있습니다.");
   }
@@ -488,7 +491,10 @@ export const finalizeReview = async (
 
     // ⭐ 응답 상세 로깅
     console.log("[finalizeReview] Response Status:", res.status);
-    console.log("[finalizeReview] Response Headers:", Object.fromEntries(res.headers.entries()));
+    console.log(
+      "[finalizeReview] Response Headers:",
+      Object.fromEntries(res.headers.entries())
+    );
     console.log("[finalizeReview] Response Body:", text);
 
     if (!res.ok) {
@@ -497,21 +503,28 @@ export const finalizeReview = async (
         statusText: res.statusText,
         url,
         requestBody: request,
-        responseBody: text
+        responseBody: text,
       });
 
       // ⭐ 500 에러 특별 처리
       if (res.status === 500) {
-        console.error("[finalizeReview] 🚨 서버 내부 오류 - 요청 데이터 검토 필요");
-        
+        console.error(
+          "[finalizeReview] 🚨 서버 내부 오류 - 요청 데이터 검토 필요"
+        );
+
         // 서버 에러 응답 파싱 시도
         try {
           const errorJson = JSON.parse(text);
           console.error("[finalizeReview] 서버 에러 상세:", errorJson);
-          const errorMessage = errorJson.message || errorJson.error || "서버 내부 오류가 발생했습니다.";
+          const errorMessage =
+            errorJson.message ||
+            errorJson.error ||
+            "서버 내부 오류가 발생했습니다.";
           throw new Error(`서버 오류: ${errorMessage}`);
         } catch (parseError) {
-          throw new Error(`서버 내부 오류가 발생했습니다. (Status: ${res.status})`);
+          throw new Error(
+            `서버 내부 오류가 발생했습니다. (Status: ${res.status})`
+          );
         }
       }
 
@@ -548,7 +561,7 @@ export const finalizeReview = async (
     console.error("[finalizeReview] 🔥 최종 에러:", {
       name: error.name,
       message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n') // 스택 트레이스 일부만
+      stack: error.stack?.split("\n").slice(0, 3).join("\n"), // 스택 트레이스 일부만
     });
 
     if (error.name === "TypeError" && error.message.includes("Network")) {
@@ -576,7 +589,11 @@ export const pollReviewAsset = async (
   const maxAttempts = 60; // 최대 60번 (5분) - 5초씩 60번 = 300초
   const pollInterval = 5000; // ⭐ 5초 간격으로 변경
 
-  console.log(`[pollReviewAsset] 폴링 시작 (reviewAssetId: ${reviewAssetId}) - ${pollInterval/1000}초 간격`);
+  console.log(
+    `[pollReviewAsset] 폴링 시작 (reviewAssetId: ${reviewAssetId}) - ${
+      pollInterval / 1000
+    }초 간격`
+  );
 
   while (attempts < maxAttempts) {
     try {
@@ -584,7 +601,7 @@ export const pollReviewAsset = async (
       if (attempts > 0) {
         await new Promise((resolve) => setTimeout(resolve, pollInterval)); // 5초 대기
       }
-      
+
       attempts++;
 
       if (onProgress) {
@@ -593,13 +610,17 @@ export const pollReviewAsset = async (
 
       // ⭐ 6회마다(30초마다) 진행상황 로그 출력
       if (attempts % 6 === 0) {
-        console.log(`[pollReviewAsset] AI 생성 대기 중... ${attempts * 5}초 경과`);
+        console.log(
+          `[pollReviewAsset] AI 생성 대기 중... ${attempts * 5}초 경과`
+        );
       }
 
       const result = await getReviewAssetResult(reviewAssetId, accessToken);
 
       if (result.status === "SUCCESS") {
-        console.log(`[pollReviewAsset] ✅ AI 생성 완료! (${attempts * 5}초 소요)`);
+        console.log(
+          `[pollReviewAsset] ✅ AI 생성 완료! (${attempts * 5}초 소요)`
+        );
         console.log(`[pollReviewAsset] 결과:`, {
           type: result.type,
           imageUrl: result.imageUrl ? "있음" : "없음",
@@ -612,12 +633,13 @@ export const pollReviewAsset = async (
           shortsUrl: result.shortsUrl,
         };
       } else if (result.status === "FAILED") {
-        console.log(`[pollReviewAsset] ❌ AI 생성 실패 (${attempts * 5}초 소요)`);
+        console.log(
+          `[pollReviewAsset] ❌ AI 생성 실패 (${attempts * 5}초 소요)`
+        );
         return { status: "FAILED" };
       }
 
       // PENDING인 경우 조용히 계속 진행
-
     } catch (error) {
       // ⭐ 에러 로그도 6회마다(30초마다)만 출력
       if (attempts % 6 === 0) {
@@ -632,5 +654,78 @@ export const pollReviewAsset = async (
   console.log(`[pollReviewAsset] ⏰ 폴링 타임아웃 (${maxAttempts * 5}초)`);
   throw new Error(
     "리뷰 생성 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요."
+  );
+};
+
+// 해당 가게에 대한 리뷰 전체 조회
+export interface StoreReviewItem {
+  description: string;
+  imageUrl?: string | null;
+  shortsUrl?: string | null;
+  thumbnailUrl?: string | null;
+}
+
+export const getStoreReviews = async (
+  storeId: number,
+  accessToken: string
+): Promise<StoreReviewItem[]> => {
+  if (!storeId || storeId <= 0) throw new Error("유효하지 않은 가게 ID입니다.");
+  if (!accessToken) throw new Error("인증 토큰이 없습니다.");
+
+  const url = `${BASE_API_URL}/reviews?storeId=${encodeURIComponent(
+    String(storeId)
+  )}`;
+  console.log("[getStoreReviews] GET", url);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      // GET에서는 Content-Type 지정 불필요. Accept만 명시.
+      Accept: "application/json",
+    },
+  });
+
+  const text = await res.text().catch(() => "");
+
+  if (!res.ok) {
+    console.log("[getStoreReviews] status:", res.status, "payload:", text);
+    throw new Error(text || "리뷰 조회 실패");
+  }
+
+  // content-type 확인 후 파싱
+  const ct = res.headers.get("content-type") || "";
+  let json: any = {};
+  if (ct.includes("application/json")) {
+    try {
+      json = JSON.parse(text || "{}");
+    } catch {
+      throw new Error("잘못된 응답 형식입니다.");
+    }
+  } else {
+    // 스웨거가 string으로 표시되는 경우 대비: 서버가 JSON을 문자열로 반환하면 에러 처리
+    try {
+      json = JSON.parse(text); // 혹시 문자열로 JSON이 올 때
+    } catch {
+      throw new Error("서버가 JSON이 아닌 응답을 반환했습니다.");
+    }
+  }
+
+  // 명세: data가 배열(마이페이지/스토어 둘 다 커버)
+  const arr = Array.isArray(json?.data)
+    ? json.data
+    : Array.isArray(json?.reviews)
+    ? json.reviews
+    : Array.isArray(json)
+    ? json
+    : [];
+
+  return arr.map(
+    (it: any): StoreReviewItem => ({
+      description: String(it?.description ?? ""),
+      imageUrl: it?.imageUrl ?? null,
+      shortsUrl: it?.shortsUrl ?? null,
+      thumbnailUrl: it?.thumbnailUrl ?? null,
+    })
   );
 };
