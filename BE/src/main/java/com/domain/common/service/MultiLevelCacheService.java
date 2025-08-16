@@ -18,6 +18,7 @@ public class MultiLevelCacheService {
     private final CacheService l2Cache;
     private final CacheMetricsService cacheMetricsService;
     private final CacheMetadataService cacheMetadataService;
+    private final PoiAccessTrackingService accessTrackingService;
 
     // L1 캐시 (Caffeine - 로컬 메모리)
     private final Cache<String, List<StoreDistanceResult>> l1Cache = Caffeine.newBuilder()
@@ -51,7 +52,12 @@ public class MultiLevelCacheService {
             List<StoreDistanceResult> l2Result = l2Cache.getCache(poiId, distance);
 
             if (Objects.nonNull(l2Result)) {
-                l1Cache.put(key, l2Result);
+                if (accessTrackingService.isHotspot(poiId)) {
+                    l1Cache.put(key, l2Result);
+                    log.info("L2 cache hit for HOTSPOT {}, promoted to L1", key);
+                } else {
+                    log.debug("L2 cache hit for normal POI {}, not promoted", key);
+                }
                 boolean isStale = cacheMetadataService.isStale(poiId, distance);
                 cacheMetricsService.recordHit(poiId, isStale);
                 log.info("L2 cache hit for {}, promoted to L1", key);
@@ -71,10 +77,14 @@ public class MultiLevelCacheService {
     public void put(Long poiId, int distance, List<StoreDistanceResult> data) {
         String key = generateKey(poiId, distance);
 
-        l1Cache.put(key, data);
-        l2Cache.saveCache(poiId, distance, data);
+        if (accessTrackingService.isHotspot(poiId)) {
+            l1Cache.put(key, data);
+            log.info("Saved HOTSPOT to L1 and L2 cache: {}", key);
+        } else {
+            log.info("Saved to L2 cache only (non-hotspot): {}", key);
+        }
 
-        log.info("Saved to L1 and L2 cache: {}", key);
+        l2Cache.saveCache(poiId, distance, data);
     }
 
     /**
