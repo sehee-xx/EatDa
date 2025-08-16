@@ -148,8 +148,8 @@ public class EventController {
     }
 
     @GetMapping
-    public ResponseEntity<BaseResponse> getEvents(@RequestParam("eventId") final Long eventId) {
-        List<Event> events = eventService.getEvents(eventId);
+    public ResponseEntity<BaseResponse> getEvents(@RequestParam("storeId") final Long storeId) {
+        List<Event> events = eventService.getEvents(storeId);
         return ApiResponseFactory.success(EVENT_LIST_RETRIEVED, eventMapper.toResponse(events));
     }
 }

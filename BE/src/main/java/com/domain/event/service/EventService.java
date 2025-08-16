@@ -30,5 +30,5 @@ public interface EventService {
 
     void deleteEvent(Long eventId, String makerEmail);
 
-    List<Event> getEvents(Long eventId);
+    List<Event> getEvents(Long storeId);
 }

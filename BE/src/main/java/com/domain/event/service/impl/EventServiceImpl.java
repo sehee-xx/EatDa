@@ -304,8 +304,8 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<Event> getEvents(final Long eventId) {
-        return eventRepository.findByStoreIdAndStatus(eventId, Status.SUCCESS);
+    public List<Event> getEvents(final Long storeId) {
+        return eventRepository.findByStoreIdAndStatus(storeId, Status.SUCCESS);
     }
 
     private Event createPendingEvent(final String title, final Store store, final LocalDate startDate,
