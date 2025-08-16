@@ -17,6 +17,7 @@ import java.util.Map;
 public class CacheMetadataService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final DynamicThresholdService thresholdService;
 
     // metadata - poi:cache:metadata:123:500 (poi123에 500m 캐시의 메타데이터 저장)
     private static final String METADATA_KEY_PREFIX = "poi:cache:metadata:";
@@ -97,7 +98,7 @@ public class CacheMetadataService {
     }
 
     /**
-     * 캐시가 너무 오래되었는지 확인 (60분 이상)
+     * 캐시가 너무 오래되었는지 확인
      */
     public boolean isTooStale(Long poiId, int distance) {
         CacheMetadata metadata = getMetadata(poiId, distance);
@@ -106,15 +107,11 @@ public class CacheMetadataService {
             return false;
         }
 
-        log.info("POI {} at {}m - isStale: {}, staleReason: {}, lastUpdated: {}",
-                poiId, distance, metadata.isStale(),
-                metadata.staleReason(), metadata.lastUpdated());
-
+        // Stale 상태가 너무 오래된 것이라 판단 x2배인 이유는 무분별한 갱신을 막기 위함
+        int tooStaleMinutes = thresholdService.getCacheTtlMinutes() * 2;
         Duration staleDuration = Duration.between(metadata.lastUpdated(), LocalDateTime.now());
-        boolean result = staleDuration.toMinutes() > 60;
-        log.info("60분이 지났는가? = {}", result);
 
-        return result;
+        return staleDuration.toMinutes() > tooStaleMinutes;
     }
 
     private String generateKey(Long poiId, int distance) {
