@@ -1,5 +1,4 @@
 // src/screens/Store/ReviewWriteScreen.tsx
-
 import React, { useState, useEffect } from "react";
 import { SafeAreaView, StyleSheet, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -82,7 +81,6 @@ export default function ReviewWriteScreen({ navigation, route }: Props) {
   // Init: read params, token
   // ============================
   useEffect(() => {
-    // Read storeId from route params
     if (route && route.params && typeof route.params.storeId === "number") {
       setStoreId(route.params.storeId);
       console.log(
@@ -164,6 +162,10 @@ export default function ReviewWriteScreen({ navigation, route }: Props) {
           imgsLength: imgs.length,
           selectedLength: selected.length,
         });
+        Alert.alert(
+          "알림",
+          "생성 유형, 이미지, 프롬프트, 메뉴 선택을 확인해주세요."
+        );
         return;
       }
 
@@ -256,6 +258,10 @@ export default function ReviewWriteScreen({ navigation, route }: Props) {
         }
       } catch (pollError: any) {
         console.error("[ReviewWriteScreen] polling failed:", pollError);
+        Alert.alert(
+          "오류",
+          "AI 생성 결과를 가져오지 못했습니다. 잠시 후 다시 시도해주세요."
+        );
       } finally {
         setGenLoading(false);
       }
@@ -274,7 +280,7 @@ export default function ReviewWriteScreen({ navigation, route }: Props) {
           errorMessage = error.message;
         }
       }
-      console.error("[ReviewWriteScreen] handled error message:", errorMessage);
+      Alert.alert("오류", errorMessage);
     }
   };
 
