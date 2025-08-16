@@ -18,7 +18,7 @@ spring:
 
 logging:
   level:
-    root: INFO
+    root: WARN
     com.global: INFO
     com.domain: INFO
     org.springframework.batch: INFO
