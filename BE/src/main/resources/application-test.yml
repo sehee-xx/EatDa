@@ -12,6 +12,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  batch:
+    jdbc:
+      initialize-schema: always
+
   aop:
     proxy-target-class: true
 
