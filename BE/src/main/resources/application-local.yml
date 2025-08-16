@@ -13,6 +13,10 @@ spring:
       hibernate:
         format_sql: true
 
+  batch:
+    jdbc:
+      initialize-schema: always
+
 logging:
   level:
     com.domain..controller: DEBUG
