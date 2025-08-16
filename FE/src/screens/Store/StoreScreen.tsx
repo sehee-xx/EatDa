@@ -156,9 +156,20 @@ export default function StoreScreen() {
     try {
       setPostersLoading(true);
       setPostersError(null);
+
       const list = await getAdoptedMenuPostersByStore(storeId);
+
+      // 중복 제거 (menuPosterId 기준)
+      const seen = new Set<number>();
+      const unique = list.filter((p) => {
+        const id = Number(p.menuPosterId);
+        if (!Number.isFinite(id) || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
       // 최대 5개만
-      setAdoptedPosters(Array.isArray(list) ? list.slice(0, 5) : []);
+      setAdoptedPosters(unique.slice(0, 5));
     } catch (e: any) {
       console.warn("[StoreScreen] adopted fetch error:", e?.message || e);
       setAdoptedPosters([]);
@@ -309,7 +320,7 @@ export default function StoreScreen() {
           <Text style={styles.posterBarTitle}>사장님이 채택한 메뉴판</Text>
           <FlatList
             data={adoptedPosters}
-            keyExtractor={(p) => String(p.menuPosterId)}
+            keyExtractor={(p, i) => `${p.menuPosterId}-${i}`} // ← 중복 방지
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 12 }}
@@ -404,7 +415,7 @@ const styles = StyleSheet.create({
   },
   posterThumb: {
     width: 84,
-    height: 118, 
+    height: 118,
     borderRadius: 8,
     backgroundColor: "#eee",
   },
