@@ -12,7 +12,6 @@ public class DynamicThresholdService {
 
     private final CacheMetricsService metricsService;
     private final SystemMetricsService systemMetricsService;
-    private final PoiAccessTrackingService poiAccessTrackingService;
 
     // 동적 임계값
     private volatile int hotspotThreshold = 100;
