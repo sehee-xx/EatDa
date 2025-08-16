@@ -6,12 +6,12 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   ScrollView,
 } from "react-native";
 import { getStoreMenus, MenuData } from "./Menu/services/api";
 import NoDataScreen from "../../components/NoDataScreen";
+import ResultModal from "../../components/ResultModal";
 
 type PosterThumb = { id: string; uri: string };
 
@@ -39,14 +39,25 @@ export default function StoreMenuScreen({
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchedOnce, setFetchedOnce] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [brokenMap, setBrokenMap] = useState<Record<string, boolean>>({});
+
+  // ResultModal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "failure">("failure");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const openErrorModal = (msg: string) => {
+    setModalType("failure");
+    setModalMessage(msg);
+    setModalVisible(true);
+  };
+  const handleModalClose = () => setModalVisible(false);
 
   // 실제 메뉴 데이터 가져오기
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
         setLoading(true);
-        setError("");
 
         const sid = typeof storeId === "string" ? Number(storeId) : storeId;
         if (!Number.isFinite(sid)) {
@@ -75,11 +86,7 @@ export default function StoreMenuScreen({
         onDataLoaded?.(adjusted);
       } catch (error: any) {
         console.error("[STORE-MENU][SCREEN] fetch error:", error);
-        setError(error.message || "메뉴를 불러오는데 실패했습니다.");
-        Alert.alert(
-          "오류",
-          "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요."
-        );
+        openErrorModal("메뉴를 불러오는데 실패했습니다. 다시 시도해주세요.");
         setFetchedOnce(true);
         onDataLoaded?.([]);
       } finally {
@@ -105,8 +112,10 @@ export default function StoreMenuScreen({
       }));
       setMenuData(Array.isArray(adjusted) ? adjusted : []);
       onDataLoaded?.(Array.isArray(adjusted) ? adjusted : []);
+      setBrokenMap({}); // 새로고침 시 실패 캐시 초기화
     } catch (e) {
       console.warn("[StoreMenu] refresh failed:", e);
+      openErrorModal("새로고침에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       setRefreshing(false);
     }
@@ -115,7 +124,17 @@ export default function StoreMenuScreen({
   const posterStrip = (giftedPosters || []).slice(0, 5);
 
   if (fetchedOnce && !loading && menuData.length === 0) {
-    return <NoDataScreen />;
+    return (
+      <>
+        <NoDataScreen />
+        <ResultModal
+          visible={modalVisible}
+          type={modalType}
+          message={modalMessage}
+          onClose={handleModalClose}
+        />
+      </>
+    );
   }
 
   return (
@@ -134,26 +153,38 @@ export default function StoreMenuScreen({
               paddingVertical: 8,
               paddingBottom: posterStrip.length > 0 ? 80 : 16,
             }}
-            renderItem={({ item }) => (
-              <View style={styles.row}>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
-                ) : (
-                  <View style={[styles.thumb, styles.thumbPlaceholder]} />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  {typeof item.price === "number" ? (
-                    <Text style={styles.price}>
-                      {item.price.toLocaleString()}원
-                    </Text>
-                  ) : null}
-                  {item.description ? (
-                    <Text style={styles.desc}>{item.description}</Text>
-                  ) : null}
+            renderItem={({ item }) => {
+              const idKey = String((item as any).id ?? item.name);
+              const showPlaceholder =
+                !item.imageUrl || brokenMap[idKey] === true;
+
+              return (
+                <View style={styles.row}>
+                  {showPlaceholder ? (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]} />
+                  ) : (
+                    <Image
+                      source={{ uri: item.imageUrl! }}
+                      style={styles.thumb}
+                      onError={() =>
+                        setBrokenMap((prev) => ({ ...prev, [idKey]: true }))
+                      }
+                    />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    {typeof item.price === "number" ? (
+                      <Text style={styles.price}>
+                        {item.price.toLocaleString()}원
+                      </Text>
+                    ) : null}
+                    {item.description ? (
+                      <Text style={styles.desc}>{item.description}</Text>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            )}
+              );
+            }}
           />
 
           {/* 하단: 선물받은/채택된 메뉴판 썸네일 스트립 (최대 5개) */}
@@ -179,6 +210,14 @@ export default function StoreMenuScreen({
           )}
         </>
       )}
+
+      {/* 공통 ResultModal */}
+      <ResultModal
+        visible={modalVisible}
+        type={modalType}
+        message={modalMessage}
+        onClose={handleModalClose}
+      />
     </View>
   );
 }

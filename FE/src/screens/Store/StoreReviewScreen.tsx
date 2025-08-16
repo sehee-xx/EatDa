@@ -13,12 +13,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import GridComponent, { ReviewItem } from "../../components/GridComponent";
 import CloseBtn from "../../../assets/closeBtn.svg";
 import NoDataScreen from "../../components/NoDataScreen";
+import ResultModal from "../../components/ResultModal";
 
 // API
 import { getStoreReviews } from "./Review/services/api";
@@ -42,6 +42,17 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
 
   const flatListRef = useRef<FlatList<ReviewItem>>(null);
   const vdoRefs = useRef<{ [key: number]: Video | null }>({});
+
+  // ResultModal 상태
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "failure">("failure");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const openError = (msg: string) => {
+    setModalType("failure");
+    setModalMessage(msg);
+    setModalVisible(true);
+  };
 
   // 스크롤 시 여러 페이지 한꺼번에 넘어가지 않게끔 조절
   const handleMomentumEnd = useCallback(
@@ -70,6 +81,10 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const handleOpenDetail = (item: ReviewItem) => {
     setSelectedItem(item);
+    // 현재 index 동기화 (비디오 재생 제어 정확도 ↑)
+    const idx = items.findIndex((i) => i.id === item.id);
+    if (idx >= 0) setCurrentIndex(idx);
+
     scaleAnim.setValue(0.8);
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
@@ -77,40 +92,55 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
   const fetchReviews = useCallback(async () => {
     try {
       if (!storeId || storeId <= 0) {
-        Alert.alert("오류", "유효하지 않은 가게 ID입니다.");
+        openError("유효하지 않은 가게 ID입니다.");
         return;
       }
       setLoading(true);
       const { accessToken } = await getTokens();
       if (!accessToken) {
-        Alert.alert("로그인 필요", "다시 로그인 해주세요.");
+        openError("다시 로그인 해주세요.");
         return;
       }
 
       const raw = await getStoreReviews(storeId, accessToken);
 
       // API → Grid/상세뷰에서 쓰는 ReviewItem으로 매핑
-      // 백엔드에 id 필드가 없다면 프론트에서 고유키 생성
+      // ※ 영상이면 thumbnailUrl이 있을 수 있으니 그리드 로딩 품질 위해 채워줌
       const mapped: ReviewItem[] = raw
-        .map((r, idx) => {
-          const isVideo = !!r.shortsUrl && typeof r.shortsUrl === "string";
-          const uri = isVideo ? r.shortsUrl : r.imageUrl;
+        .map((r: any, idx: number) => {
+          const isVideo = !!r?.shortsUrl && typeof r.shortsUrl === "string";
+          const mediaUri: string | undefined = isVideo
+            ? r.shortsUrl
+            : r.imageUrl;
 
           // uri가 하나도 없으면 렌더링 불가하므로 스킵
-          if (!uri || typeof uri !== "string" || uri.length === 0) return null;
+          if (
+            !mediaUri ||
+            typeof mediaUri !== "string" ||
+            mediaUri.length === 0
+          )
+            return null;
 
-          const idBase =
-            (r as any).id != null ? String((r as any).id) : `${storeId}-${idx}`;
-          return {
+          const idBase = r?.id != null ? String(r.id) : `${storeId}-${idx}`;
+
+          const thumbnail: string | undefined = isVideo
+            ? typeof r?.thumbnailUrl === "string"
+              ? r.thumbnailUrl
+              : undefined
+            : typeof r?.imageUrl === "string"
+            ? r.imageUrl
+            : undefined;
+
+          const item: ReviewItem = {
             id: idBase,
             type: isVideo ? "video" : "image",
-            uri,
-            // 타이틀이 따로 없으므로 간단한 프리셋
+            uri: mediaUri,
+            thumbnail, // GridComponent가 우선 사용
             title: isVideo ? "쇼츠 리뷰" : "사진 리뷰",
-            description: r.description ?? "",
-            // GridComponent가 썸네일을 사용한다면 r.thumbnailUrl 활용 가능
-            // thumbnail: r.thumbnailUrl ?? undefined,
-          } as ReviewItem;
+            description:
+              typeof r?.description === "string" ? r.description : "",
+          };
+          return item;
         })
         .filter(Boolean) as ReviewItem[];
 
@@ -118,7 +148,9 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
       setFetchedOnce(true);
     } catch (e: any) {
       console.log("[StoreReviewScreen] fetchReviews error:", e?.message);
-      Alert.alert("리뷰 조회 실패", e?.message || "잠시 후 다시 시도해주세요.");
+      openError(
+        e?.message || "리뷰 조회에 실패했습니다. 잠시 후 다시 시도해주세요."
+      );
     } finally {
       setLoading(false);
     }
@@ -131,11 +163,29 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
   const isEmpty = fetchedOnce && (!items || items.length === 0);
 
   if (loading && !fetchedOnce) {
-    return <NoDataScreen />;
+    return (
+      <>
+        <NoDataScreen />
+        <ResultModal
+          visible={modalVisible}
+          type={modalType}
+          message={modalMessage}
+          onClose={() => setModalVisible(false)}
+        />
+      </>
+    );
   }
 
   return isEmpty ? (
-    <NoDataScreen />
+    <>
+      <NoDataScreen />
+      <ResultModal
+        visible={modalVisible}
+        type={modalType}
+        message={modalMessage}
+        onClose={() => setModalVisible(false)}
+      />
+    </>
   ) : (
     <View style={{ flex: 1 }}>
       {selectedItem ? (
@@ -185,8 +235,9 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
             decelerationRate="fast"
             snapToInterval={screenHeight}
             snapToAlignment="start"
-            initialScrollIndex={items.findIndex(
-              (i) => i.id === selectedItem?.id
+            initialScrollIndex={Math.max(
+              0,
+              items.findIndex((i) => i.id === selectedItem?.id)
             )}
             getItemLayout={(data, index) => ({
               length: screenHeight,
@@ -216,11 +267,18 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
               onPress={() => handleOpenDetail(item)}
             />
           )}
-          // 당겨서 새로고침(optional)
           refreshing={loading}
           onRefresh={fetchReviews}
+          removeClippedSubviews
         />
       )}
+
+      <ResultModal
+        visible={modalVisible}
+        type={modalType}
+        message={modalMessage}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 }

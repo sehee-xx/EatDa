@@ -1,11 +1,9 @@
-// src/screens/Store/StoreScreen.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
   FlatList,
   Image,
@@ -20,6 +18,7 @@ import HamburgerButton from "../../components/Hamburger";
 import HeaderLogo from "../../components/HeaderLogo";
 import TabSwitcher from "../../components/TabSwitcher";
 import BottomButton from "../../components/BottomButton";
+import ResultModal from "../../components/ResultModal";
 
 import StoreMenuScreen from "./StoreMenuScreen";
 import StoreEventScreen from "./StoreEventScreen";
@@ -67,40 +66,66 @@ export default function StoreScreen() {
   );
   const [activeTab, setActiveTab] = useState("menu");
 
-  // 가게 정보 상태
+  // 가게 정보
   const [storeInfo, setStoreInfo] = useState<{
     name: string;
     address: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 채택된 메뉴포스터(썸네일 바용)
+  // 채택된 메뉴포스터(썸네일 바)
   const [adoptedPosters, setAdoptedPosters] = useState<AdoptedPoster[]>([]);
-  const [postersLoading, setPostersLoading] = useState(false);
-  const [postersError, setPostersError] = useState<string | null>(null);
+  const [postersLoading, setPostersLoading] = useState(false); // (유지)
+  const [postersError, setPostersError] = useState<string | null>(null); // (유지)
 
-  // 모달
+  // 미리보기 모달
   const [posterModalVisible, setPosterModalVisible] = useState(false);
   const [posterInitialIndex, setPosterInitialIndex] = useState(0);
 
+  // ResultModal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "failure">("failure");
+  const [modalTitle, setModalTitle] = useState<string>("");
+  const [modalMessage, setModalMessage] = useState<string>("");
+  const onModalCloseRef = useRef<(() => void) | null>(null);
+
   const API_BASE_URL = "https://i13a609.p.ssafy.io/test";
+
+  const openModal = (
+    type: "success" | "failure",
+    message: string,
+    title?: string,
+    onClose?: () => void
+  ) => {
+    setModalType(type);
+    setModalMessage(message);
+    setModalTitle(title ?? (type === "success" ? "알림" : "오류"));
+    onModalCloseRef.current = onClose ?? null;
+    setModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    const cb = onModalCloseRef.current;
+    onModalCloseRef.current = null;
+    cb?.();
+  };
 
   // 가게 정보 조회
   const fetchStoreInfo = async () => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
       if (!token) {
-        Alert.alert("인증 오류", "로그인이 필요합니다.");
+        openModal("failure", "로그인이 필요합니다.", "인증 오류", () =>
+          navigation.navigate("Login")
+        );
         setLoading(false);
         return;
       }
 
       setAccessToken(token);
 
-      const params = new URLSearchParams({
-        storeId: storeId.toString(),
-      });
-
+      const params = new URLSearchParams({ storeId: storeId.toString() });
       const apiUrl = `${API_BASE_URL}/api/stores?${params.toString()}`;
 
       const response = await fetch(apiUrl, {
@@ -115,16 +140,18 @@ export default function StoreScreen() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          Alert.alert("인증 만료", "다시 로그인해주세요.");
           await AsyncStorage.removeItem("accessToken");
+          openModal("failure", "다시 로그인해주세요.", "인증 만료", () =>
+            navigation.navigate("Login")
+          );
           return;
         }
         if (response.status === 404) {
-          Alert.alert("오류", "가게 정보를 찾을 수 없습니다.");
+          openModal("failure", "가게 정보를 찾을 수 없습니다.", "오류");
           return;
         }
         if (response.status === 500) {
-          Alert.alert("서버 오류", "잠시 후 다시 시도해주세요.");
+          openModal("failure", "잠시 후 다시 시도해주세요.", "서버 오류");
           return;
         }
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -137,14 +164,15 @@ export default function StoreScreen() {
           address: data.data.address || "주소 정보 없음",
         });
       } else {
-        Alert.alert(
-          "오류",
-          data.message || "가게 정보를 불러오는데 실패했습니다."
+        openModal(
+          "failure",
+          data.message || "가게 정보를 불러오는데 실패했습니다.",
+          "오류"
         );
       }
     } catch (error: any) {
       console.error("가게 정보 조회 실패:", error);
-      Alert.alert("오류", `네트워크 오류: ${error.message}`);
+      openModal("failure", `네트워크 오류: ${error.message}`, "오류");
     } finally {
       setLoading(false);
     }
@@ -159,7 +187,6 @@ export default function StoreScreen() {
 
       const list = await getAdoptedMenuPostersByStore(storeId);
 
-      // 중복 제거 (menuPosterId 기준)
       const seen = new Set<number>();
       const unique = list.filter((p) => {
         const id = Number(p.menuPosterId);
@@ -168,12 +195,12 @@ export default function StoreScreen() {
         return true;
       });
 
-      // 최대 5개만
       setAdoptedPosters(unique.slice(0, 5));
     } catch (e: any) {
       console.warn("[StoreScreen] adopted fetch error:", e?.message || e);
       setAdoptedPosters([]);
       setPostersError(e?.message || "채택된 메뉴판을 불러오지 못했습니다.");
+      // 필요 시 모달로도 보여줄 수 있음(지금은 조용히 실패)
     } finally {
       setPostersLoading(false);
     }
@@ -193,7 +220,6 @@ export default function StoreScreen() {
     { key: "review", label: "리뷰" },
   ];
 
-  // 하단 버튼 핸들러
   const handleBottomButtonPress = (screen: string) => {
     setBottomActiveScreen(screen);
   };
@@ -219,33 +245,32 @@ export default function StoreScreen() {
 
   // 하단 버튼 네비게이션
   useEffect(() => {
-    if (bottomActiveScreen) {
-      switch (bottomActiveScreen) {
-        case "review":
-          navigation.navigate("ReviewWriteScreen", {
-            storeId,
-            storeName: storeInfo?.name || "가게 이름",
-            address: storeInfo?.address || "주소 정보 없음",
-          });
-          break;
-        case "map":
-          navigation.navigate("MapScreen", {});
-          break;
-        case "menu":
-          navigation.navigate("MenuCustomScreen", {
-            storeId,
-            storeName: storeInfo?.name || "가게 이름",
-            address: storeInfo?.address || "주소 정보 없음",
-          });
-          break;
-        default:
-          break;
-      }
-      setBottomActiveScreen(null);
+    if (!bottomActiveScreen) return;
+
+    switch (bottomActiveScreen) {
+      case "review":
+        navigation.navigate("ReviewWriteScreen", {
+          storeId,
+          storeName: storeInfo?.name || "가게 이름",
+          address: storeInfo?.address || "주소 정보 없음",
+        });
+        break;
+      case "map":
+        navigation.navigate("MapScreen", {});
+        break;
+      case "menu":
+        navigation.navigate("MenuCustomScreen", {
+          storeId,
+          storeName: storeInfo?.name || "가게 이름",
+          address: storeInfo?.address || "주소 정보 없음",
+        });
+        break;
+      default:
+        break;
     }
+    setBottomActiveScreen(null);
   }, [bottomActiveScreen, storeId, storeInfo, navigation]);
 
-  // 조건부 렌더링
   if (!storeId || storeId <= 0) {
     return (
       <SafeAreaView
@@ -279,7 +304,6 @@ export default function StoreScreen() {
     );
   }
 
-  // 썸네일 클릭 → 모달
   const openPosterModalAt = (idx: number) => {
     setPosterInitialIndex(idx);
     setPosterModalVisible(true);
@@ -311,16 +335,18 @@ export default function StoreScreen() {
         {activeTab === "event" && (
           <StoreEventScreen storeId={storeId} canDelete={canDeleteEvents} />
         )}
-        {activeTab === "review" && <StoreReviewScreen storeId={storeId} />}
+        {activeTab === "review" && accessToken && (
+          <StoreReviewScreen storeId={storeId} />
+        )}
       </View>
 
       {/* === 채택된 메뉴포스터 썸네일 바 (EATER 전용) === */}
-      {isEater && adoptedPosters.length > 0 && (
+      {isEater && activeTab === "menu" && adoptedPosters.length > 0 && (
         <View style={styles.posterBar}>
           <Text style={styles.posterBarTitle}>사장님이 채택한 메뉴판</Text>
           <FlatList
             data={adoptedPosters}
-            keyExtractor={(p, i) => `${p.menuPosterId}-${i}`} // ← 중복 방지
+            keyExtractor={(p, i) => `${p.menuPosterId}-${i}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 12 }}
@@ -343,7 +369,7 @@ export default function StoreScreen() {
 
       {isEater && <BottomButton onPress={handleBottomButtonPress} />}
 
-      {/* 모달: 채택된 포스터 크게 보기 */}
+      {/* 포스터 미리보기 모달 */}
       <PosterPreviewModal
         visible={posterModalVisible}
         onClose={() => setPosterModalVisible(false)}
@@ -353,6 +379,15 @@ export default function StoreScreen() {
         }))}
         initialIndex={posterInitialIndex}
         title="메뉴판 미리보기"
+      />
+
+      {/* 공통 ResultModal */}
+      <ResultModal
+        visible={modalVisible}
+        type={modalType}
+        title={modalTitle}
+        message={modalMessage}
+        onClose={handleModalClose}
       />
     </SafeAreaView>
   );
@@ -401,7 +436,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: "#fff",
-    // borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#e5e7eb",
   },
   posterBarTitle: {
