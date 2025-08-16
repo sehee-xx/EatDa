@@ -104,6 +104,7 @@ export async function getMyUserStats(params?: {
  *  Maker 마이페이지 상단 정보
  * ========================= */
 export interface MakerStats {
+  storeId : number;
   storeName: string; // storeName 속성 추가
   reviewCount: number; // = countReceivedReviews
   eventCount: number; // = countEvents
@@ -113,6 +114,7 @@ export interface MakerStats {
 function extractMakerStatsStrict(json: any): MakerStats {
   const d = json?.data ?? json ?? {};
   return {
+    storeId: Number(d?.storeId ?? 0),
     storeName: String(d?.storeName ?? "가게 이름 없음"), // storeName 추출 로직 추가
     reviewCount: Number(d?.countReceivedReviews ?? 0),
     eventCount: Number(d?.countEvents ?? 0),
