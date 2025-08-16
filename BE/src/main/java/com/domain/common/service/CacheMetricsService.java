@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -90,14 +91,15 @@ public class CacheMetricsService {
     }
 
     // 매트릭을 Redis에 주기적으로 저장 (1분마다)
-    @Scheduled(fixedDelay = 60000)
+    @Scheduled(fixedDelay = 3600000) // 1시간마다
     public void persistMetrics() {
         CacheMetrics metrics = getSystemMetrics();
 
-        String key = METRICS_KEY_PREFIX + LocalDateTime.now().toString();
+        String key = METRICS_KEY_PREFIX + LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"));
 
         redisTemplate.opsForValue().set(key, metrics, Duration.ofDays(7));
-        log.info("Persisted system metrics: {}", metrics);
+        log.info("Persisted hourly metrics: {}", metrics);
     }
 }
 
