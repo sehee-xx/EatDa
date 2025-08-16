@@ -38,20 +38,7 @@ export default function BottomButton({ onPress }: BottomButtonProps) {
           리뷰 작성하기
         </Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={
-          clickedBtn === "map"
-            ? styles.selectedWrapper
-            : styles.bottomTextWrapper
-        }
-        onPress={() => handlePress("map")}
-      >
-        <Text
-          style={clickedBtn === "map" ? styles.selectedBtn : styles.bottomText}
-        >
-          찾아가기
-        </Text>
-      </TouchableOpacity>
+      
       <TouchableOpacity
         style={
           clickedBtn === "menu"
