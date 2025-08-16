@@ -18,6 +18,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,7 @@ public class CacheService {
     private final HaversineCalculator haversineCalculator;
     private final PoiAccessTrackingService poiAccessTrackingService;
     private final CacheMetadataService metadataService;
+    private final DynamicThresholdService thresholdService;
 
     /**
      * 특정 거리 밴드의 캐시 존재 여부 확인
@@ -91,7 +93,8 @@ public class CacheService {
                 )
         );
 
-        redisTemplate.expire(cacheKey, RedisConstants.CACHE_POI_STORE_DISTANCE_TTL);
+        Duration dynamicTtl = Duration.ofMinutes(thresholdService.getCacheTtlMinutes());
+        redisTemplate.expire(cacheKey, dynamicTtl);
 
         log.info("Cached {} stores for POI {} at {}m band", stores.size(), poiId, distance);
     }
