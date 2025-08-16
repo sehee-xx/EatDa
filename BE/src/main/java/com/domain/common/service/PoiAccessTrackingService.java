@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class PoiAccessTrackingService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final DynamicThresholdService thresholdService;
 
     // redis 관련 key랑 상수들은 redisConstants로 이관 가능
     // 접근 횟수 카운트 - poi:access:count:123, 150 (poi 123번에 조회횟수 150)
@@ -47,7 +48,7 @@ public class PoiAccessTrackingService {
             redisTemplate.opsForValue().set(lastAccessKey, LocalDateTime.now().toString(), Duration.ofDays(7));
 
             // 임계값 도달 시 자동으로 핫스팟 승격
-            if (count >= HOTSPOT_THRESHOLD_PER_HOUR) {
+            if (count >= thresholdService.getHotspotThreshold()) {
                 promoteToHotspot(poiId);
             }
 
