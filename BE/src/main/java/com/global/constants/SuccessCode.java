@@ -68,6 +68,7 @@ public enum SuccessCode {
     POSTER_UNADOPTED("POSTER_UNADOPTED", "메뉴판이 성공적으로 채택 해제되었습니다.", HttpStatus.OK.value()),
     POSTER_GET("POSTER_GET", "작성했던 메뉴판을 성공적으로 조회했습니다.", HttpStatus.OK.value()),
     POSTER_RECEIVED_GET("POSTER_RECEIVED", "전송받은 메뉴판을 성공적으로 조회했습니다.", HttpStatus.OK.value()),
+    ADOPTED_POSTERS_FOUND("ADOPTED_POSTERS_FOUND", "채택된 메뉴 포스터를 조회했습니다.", HttpStatus.OK.value()),
 
     // 이벤트
     EVENT_ASSET_REQUESTED("EVENT_ASSET_REQUESTED", "이벤트 생성 요청이 접수되었습니다.", HttpStatus.ACCEPTED.value()),
