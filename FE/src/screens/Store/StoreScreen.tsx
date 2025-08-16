@@ -48,7 +48,7 @@ export default function StoreScreen() {
 
   const { isLoggedIn, userRole } = useAuth();
   const isEater = isLoggedIn && userRole === "EATER";
-
+  const canDeleteEvents = isLoggedIn && userRole === "MAKER";
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [bottomActiveScreen, setBottomActiveScreen] = useState<string | null>(
     null
@@ -272,7 +272,7 @@ export default function StoreScreen() {
         {activeTab === "menu" && accessToken && (
           <StoreMenuScreen storeId={storeId} accessToken={accessToken} />
         )}
-        {activeTab === "event" && <StoreEventScreen />}
+        {activeTab === "event" && <StoreEventScreen storeId={storeId} canDelete={canDeleteEvents}/>}
         {activeTab === "review" && <StoreReviewScreen storeId={storeId}/>}
       </View>
 

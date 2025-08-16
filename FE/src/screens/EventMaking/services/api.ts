@@ -659,3 +659,76 @@ export const deleteEvent = async (eventId: number) => {
 
   return json; // 성공 시 { code:"EVENT_DELETED", message:"...", status:200, data:null, timestamp:... }
 };
+
+// 해당 가게 전체 이벤트 조회
+export const getStoreEvents = async (
+  storeId: number
+): Promise<ActiveEvent[]> => {
+  const { accessToken } = await getTokens();
+  if (!accessToken)
+    throw new Error("인증 정보가 없습니다. 다시 로그인해주세요.");
+  if (!storeId || storeId <= 0) throw new Error("유효하지 않은 가게 ID입니다.");
+
+  const url = `${BASE_URL}/api/events?storeId=${encodeURIComponent(
+    String(storeId)
+  )}`;
+  console.log(`[getStoreEvents] GET ${url}`);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+
+  const raw = await res.text();
+  let json: any = null;
+  try {
+    json = raw ? JSON.parse(raw) : null;
+  } catch {
+    console.error("[getStoreEvents] JSON 파싱 실패:", raw);
+    throw new Error("응답 파싱 실패");
+  }
+
+  if (!res.ok) {
+    const msg = json?.message || raw || `HTTP ${res.status}`;
+    console.error("[getStoreEvents] 서버 오류:", msg);
+    throw new Error(msg);
+  }
+
+  // 스웨거 응답: { code, message, status, data: [ {title, description, startDate, endDate, imageUrl} ] }
+  const arr: any[] = Array.isArray(json?.data)
+    ? json.data
+    : Array.isArray(json?.events)
+    ? json.events
+    : Array.isArray(json)
+    ? json
+    : [];
+
+  const mapped: ActiveEvent[] = arr.map((e: any, idx: number) => ({
+    eventId:
+      typeof e?.eventId === "number"
+        ? e.eventId
+        : typeof e?.id === "number"
+        ? e.id
+        : Number(`${storeId}${idx}`),
+
+    title: String(e?.title ?? ""),
+    startAt: String(e?.startAt ?? e?.startDate ?? ""),
+    endAt: String(e?.endAt ?? e?.endDate ?? ""),
+    postUrl:
+      typeof e?.postUrl === "string"
+        ? e.postUrl
+        : typeof e?.imageUrl === "string"
+        ? e.imageUrl
+        : "", // 이미지 URL로 대체
+    storeName: String(e?.storeName ?? ""),
+    description: String(e?.description ?? ""),
+  }));
+
+  console.log("[getStoreEvents] mapped length:", mapped.length);
+  if (mapped[0]) console.log("[getStoreEvents] first mapped:", mapped[0]);
+
+  return mapped;
+};

@@ -4,36 +4,35 @@ import { View, Text, FlatList } from "react-native";
 import GridComponent, { eventItem } from "../../components/GridComponent";
 import DetailEventScreen from "./DetailEventScreen";
 import NoDataScreen from "../../components/NoDataScreen";
-import { getMyEvents } from "../EventMaking/services/api";
+import { getStoreEvents } from "../EventMaking/services/api";
+import type { ActiveEvent } from "../EventMaking/services/api";
 
-type MyEventApiItem = {
-  eventId: number;
-  title: string;
-  startAt: string;
-  endAt: string;
-  postUrl: string;
-  storeName?: string;
-  description?: string;
+type Props = {
+  storeId: number;
+  canDelete?: boolean; // 가게 주인일 때만 true
 };
 
-const adapt = (a: MyEventApiItem): eventItem => ({
+const adapt = (a: ActiveEvent): eventItem => ({
   id: String(a.eventId),
   eventName: a.title,
   description: a.description ?? "",
-  uri: {uri : a.postUrl},
+  uri: { uri: a.postUrl },
   start_date: new Date(a.startAt),
   end_date: new Date(a.endAt),
   storeName: a.storeName ?? "",
 });
 
-// ⬇️ 매핑 + (옵션) 유효 이미지 필터링
-const toItems = (list: MyEventApiItem[]): eventItem[] =>
+// 유효 이미지(포스터)만 남기기
+const toItems = (list: ActiveEvent[]): eventItem[] =>
   list.map(adapt).filter((it) => {
     const uri = (it.uri as any)?.uri;
-    return uri && String(uri).trim().length > 0; // 필요 시 isDeleted 같은 플래그도 함께 체크
+    return typeof uri === "string" && uri.trim().length > 0;
   });
 
-export default function StoreEventScreen() {
+export default function StoreEventScreen({
+  storeId,
+  canDelete = false,
+}: Props) {
   const [containerWidth, setContainerWidth] = useState(0);
   const [items, setItems] = useState<eventItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,34 +40,36 @@ export default function StoreEventScreen() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const fetchFirst = useCallback(async () => {
+    if (!storeId) return;
     setLoading(true);
     try {
-      const list: MyEventApiItem[] = await getMyEvents();
-      setItems(toItems(list)); // ⬅️ 여기
+      const list = await getStoreEvents(storeId);
+      setItems(toItems(list));
       if (list?.[0]) console.log("[StoreEvent] first item:", list[0]);
     } catch (e) {
-      console.warn("[StoreEvent] getMyEvents failed:", e);
+      console.warn("[StoreEvent] getStoreEvents failed:", e);
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
     fetchFirst();
   }, [fetchFirst]);
 
   const onRefresh = useCallback(async () => {
+    if (!storeId) return;
     setRefreshing(true);
     try {
-      const list: MyEventApiItem[] = await getMyEvents();
-      setItems(toItems(list)); // ⬅️ 여기
+      const list = await getStoreEvents(storeId);
+      setItems(toItems(list));
     } catch (e) {
       console.warn("[StoreEvent] refresh failed:", e);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [storeId]);
 
   const isEmpty = !loading && items.length === 0;
   const tile = Math.floor(containerWidth / 3);
@@ -81,11 +82,11 @@ export default function StoreEventScreen() {
         events={items}
         selectedIndex={selectedIndex}
         onClose={() => setSelectedIndex(null)}
-        // ⬇️ 삭제 성공 시 목록에서 제거 + 상세 닫기
         onDeleted={(deletedId) => {
           setItems((prev) => prev.filter((it) => it.id !== deletedId));
           setSelectedIndex(null);
         }}
+        canDelete={canDelete}
       />
     );
   }

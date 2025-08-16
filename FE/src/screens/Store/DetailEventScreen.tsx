@@ -13,20 +13,23 @@ import {
 } from "react-native";
 import { eventItem } from "../../components/GridComponent";
 import CloseBtn from "../../../assets/closeBtn.svg";
-import { deleteEvent } from "../EventMaking/services/api"; // ⬅️ 추가
+import { deleteEvent } from "../EventMaking/services/api";
 
 interface DetailEventScreenProps {
   events: eventItem[];
   selectedIndex: number;
   onClose: () => void;
-  onDeleted?: (deletedId: string) => void; // ⬅️ 부모가 목록에서 제거하려면 옵셔널 콜백
+  onDeleted?: (deletedId: string) => void;
+  /** 가게 주인일 때만 true → 삭제 버튼 노출 */
+  canDelete?: boolean;
 }
 
-export default function ({
+export default function DetailEventScreen({
   events,
   selectedIndex,
   onClose,
   onDeleted,
+  canDelete = false,
 }: DetailEventScreenProps) {
   const { width, height } = useWindowDimensions();
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -36,7 +39,23 @@ export default function ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   }, []);
 
+  // 안전 가드
   const event = events[selectedIndex];
+  if (!event) {
+    return (
+      <View
+        style={[
+          styles.eventDetailContainer,
+          { alignItems: "center", justifyContent: "center" },
+        ]}
+      >
+        <Text>이벤트 정보를 불러오지 못했습니다.</Text>
+        <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
+          <Text style={{ color: "#6c5ce7" }}>닫기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const confirmDelete = () => {
     Alert.alert("이벤트 삭제", "정말 삭제하시겠어요?", [
@@ -48,8 +67,8 @@ export default function ({
           try {
             setDeleting(true);
             await deleteEvent(Number(event.id));
-            onDeleted?.(event.id); // ⬅️ 부모 목록에서 제거
-            onClose(); // ⬅️ 상세 닫기
+            onDeleted?.(event.id);
+            onClose();
           } catch (e: any) {
             Alert.alert(
               "삭제 실패",
@@ -75,8 +94,12 @@ export default function ({
           <CloseBtn />
         </TouchableOpacity>
 
-        <Text style={styles.storeName}>{event.storeName}</Text>
+        {/* 상단 가게명 */}
+        {!!event.storeName && (
+          <Text style={styles.storeName}>{event.storeName}</Text>
+        )}
 
+        {/* 이미지 */}
         <View style={styles.ImageContainer}>
           <Image
             source={event.uri}
@@ -88,25 +111,31 @@ export default function ({
           />
         </View>
 
+        {/* 텍스트 */}
         <View style={styles.eventTextContainer}>
           <Text style={styles.eventTitle}>{event.eventName}</Text>
-          <Text style={styles.eventDescription}>{event.description}</Text>
+          {!!event.description && (
+            <Text style={styles.eventDescription}>{event.description}</Text>
+          )}
         </View>
 
-        <View style={styles.deleteWrapper}>
-          <TouchableOpacity
-            style={[styles.deleteContainer, deleting && { opacity: 0.6 }]}
-            onPress={confirmDelete}
-            disabled={deleting}
-            activeOpacity={0.8}
-          >
-            {deleting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.deleteText}>이벤트 삭제하기</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        {/* 삭제 버튼: 가게 주인만 노출 */}
+        {canDelete && (
+          <View style={styles.deleteWrapper}>
+            <TouchableOpacity
+              style={[styles.deleteContainer, deleting && { opacity: 0.6 }]}
+              onPress={confirmDelete}
+              disabled={deleting}
+              activeOpacity={0.8}
+            >
+              {deleting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.deleteText}>이벤트 삭제하기</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -135,7 +164,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F8F9",
   } as any,
   eventTitle: { fontSize: 18, paddingBottom: 10 } as any,
-  eventDescription: { fontSize: 14 } as any,
+  eventDescription: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 16,
+  } as any,
   deleteWrapper: {
     alignItems: "center",
     justifyContent: "center",
