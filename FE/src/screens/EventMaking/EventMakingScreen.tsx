@@ -1,5 +1,4 @@
-// src/screens/EventMaking/EventMakingScreen.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   StyleSheet,
@@ -27,6 +26,9 @@ import {
   downloadEventAsset,
   waitForAssetReady,
 } from "./services/api";
+
+// 👇 추가: 라우트 파라미터 누락 시 가게명 fallback
+import { getMyMakerStats } from "../Mypage/services/api"; /* NEW */
 
 // 화면 단계 정의
 type Step = "gen" | "write";
@@ -66,11 +68,31 @@ export default function EventMakingScreen({ navigation }: Props) {
         undefined;
     }
   } catch {
-    // no-op (안전 가드)
+    // no-op
   }
 
+  // 3) fallback: makers/me에서 가져오기
+  const [fallbackStoreName, setFallbackStoreName] = useState<
+    string | undefined
+  >(undefined); /* NEW */
+
+  useEffect(() => {
+    /* NEW */
+    (async () => {
+      if (!routeStoreName && !prevStoreName) {
+        try {
+          const stats = await getMyMakerStats();
+          setFallbackStoreName(stats.storeName);
+        } catch (e) {
+          // 조용히 실패
+        }
+      }
+    })();
+  }, [routeStoreName, prevStoreName]);
+
   // 최종 헤더용 가게명
-  const headerStoreName = routeStoreName ?? prevStoreName ?? undefined;
+  const headerStoreName =
+    routeStoreName ?? prevStoreName ?? fallbackStoreName; /* NEW */
 
   // --- 상태 ---
   const [step, setStep] = useState<Step>("gen");
@@ -349,7 +371,7 @@ export default function EventMakingScreen({ navigation }: Props) {
             }}
             onClose={handleClose}
             generatedImageUrl={assetUrl}
-            storeName={headerStoreName} // ✅ 여기서 전달
+            storeName={headerStoreName} // ✅ 동적 전달 (route/prev/fallback)
           ></WriteStep>
         ) : null}
       </KeyboardAvoidingView>

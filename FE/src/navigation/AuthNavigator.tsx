@@ -47,7 +47,12 @@ export type AuthStackParamList = {
   StoreClusteringScreen: undefined;
   StoreClustering: undefined;
   ActiveEventScreen: undefined;
-  EventMakingScreen: undefined;
+  EventMakingScreen:
+    | {
+        storeName?: string;
+        storeId?: number;
+      }
+    | undefined;
 
   MapScreen: { onClose?: () => void };
 
