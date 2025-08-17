@@ -1,5 +1,5 @@
 // src/screens/EventMaking/WriteStep.tsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   SafeAreaView,
   View,
@@ -10,9 +10,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   Image,
-  KeyboardAvoidingView,
   Platform,
-  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
@@ -42,59 +40,34 @@ export default function WriteStep({
 }: WriteProps) {
   const { width } = useWindowDimensions();
 
-  // ✅ 키보드 높이 감지해서 하단 버튼과 스크롤 여백을 올림
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKeyboardHeight(e.endCoordinates?.height || 0);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
+  // '작성 완료' 버튼 활성화 조건
   const canComplete = aiDone && text.trim().length > 30;
 
   const handleComplete = () => {
-    if (canComplete) {
-      onNext();
-    }
+    if (canComplete) onNext();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "android" ? "height" : "padding"}
-        keyboardVerticalOffset={0}
-      >
-        {/* 상단 헤더 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons
-              name="chevron-back"
-              size={width * 0.06}
-              color="#333"
-            ></Ionicons>
-          </TouchableOpacity>
-          <Text style={styles.title}>{storeName ? storeName : "가게"}</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={width * 0.06} color="#333"></Ionicons>
-          </TouchableOpacity>
-        </View>
+      {/* 상단 헤더 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
+          <Ionicons name="chevron-back" size={width * 0.06} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{storeName || "가게"}</Text>
+        <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+          <Ionicons name="close" size={width * 0.06} color="#333" />
+        </TouchableOpacity>
+      </View>
 
-        {/* 본문 */}
+      {/* 본문 + 하단 버튼을 세로로 배치 (absolute 사용 안 함) */}
+      <View style={styles.body}>
+        {/* 스크롤 본문 (하단 버튼 높이만큼 여유 paddingBottom) */}
         <ScrollView
           style={styles.content}
+          contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps={"handled"}
-          contentContainerStyle={{
-            paddingBottom: 120 + keyboardHeight, // ✅ 키보드 높이만큼 여백 추가
-          }}
+          keyboardShouldPersistTaps="handled"
         >
           {/* AI 상태 */}
           <View style={styles.aiSection}>
@@ -107,7 +80,7 @@ export default function WriteStep({
                   autoPlay
                   loop
                   style={styles.lottie}
-                ></LottieView>
+                />
                 <Text style={styles.loadingText}>
                   AI 포스터를 생성중입니다...
                 </Text>
@@ -122,8 +95,8 @@ export default function WriteStep({
                 <Image
                   source={{ uri: generatedImageUrl }}
                   style={styles.generatedImage}
-                  resizeMode={"cover"}
-                ></Image>
+                  resizeMode="cover"
+                />
                 <Text style={styles.aiCompleteText}>
                   AI 포스터 생성이 완료되었습니다!
                 </Text>
@@ -140,28 +113,26 @@ export default function WriteStep({
             <TextInput
               style={styles.textInput}
               multiline
-              placeholder={
-                "현재 진행하는 이벤트에 대해서 자유롭게 설명해주세요"
-              }
-              placeholderTextColor={"#999999"}
-              textAlignVertical={"top"}
+              placeholder="현재 진행하는 이벤트에 대해서 자유롭게 설명해주세요"
+              placeholderTextColor="#999999"
+              textAlignVertical="top"
               value={text}
               onChangeText={onChange}
               maxLength={500}
-              scrollEnabled={true}
-            ></TextInput>
+              scrollEnabled
+            />
             <View style={styles.textCounter}>
               <Text style={styles.counterText}>{text.length}/500</Text>
             </View>
           </View>
         </ScrollView>
 
-        {/* 하단 버튼 - 키보드 뜨면 같이 올라감 */}
-        <View style={[styles.bottom, { bottom: keyboardHeight }]}>
+        {/* 하단 고정 버튼 (absolute 아님) */}
+        <View style={styles.footer}>
           <TouchableOpacity
             style={[
               styles.completeButton,
-              !canComplete ? styles.completeButtonDisabled : null,
+              !canComplete && styles.completeButtonDisabled,
             ]}
             onPress={handleComplete}
             disabled={!canComplete}
@@ -176,17 +147,16 @@ export default function WriteStep({
             </Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-  flex: { flex: 1 },
+
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -195,19 +165,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  backButton: {
+  iconBtn: {
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
-  closeButton: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
+  title: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1A1A1A",
   },
+
+  // 본문 + 하단 버튼을 세로로(footer가 항상 아래에 오도록)
+  body: { flex: 1 },
   content: { flex: 1, backgroundColor: "#F7F8F9" },
 
   aiSection: {
@@ -251,7 +224,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingVertical: 24,
-    marginBottom: 100,
   },
   textInput: {
     minHeight: 150,
@@ -268,16 +240,14 @@ const styles = StyleSheet.create({
   textCounter: { alignItems: "flex-end", marginTop: 8 },
   counterText: { fontSize: 12, color: "#999999" },
 
-  bottom: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 34,
-    backgroundColor: "#FFFFFF",
+  // 하단 버튼 영역(absolute 제거)
+  footer: {
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   completeButton: {
     backgroundColor: "#fec566",
