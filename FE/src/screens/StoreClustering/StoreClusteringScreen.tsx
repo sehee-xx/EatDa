@@ -73,11 +73,14 @@ const INITIAL_REGION = {
   longitude: 126.978,
 };
 
-const KAKAO_API_KEY =
-  Constants.manifest?.extra?.kakaoApiKey ??
-  Constants.expoConfig?.extra?.kakaoApiKey ??
-  "";
+const expoConfig: any = Constants.expoConfig;
+const manifest: any = (Constants as any).manifest;
 
+const KAKAO_API_KEY =
+  expoConfig?.extra?.kakaoApiKey ||
+  manifest?.extra?.kakaoApiKey ||
+  "";
+  
 export default function StoreClusteringScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userRole } = useAuth();
