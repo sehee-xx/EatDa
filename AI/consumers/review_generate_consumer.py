@@ -59,13 +59,19 @@ except ModuleNotFoundError:
             # lowercase 'ai' package name (some builds place code under /app/ai)
             from ai.clients.gms_api.luma_prompt_enhancer import enhance, EnhancerPolicy, Score  # type: ignore
         except ModuleNotFoundError:
-            # 최후의 폴백: 파일 경로에서 직접 로드
+            # 최후의 폴백: 파일 경로에서 직접 로드 (경로 탐색 포함)
             import importlib.util as _ilu
             _cands = [
                 os.path.join(_ROOT_FLAT, "clients", "gms_api", "luma_prompt_enhancer.py"),
                 os.path.join(_ROOT_AI,   "clients", "gms_api", "luma_prompt_enhancer.py"),
                 os.path.join(_ROOT_ai,   "clients", "gms_api", "luma_prompt_enhancer.py"),
             ]
+            # 디렉터리 트리 전체를 순회하며 검색
+            _search_roots = [p for p in (_ROOT_FLAT, _ROOT_AI, _ROOT_ai) if os.path.isdir(p)]
+            for _root in _search_roots:
+                for _dirpath, _dirnames, _filenames in os.walk(_root):
+                    if "luma_prompt_enhancer.py" in _filenames and "clients" in _dirpath and "gms_api" in _dirpath:
+                        _cands.append(os.path.join(_dirpath, "luma_prompt_enhancer.py"))
             _loaded = False
             for _p in _cands:
                 try:
