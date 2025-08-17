@@ -7,9 +7,10 @@ Services package
 # - nested: /app/AI/services, /app/AI/clients
 import os, sys
 _CUR = os.path.abspath(os.path.dirname(__file__))
-_ROOT_FLAT = os.path.abspath(os.path.join(_CUR, ".."))
-_ROOT_REPO = os.path.abspath(os.path.join(_CUR, "..", ".."))
-for p in (_ROOT_FLAT, _ROOT_REPO):
+_ROOT_FLAT = os.path.abspath(os.path.join(_CUR, ".."))         # /app
+_ROOT_AI   = os.path.join(_ROOT_FLAT, "AI")                     # /app/AI
+_ROOT_ai   = os.path.join(_ROOT_FLAT, "ai")                     # /app/ai (lowercase)
+for p in (_ROOT_FLAT, _ROOT_AI, _ROOT_ai):
     if p not in sys.path:
         sys.path.insert(0, p)
 
