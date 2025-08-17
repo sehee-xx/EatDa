@@ -20,7 +20,7 @@ public interface MakerRepository extends JpaRepository<User, Long>, UserReposito
     )
     FROM User u
     JOIN u.stores s
-    LEFT JOIN s.menus m
+    LEFT JOIN s.menuPosters m
     WHERE u.email = :email 
     AND u.deleted = false
     GROUP BY s.id, s.name
