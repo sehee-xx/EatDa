@@ -1,4 +1,3 @@
-// src/screens/EventMaking/ActiveEventScreen.tsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -28,6 +27,9 @@ import GridComponent from "../../components/GridComponent";
 import CloseButton from "../../../assets/closeBtn.svg";
 import NoDataScreen from "../../components/NoDataScreen";
 
+// 👇 추가: 내 가게 정보 조회 (storeName, storeId)
+import { getMyMakerStats } from "../Mypage/services/api"; /* NEW */
+
 type NavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
   "ActiveEventScreen"
@@ -38,9 +40,6 @@ export default function ActiveEventScreen() {
   const navigation = useNavigation<NavigationProp>();
 
   const handleMypage = () => {};
-  const handleCreateEventPoster = () =>
-    navigation.navigate("EventMakingScreen");
-
   const { isLoggedIn, userRole } = useAuth();
   const isMaker = isLoggedIn && userRole === "MAKER";
 
@@ -53,13 +52,21 @@ export default function ActiveEventScreen() {
   const [containerWidth, setContainerWidth] = useState(0);
   const tile = Math.floor(containerWidth / 3);
 
+  // 👇 추가: maker의 기본 가게명/ID를 화면 진입 시 확보
+  const [makerStoreName, setMakerStoreName] = useState<string | null>(
+    null
+  ); /* NEW */
+  const [makerStoreId, setMakerStoreId] = useState<number | null>(
+    null
+  ); /* NEW */
+
   const adapt = (a: ActiveEvent): eventItem => {
     console.log("[DEBUG] adapt() input:", a);
     return {
       id: String(a.eventId),
       eventName: a.title,
       description: a.description,
-      uri: a.postUrl,
+      uri: { uri: a.postUrl },
       start_date: new Date(a.startAt),
       end_date: new Date(a.endAt),
       storeName: a.storeName,
@@ -83,6 +90,23 @@ export default function ActiveEventScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let cancelled = false;
+
+      // 👇 추가: maker의 가게명/ID 가져오기
+      (async () => {
+        /* NEW */
+        try {
+          const stats = await getMyMakerStats();
+          if (!cancelled) {
+            setMakerStoreName(stats.storeName ?? null);
+            setMakerStoreId(
+              typeof stats.storeId === "number" ? stats.storeId : null
+            );
+          }
+        } catch (e) {
+          console.warn("[MakerStats] fetch failed:", e);
+        }
+      })();
+
       (async () => {
         setLoading(true);
         try {
@@ -95,6 +119,7 @@ export default function ActiveEventScreen() {
           if (!cancelled) setLoading(false);
         }
       })();
+
       return () => {
         cancelled = true;
       };
@@ -113,6 +138,14 @@ export default function ActiveEventScreen() {
     }
   }, []);
 
+  const handleCreateEventPoster = () => {
+    /* NEW */
+    navigation.navigate("EventMakingScreen", {
+      storeName: makerStoreName ?? undefined,
+      storeId: makerStoreId ?? undefined,
+    });
+  };
+
   // 상세 보기 애니메이션
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   useEffect(() => {
@@ -122,7 +155,7 @@ export default function ActiveEventScreen() {
 
   // 상세 보기
   if (selectedEvent) {
-     console.log("[DEBUG] rendering detail view with:", selectedEvent);
+    console.log("[DEBUG] rendering detail view with:", selectedEvent);
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
         <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
@@ -148,7 +181,7 @@ export default function ActiveEventScreen() {
                 height: height * 0.65,
                 borderRadius: 10,
               }}
-              source={{uri:selectedEvent.uri}}
+              source={selectedEvent.uri}
               resizeMode="stretch"
             />
           </View>
@@ -164,7 +197,7 @@ export default function ActiveEventScreen() {
             <Text
               style={[
                 styles.eventDescription,
-                { paddingBottom: height * 0.02 },
+                { paddingBottom: height * 0.02, paddingLeft: width * 0.05 },
               ]}
             >
               {selectedEvent.description}
@@ -195,7 +228,6 @@ export default function ActiveEventScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           numColumns={3}
-          // 여백/패딩 0 → 리뷰탭과 동일
           style={{ margin: 0, padding: 0, backgroundColor: "#fff" }}
           contentContainerStyle={{ paddingHorizontal: 0, paddingVertical: 0 }}
           showsVerticalScrollIndicator={false}
@@ -203,7 +235,7 @@ export default function ActiveEventScreen() {
           renderItem={({ item, index }) => (
             <GridComponent
               item={item}
-              size={tile} // 정수 타일
+              size={tile}
               index={index}
               totalLength={items.length}
               onPress={() => {

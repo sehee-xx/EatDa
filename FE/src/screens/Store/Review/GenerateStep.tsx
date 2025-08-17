@@ -9,6 +9,9 @@ import {
   StyleSheet,
   useWindowDimensions,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ImageUploader from "../../../components/ImageUploader";
@@ -53,32 +56,44 @@ export default function GenerateStep({
     null,
   ]);
 
+  // === Android 키보드 대응 (iOS 미사용) ===
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
-    const newImages: (string | null)[] = [null, null, null];
-    uploadedImages.forEach((img, index) => {
-      if (index < 3) {
-        newImages[index] = img;
-      }
+    if (Platform.OS !== "android") return;
+    const showSub = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardOpen(true)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardOpen(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const next: (string | null)[] = [null, null, null];
+    uploadedImages.forEach((img, i) => {
+      if (i < 3) next[i] = img;
     });
-    setLocalImages(newImages);
+    setLocalImages(next);
   }, [uploadedImages]);
 
   const handleAddImage = (index: number, imageUrl: string) => {
     if (isLoading) return;
-    
-    const newImages = [...localImages];
-    newImages[index] = imageUrl;
-    setLocalImages(newImages);
-    if (onAdd) onAdd(imageUrl);
+    const next = [...localImages];
+    next[index] = imageUrl;
+    setLocalImages(next);
+    onAdd(imageUrl);
   };
 
   const handleRemoveImage = (index: number) => {
     if (isLoading) return;
-    
-    const newImages = [...localImages];
-    newImages[index] = null;
-    setLocalImages(newImages);
-    if (onRemove) onRemove(index);
+    const next = [...localImages];
+    next[index] = null;
+    setLocalImages(next);
+    onRemove(index);
   };
 
   const hasImages = localImages.some((img) => img !== null);
@@ -97,21 +112,32 @@ export default function GenerateStep({
 AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할 수 있도록 배려해 주세요`;
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      // Android만 적용 (iOS는 사용 X)
+      enabled={Platform.OS === "android"}
+      behavior="height"
+    >
       {/* 뒤로가기 버튼 */}
-      <TouchableOpacity 
-        onPress={isLoading ? undefined : onBack} 
+      <TouchableOpacity
+        onPress={isLoading ? undefined : onBack}
         style={[styles.backButton, isLoading && styles.backButtonDisabled]}
         disabled={isLoading}
       >
-        <Ionicons 
-          name="chevron-back" 
-          size={width * 0.06} 
-          color={isLoading ? "#999" : "#1A1A1A"} 
+        <Ionicons
+          name="chevron-back"
+          size={width * 0.06}
+          color={isLoading ? "#999" : "#1A1A1A"}
         />
       </TouchableOpacity>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{
+          paddingBottom: keyboardOpen ? 24 : 140, // 키보드 열리면 여백 줄이고, 닫히면 하단 버튼 영역만큼 확보
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Text style={styles.title}>리뷰 생성</Text>
           <Text style={styles.subtitle}>
@@ -131,11 +157,13 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
                   activeOpacity={isLoading ? 1 : 0.7}
                   disabled={isLoading}
                 >
-                  <View style={[
-                    styles.cb, 
-                    contentType === t && styles.cbOn,
-                    isLoading && styles.cbDisabled
-                  ]}>
+                  <View
+                    style={[
+                      styles.cb,
+                      contentType === t && styles.cbOn,
+                      isLoading && styles.cbDisabled,
+                    ]}
+                  >
                     {contentType === t && <Text style={styles.ck}>✓</Text>}
                   </View>
                   <Text style={[styles.lbl, isLoading && styles.lblDisabled]}>
@@ -164,22 +192,30 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
             생성할 리뷰의 내용을 구체적으로 작성해주세요
           </Text>
           <TextInput
-            style={[styles.promptInput, isLoading && styles.promptInputDisabled]}
+            style={[
+              styles.promptInput,
+              isLoading && styles.promptInputDisabled,
+            ]}
             multiline
             placeholder={placeholderText}
             placeholderTextColor="#999999"
             textAlignVertical="top"
             value={prompt}
             onChangeText={isLoading ? undefined : onPrompt}
-            scrollEnabled={true}
+            scrollEnabled
             numberOfLines={10}
             editable={!isLoading}
           />
         </View>
       </ScrollView>
 
-      {/* 확인 버튼 */}
-      <View style={styles.bottom}>
+      {/* 확인 버튼: 키보드가 열리면 absolute 해제해 가림 방지 */}
+      <View
+        style={[
+          styles.bottom,
+          keyboardOpen ? { position: "relative", paddingBottom: 16 } : null,
+        ]}
+      >
         <TouchableOpacity
           style={[styles.button, isDisabled && styles.buttonDisabled]}
           onPress={isDisabled ? () => {} : onNext}
@@ -189,14 +225,16 @@ AI를 통한 리뷰를 생성 시 모두가 쾌적한 리뷰 문화를 경험할
           {isLoading ? (
             <View style={styles.loadingButtonContent}>
               <ActivityIndicator size="small" color="#FFFFFF" />
-              <Text style={[styles.buttonText, { marginLeft: 8 }]}>요청 중...</Text>
+              <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                요청 중...
+              </Text>
             </View>
           ) : (
             <Text style={styles.buttonText}>확인</Text>
           )}
         </TouchableOpacity>
       </View>
-    </>
+    </KeyboardAvoidingView>
   );
 }
 

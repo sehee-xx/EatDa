@@ -143,7 +143,7 @@ export default function EaterLoginScreen(props?: Props) {
       onLinkPress={handleLinkPress}
       showLinks={true}
     >
-      <SocialLoginBtn
+      {/* <SocialLoginBtn
         title="구글 로그인"
         onPress={handleGoogleLogin}
         IconComponent={GoogleIcon}
@@ -156,7 +156,7 @@ export default function EaterLoginScreen(props?: Props) {
         IconComponent={KakaoIcon}
         style={{ backgroundColor: "#FEE500" }}
         iconStyle={{ width: 14, height: 14 }}
-      />
+      /> */}
     </AuthForm>
   );
 }

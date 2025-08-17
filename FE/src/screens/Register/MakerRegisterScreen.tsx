@@ -42,16 +42,13 @@ import {
   getCoordinatesFromAddressNaver,
 } from "./services/geocoding";
 import {
-  // 🔁 OCR 전용
-  requestMenuOCR,  // POST /ai/api/menu-extraction (file)
-  getOCRResult,    // GET  /ai/api/menu-extraction/{assetId}/result
-  // ✅ 원샷 회원가입
-  signupMakerAllInOne, // POST /api/makers (모든 데이터 한번에 전송)
+  requestMenuOCR, // POST /ai/api/menu-extraction (file)
+  getOCRResult, // GET  /ai/api/menu-extraction/{assetId}/result
+  signupMakerAllInOne, // POST /api/makers (원샷)
 } from "./services/api";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "MakerRegisterScreen">;
 
-// services/api.ts에서 MENUBOARD_* → PENDING/SUCCESS/FAILED 로 매핑해서 돌려준다고 가정
 type OCRResult = {
   status: "PENDING" | "SUCCESS" | "FAILED";
   extractedMenus?: Array<{ name: string; price: number | null }>;
@@ -76,7 +73,9 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     formattedAddress: undefined,
   });
 
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [validationTypes, setValidationTypes] = useState<ValidationTypes>({});
   const [duplicateCheckStates, setDuplicateCheckStates] =
     useState<DuplicateCheckStates>({ email: "none" });
@@ -96,8 +95,12 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
+  // ResultModal 상태
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"success" | "failure">("success");
+  const [modalTitle, setModalTitle] = useState<string | undefined>(undefined);
+  const [modalMessage, setModalMessage] = useState<string>("");
+  const [onModalClose, setOnModalClose] = useState<(() => void) | null>(null);
 
   const [signupState, setSignupState] = useState<SignupState>({
     step1Complete: false,
@@ -108,7 +111,30 @@ export default function MakerRegisterScreen({ navigation }: Props) {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  /** ====== Step1 입력/검증 (서버 호출 X) ====== */
+  /** 공통 ResultModal 오픈 */
+  const openModal = (
+    type: "success" | "failure",
+    message: string,
+    title?: string,
+    onClose?: () => void
+  ) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalMessage(message);
+    setOnModalClose(() => (onClose ? onClose : null));
+    setModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    if (onModalClose) {
+      const cb = onModalClose;
+      setOnModalClose(null);
+      cb();
+    }
+  };
+
+  /** ====== Step1 입력/검증 ====== */
   const handleInputChange = (key: keyof MakerFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
 
@@ -176,7 +202,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     }
   };
 
-  // 주소 검증 및 좌표 변환 (서버 호출 X)
+  // 주소 검증 및 좌표 변환
   const validateAndGetCoordinates = async (address: string) => {
     if (!address.trim()) {
       setValidationErrors((prev) => ({
@@ -253,13 +279,8 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     );
   };
 
-  // Step2: 사업자등록증 업로드해야 다음 단계 가능
   const isStep2NextEnabled = () => !!businessLicenseUri;
-
-  // Step3: 메뉴 OCR로 최소 1개 이상 메뉴가 생겨야 다음 단계 가능 (폴링 중 비활)
   const isStep3NextEnabled = () => menuItems.length > 0 && !isPolling;
-
-  // Step4: 약관 2개 모두 체크해야 가입하기 버튼 활성화
   const isStep4NextEnabled = () =>
     agreementsState.terms && agreementsState.marketing;
 
@@ -330,13 +351,13 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     }
   };
 
-  /** ====== Step2: 사업자등록증 업로드 (서버 호출 X) ====== */
+  /** ====== Step2: 사업자등록증 업로드 ====== */
   const handleBusinessLicenseUpload = async () => {
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("권한 필요", "갤러리 접근 권한이 필요합니다.");
+        openModal("failure", "갤러리 접근 권한이 필요합니다.", "권한 필요");
         return;
       }
 
@@ -350,21 +371,29 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       const uri = result.assets[0].uri;
       setBusinessLicenseUri(uri);
       setSignupState((prev) => ({ ...prev, step2Complete: true }));
-      Alert.alert("업로드 완료", "사업자 등록증이 업로드되었습니다.");
+      openModal("success", "사업자 등록증이 업로드되었습니다.", "업로드 완료");
     } catch (e) {
       console.error("Business license upload error:", e);
-      Alert.alert("오류", "사업자 등록증 업로드 중 오류가 발생했습니다.");
+      openModal(
+        "failure",
+        "사업자 등록증 업로드 중 오류가 발생했습니다.",
+        "오류"
+      );
     }
   };
 
-  /** ====== Step3: OCR (FastAPI 호출; 로그인 불필요) ====== */
+  /** ====== Step3: OCR ====== */
   const handleMenuScan = async () => {
     setIsScanning(true);
     try {
       const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
       const mediaPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (cameraPerm.status !== "granted" || mediaPerm.status !== "granted") {
-        Alert.alert("권한 필요", "카메라 및 갤러리 접근 권한이 필요합니다.");
+        openModal(
+          "failure",
+          "카메라 및 갤러리 접근 권한이 필요합니다.",
+          "권한 필요"
+        );
         setIsScanning(false);
         return;
       }
@@ -398,7 +427,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       ]);
     } catch (error) {
       console.error("Menu scan error:", error);
-      Alert.alert("오류", "메뉴 스캔 중 오류가 발생했습니다.");
+      openModal("failure", "메뉴 스캔 중 오류가 발생했습니다.", "오류");
       setIsScanning(false);
     }
   };
@@ -407,30 +436,26 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     try {
       setIsScanning(false);
       setIsPolling(true);
-
-      // ⬇️ POST /ai/api/menu-extraction (file 필드) → assetId 수신
       const { assetId } = await requestMenuOCR(imageUri);
-
-      // ⬇️ 1초 간격 폴링 시작
       await pollOCRResult(assetId);
     } catch (e) {
       console.error("OCR Processing error:", e);
-      Alert.alert(
-        "오류",
-        "OCR 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+      openModal(
+        "failure",
+        "OCR 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
+        "오류"
       );
       setIsPolling(false);
     }
   };
 
   const pollOCRResult = async (assetId: number) => {
-    const maxAttempts = 60; // 1초 * 60 = 최대 60초 대기
+    const maxAttempts = 60; // 60초
     let attempts = 0;
 
     const poll = async (): Promise<void> => {
       try {
         attempts++;
-        // ⬇️ GET /ai/api/menu-extraction/{assetId}/result
         const result = (await getOCRResult(assetId)) as OCRResult;
 
         if (result.status === "SUCCESS") {
@@ -450,35 +475,39 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             setMenuItems(convertedMenus);
             setSignupState((prev) => ({
               ...prev,
-              assetId, // OCR 기록
+              assetId,
               step3Complete: true,
             }));
 
-            Alert.alert(
-              "스캔 완료",
-              `${convertedMenus.length}개의 메뉴를 인식했습니다.\n메뉴를 터치하여 이미지와 설명을 추가해주세요.`
+            openModal(
+              "success",
+              `${convertedMenus.length}개의 메뉴를 인식했습니다.\n메뉴를 터치하여 이미지와 설명을 추가해주세요.`,
+              "스캔 완료"
             );
           } else {
-            Alert.alert(
-              "스캔 결과",
-              "메뉴를 인식할 수 없습니다. 다시 시도해주세요."
+            openModal(
+              "failure",
+              "메뉴를 인식할 수 없습니다. 다시 시도해주세요.",
+              "스캔 결과"
             );
           }
           setIsPolling(false);
         } else if (result.status === "FAILED") {
-          Alert.alert(
-            "스캔 실패",
-            "메뉴 인식에 실패했습니다. 다시 시도해주세요."
+          openModal(
+            "failure",
+            "메뉴 인식에 실패했습니다. 다시 시도해주세요.",
+            "스캔 실패"
           );
           setIsPolling(false);
         } else {
           // PENDING
           if (attempts < maxAttempts) {
-            setTimeout(poll, 1000); // ⬅️ 1초
+            setTimeout(poll, 1000);
           } else {
-            Alert.alert(
-              "시간 초과",
-              "메뉴 인식이 시간 초과되었습니다. 다시 시도해주세요."
+            openModal(
+              "failure",
+              "메뉴 인식이 시간 초과되었습니다. 다시 시도해주세요.",
+              "시간 초과"
             );
             setIsPolling(false);
           }
@@ -486,9 +515,9 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       } catch (error) {
         console.error("OCR polling error:", error);
         if (attempts < maxAttempts) {
-          setTimeout(poll, 1000); // ⬅️ 1초
+          setTimeout(poll, 1000);
         } else {
-          Alert.alert("오류", "메뉴 인식 중 오류가 발생했습니다.");
+          openModal("failure", "메뉴 인식 중 오류가 발생했습니다.", "오류");
           setIsPolling(false);
         }
       }
@@ -522,7 +551,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("권한 필요", "갤러리 접근 권한이 필요합니다.");
+        openModal("failure", "갤러리 접근 권한이 필요합니다.", "권한 필요");
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -535,7 +564,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
         updateMenuItem(menuId, "imageUri", result.assets[0].uri);
     } catch (e) {
       console.error("Menu image add error:", e);
-      Alert.alert("오류", "이미지 추가 중 오류가 발생했습니다.");
+      openModal("failure", "이미지 추가 중 오류가 발생했습니다.", "오류");
     }
   };
 
@@ -564,33 +593,36 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       !f.storeName.trim() ||
       !f.storeLocation.trim()
     ) {
-      Alert.alert("알림", "모든 필드를 입력해주세요.");
+      openModal("failure", "모든 필드를 입력해주세요.", "알림");
       return false;
     }
-    if (!emailRegex.test(f.email))
-      return Alert.alert("알림", "올바른 이메일 형식이 아닙니다."), false;
-    if (f.password.length < 8)
-      return Alert.alert("알림", "비밀번호는 8자 이상이어야 합니다."), false;
-    if (f.password !== f.passwordConfirm)
-      return Alert.alert("알림", "비밀번호가 일치하지 않습니다."), false;
-    if (duplicateCheckStates.email !== "success")
-      return Alert.alert("알림", "이메일 중복 검사를 완료해주세요."), false;
+    if (!emailRegex.test(f.email)) {
+      openModal("failure", "올바른 이메일 형식이 아닙니다.", "알림");
+      return false;
+    }
+    if (f.password.length < 8) {
+      openModal("failure", "비밀번호는 8자 이상이어야 합니다.", "알림");
+      return false;
+    }
+    if (f.password !== f.passwordConfirm) {
+      openModal("failure", "비밀번호가 일치하지 않습니다.", "알림");
+      return false;
+    }
+    if (duplicateCheckStates.email !== "success") {
+      openModal("failure", "이메일 중복 검사를 완료해주세요.", "알림");
+      return false;
+    }
 
     if (validationTypes.coordinates !== "success") {
-      Alert.alert("알림", "주소 확인을 완료해주세요.", [
-        {
-          text: "주소 재검증",
-          onPress: () => validateAndGetCoordinates(f.storeLocation),
-        },
-        { text: "확인" },
-      ]);
+      openModal("failure", "주소 확인을 완료해주세요.", "알림");
       return false;
     }
 
     if (!f.latitude || !f.longitude) {
-      Alert.alert(
-        "알림",
-        "주소의 위치 정보를 찾을 수 없습니다. 정확한 주소를 입력해주세요."
+      openModal(
+        "failure",
+        "주소의 위치 정보를 찾을 수 없습니다. 정확한 주소를 입력해주세요.",
+        "알림"
       );
       return false;
     }
@@ -600,7 +632,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
 
   const validateStep2 = () => {
     if (!businessLicenseUri) {
-      Alert.alert("알림", "사업자 등록증을 업로드해주세요.");
+      openModal("failure", "사업자 등록증을 업로드해주세요.", "알림");
       return false;
     }
     return true;
@@ -608,7 +640,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
 
   const validateStep3 = () => {
     if (menuItems.length === 0) {
-      Alert.alert("알림", "메뉴를 하나 이상 등록해주세요.");
+      openModal("failure", "메뉴를 하나 이상 등록해주세요.", "알림");
       return false;
     }
     return true;
@@ -639,7 +671,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       );
     } else {
       if (!agreementsState.terms || !agreementsState.marketing) {
-        Alert.alert("알림", "필수 동의 항목을 모두 체크해주세요.");
+        openModal("failure", "필수 동의 항목을 모두 체크해주세요.", "알림");
         return;
       }
       await handleFinalSubmit();
@@ -647,21 +679,23 @@ export default function MakerRegisterScreen({ navigation }: Props) {
   };
 
   const handleFinalSubmit = async () => {
-    // 회원가입: 모든 데이터 한 번에 전송
     try {
       await signupMakerAllInOne({
         formData,
-        licenseUri: businessLicenseUri, // 파일
-        menus: menuItems,  // 이름/가격/설명 + (있다면) imageUri         
+        licenseUri: businessLicenseUri,
+        menus: menuItems,
       });
 
-      setModalType("success");
-      setModalVisible(true);
+      openModal("success", "회원가입이 완료되었습니다!", undefined, () => {
+        navigation.navigate("Login");
+      });
     } catch (e: any) {
       console.error("Signup error:", e);
-      Alert.alert("오류", e?.message || "회원가입 중 오류가 발생했습니다.");
-      setModalType("failure");
-      setModalVisible(true);
+      openModal(
+        "failure",
+        e?.message || "회원가입 중 오류가 발생했습니다.",
+        "오류"
+      );
     }
   };
 
@@ -674,11 +708,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
       () => scrollViewRef.current?.scrollTo({ y: 0, animated: true }),
       100
     );
-  };
-
-  const handleModalClose = () => {
-    setModalVisible(false);
-    navigation.navigate("Login");
   };
 
   const dismissKeyboard = () => Keyboard.dismiss();
@@ -747,7 +776,6 @@ export default function MakerRegisterScreen({ navigation }: Props) {
     else if (currentStep === 3) isReady = isStep3NextEnabled();
     else if (currentStep === 4) isReady = isStep4NextEnabled();
 
-    // 3단계 폴링 중에는 이전 단계 비활성화
     const isPrevDisabled = currentStep === 3 && isPolling;
 
     if (currentStep === 1) {
@@ -845,6 +873,7 @@ export default function MakerRegisterScreen({ navigation }: Props) {
             {getCurrentTitle()}
           </Text>
 
+          {/* ✅ 안드로이드 최적값: behavior="height" */}
           <KeyboardAvoidingView
             style={styles.keyboardAvoidingView}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -868,11 +897,8 @@ export default function MakerRegisterScreen({ navigation }: Props) {
           <ResultModal
             visible={modalVisible}
             type={modalType}
-            message={
-              modalType === "success"
-                ? "회원가입이 완료되었습니다!"
-                : "회원가입 중 오류가 발생했습니다."
-            }
+            title={modalTitle}
+            message={modalMessage}
             onClose={handleModalClose}
           />
         </SafeAreaView>
@@ -902,7 +928,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: { flex: 1 },
   scrollViewContent: { paddingHorizontal: 20, paddingBottom: 20, flexGrow: 1 },
-
   bottomButtonsContainer: {
     flexDirection: "row",
     paddingHorizontal: 20,

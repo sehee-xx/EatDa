@@ -9,7 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
-  Alert,
+  KeyboardAvoidingView, // 안드로이드 키보드 회피
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -106,11 +106,13 @@ export default function EaterRegisterScreen(props?: Props) {
   const navigation = useNavigation<NavigationProp>();
   const { width, height } = useWindowDimensions();
   const secondaryColor = COLORS.secondaryEater;
-
   const btnHeight = height * 0.055;
 
+  // ResultModal 상태
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<"success" | "failure">("success");
+  const [modalMessage, setModalMessage] = useState(""); 
+
   const [isLoading, setIsLoading] = useState(false);
 
   // 폼 데이터 상태
@@ -384,7 +386,10 @@ export default function EaterRegisterScreen(props?: Props) {
       const isDuplicate = await checkNicknameDuplicate(formData.nickname);
 
       if (isDuplicate) {
-        setDuplicateCheckStates((prev) => ({ ...prev, nickname: "duplicate" }));
+        setDuplicateCheckStates((prev) => ({
+          ...prev,
+          nickname: "duplicate",
+        }));
         setValidationErrors((prev) => ({
           ...prev,
           nickname: "이미 사용중인 닉네임입니다.",
@@ -463,43 +468,57 @@ export default function EaterRegisterScreen(props?: Props) {
 
       // 빈 값 체크
       const emptyFields = Object.entries(formData).filter(
-        ([key, value]) => !value.trim()
+        ([, value]) => !value.trim()
       );
       if (emptyFields.length > 0) {
-        Alert.alert("알림", "모든 필드를 입력해주세요.");
+        setModalType("failure");
+        setModalMessage("모든 필드를 입력해주세요.");
+        setModalVisible(true);
         return;
       }
 
       // 프론트엔드 유효성 검사
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
-        Alert.alert("알림", "올바른 이메일 형식이 아닙니다.");
+        setModalType("failure");
+        setModalMessage("올바른 이메일 형식이 아닙니다.");
+        setModalVisible(true);
         return;
       }
 
       if (formData.password.length < 8) {
-        Alert.alert("알림", "비밀번호는 8자 이상이어야 합니다.");
+        setModalType("failure");
+        setModalMessage("비밀번호는 8자 이상이어야 합니다.");
+        setModalVisible(true);
         return;
       }
 
       if (formData.password !== formData.passwordConfirm) {
-        Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+        setModalType("failure");
+        setModalMessage("비밀번호가 일치하지 않습니다.");
+        setModalVisible(true);
         return;
       }
 
       if (formData.nickname.includes(" ")) {
-        Alert.alert("알림", "닉네임에는 공백을 포함할 수 없습니다.");
+        setModalType("failure");
+        setModalMessage("닉네임에는 공백을 포함할 수 없습니다.");
+        setModalVisible(true);
         return;
       }
 
       // 중복 검사 완료 확인
       if (duplicateCheckStates.email !== "success") {
-        Alert.alert("알림", "이메일 중복 검사를 완료해주세요.");
+        setModalType("failure");
+        setModalMessage("이메일 중복 검사를 완료해주세요.");
+        setModalVisible(true);
         return;
       }
 
       if (duplicateCheckStates.nickname !== "success") {
-        Alert.alert("알림", "닉네임 중복 검사를 완료해주세요.");
+        setModalType("failure");
+        setModalMessage("닉네임 중복 검사를 완료해주세요.");
+        setModalVisible(true);
         return;
       }
 
@@ -516,18 +535,18 @@ export default function EaterRegisterScreen(props?: Props) {
 
       console.log("회원가입 성공:", response);
       setModalType("success");
+      setModalMessage("회원가입이 완료되었습니다!");
       setModalVisible(true);
     } catch (error: any) {
       console.error("회원가입 실패:", error);
       setModalType("failure");
-      setModalVisible(true);
 
       let errorMessage = "회원가입에 실패했습니다.";
-      if (error.message) {
+      if (error?.message) {
         errorMessage = error.message;
       }
-
-      Alert.alert("오류", errorMessage);
+      setModalMessage(errorMessage);
+      setModalVisible(true);
     } finally {
       setIsLoading(false);
     }
@@ -542,24 +561,19 @@ export default function EaterRegisterScreen(props?: Props) {
 
   // 가입하기 버튼 활성화 여부 체크
   const isFormValid = () => {
-    // 모든 필드가 입력되었는지 확인
     const allFieldsFilled = Object.values(formData).every(
       (value) => value.trim().length > 0
     );
-
-    // 중복 검사가 모두 성공했는지 확인
     const duplicateChecksPassed =
       duplicateCheckStates.email === "success" &&
       duplicateCheckStates.nickname === "success";
 
-    // 프론트엔드 유효성 검사 통과 여부 확인
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const emailValid = emailRegex.test(formData.email);
     const passwordValid = formData.password.length >= 8;
     const passwordMatch = formData.password === formData.passwordConfirm;
     const nicknameValid = !formData.nickname.includes(" ");
 
-    // 에러 타입이 'error'인 유효성 검사 오류만 확인 (성공 메시지는 제외)
     const noValidationErrors =
       validationTypes.email !== "error" &&
       validationTypes.password !== "error" &&
@@ -600,127 +614,132 @@ export default function EaterRegisterScreen(props?: Props) {
             <View style={styles.placeholder} />
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollViewContent}
-          >
-            {/* Form Fields */}
-            <View>
-              {/* 닉네임 입력 */}
-              <InputGroup
-                label="닉네임"
-                placeholder="닉네임을 입력해주세요"
-                value={formData.nickname}
-                onChangeText={(value) => handleInputChange("nickname", value)}
-                validation={validationErrors.nickname || ""}
-                validationType={validationTypes.nickname}
-                showDuplicateCheck={true}
-                duplicateCheckDisabled={
-                  duplicateCheckStates.nickname === "success"
-                }
-                duplicateCheckLoading={
-                  duplicateCheckStates.nickname === "checking"
-                }
-                onDuplicateCheck={handleNicknameDuplicateCheck}
-                userRole="eater"
-                style={{
-                  height: btnHeight,
-                  paddingHorizontal: width * 0.04,
-                }}
-              />
-
-              {/* 이메일 입력 */}
-              <InputGroup
-                label="이메일"
-                placeholder="이메일을 입력해주세요"
-                keyboardType="email-address"
-                value={formData.email}
-                onChangeText={(value) => handleInputChange("email", value)}
-                validation={validationErrors.email || ""}
-                validationType={validationTypes.email}
-                showDuplicateCheck={true}
-                duplicateCheckDisabled={
-                  duplicateCheckStates.email === "success"
-                }
-                duplicateCheckLoading={
-                  duplicateCheckStates.email === "checking"
-                }
-                onDuplicateCheck={handleEmailDuplicateCheck}
-                userRole="eater"
-                style={{
-                  height: btnHeight,
-                  paddingHorizontal: width * 0.04,
-                }}
-              />
-
-              {/* 비밀번호 필드들 */}
-              {passwordFields.map((field) => (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
+            <ScrollView
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              contentContainerStyle={[
+                styles.scrollViewContent,
+                { paddingBottom: 24 },
+              ]}
+            >
+              {/* Form Fields */}
+              <View>
+                {/* 닉네임 입력 */}
                 <InputGroup
-                  key={field.key}
-                  label={field.label}
-                  placeholder={field.placeholder}
-                  secureTextEntry={field.secureTextEntry}
-                  keyboardType={field.keyboardType}
-                  value={formData[field.key as keyof FormData]}
-                  onChangeText={(value) =>
-                    handleInputChange(field.key as keyof FormData, value)
+                  label="닉네임"
+                  placeholder="닉네임을 입력해주세요"
+                  value={formData.nickname}
+                  onChangeText={(value) => handleInputChange("nickname", value)}
+                  validation={validationErrors.nickname || ""}
+                  validationType={validationTypes.nickname}
+                  showDuplicateCheck={true}
+                  duplicateCheckDisabled={
+                    duplicateCheckStates.nickname === "success"
                   }
-                  validation={
-                    validationErrors[field.key as keyof ValidationErrors] || ""
+                  duplicateCheckLoading={
+                    duplicateCheckStates.nickname === "checking"
                   }
-                  validationType={
-                    validationTypes[field.key as keyof ValidationTypes]
-                  }
+                  onDuplicateCheck={handleNicknameDuplicateCheck}
                   userRole="eater"
                   style={{
                     height: btnHeight,
                     paddingHorizontal: width * 0.04,
                   }}
                 />
-              ))}
-            </View>
 
-            {/* Submit Button */}
-            <View style={styles.submitSection}>
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  {
-                    backgroundColor: isLoading
-                      ? "#ccc"
-                      : isFormValid()
-                      ? secondaryColor
-                      : "#ccc",
+                {/* 이메일 입력 */}
+                <InputGroup
+                  label="이메일"
+                  placeholder="이메일을 입력해주세요"
+                  keyboardType="email-address"
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange("email", value)}
+                  validation={validationErrors.email || ""}
+                  validationType={validationTypes.email}
+                  showDuplicateCheck={true}
+                  duplicateCheckDisabled={
+                    duplicateCheckStates.email === "success"
+                  }
+                  duplicateCheckLoading={
+                    duplicateCheckStates.email === "checking"
+                  }
+                  onDuplicateCheck={handleEmailDuplicateCheck}
+                  userRole="eater"
+                  style={{
                     height: btnHeight,
-                  },
-                ]}
-                onPress={handleSubmit}
-                disabled={isLoading || !isFormValid()}
-              >
-                <Text
+                    paddingHorizontal: width * 0.04,
+                  }}
+                />
+
+                {/* 비밀번호 필드들 */}
+                {passwordFields.map((field) => (
+                  <InputGroup
+                    key={field.key}
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    secureTextEntry={field.secureTextEntry}
+                    keyboardType={field.keyboardType}
+                    value={formData[field.key as keyof FormData]}
+                    onChangeText={(value) =>
+                      handleInputChange(field.key as keyof FormData, value)
+                    }
+                    validation={
+                      validationErrors[field.key as keyof ValidationErrors] ||
+                      ""
+                    }
+                    validationType={
+                      validationTypes[field.key as keyof ValidationTypes]
+                    }
+                    userRole="eater"
+                    style={{
+                      height: btnHeight,
+                      paddingHorizontal: width * 0.04,
+                    }}
+                  />
+                ))}
+              </View>
+
+              {/* Submit Button */}
+              <View style={styles.submitSection}>
+                <TouchableOpacity
                   style={[
-                    styles.submitButtonText,
+                    styles.submitButton,
                     {
-                      fontSize: width * 0.04,
-                      color: isFormValid() ? "#fff" : "#999",
+                      backgroundColor: isLoading
+                        ? "#ccc"
+                        : isFormValid()
+                        ? secondaryColor
+                        : "#ccc",
+                      height: btnHeight,
                     },
                   ]}
+                  onPress={handleSubmit}
+                  disabled={isLoading || !isFormValid()}
                 >
-                  {isLoading ? "가입 중..." : "가입하기"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+                  <Text
+                    style={[
+                      styles.submitButtonText,
+                      {
+                        fontSize: width * 0.04,
+                        color: isFormValid() ? "#fff" : "#999",
+                      },
+                    ]}
+                  >
+                    {isLoading ? "가입 중..." : "가입하기"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
 
           <ResultModal
             visible={modalVisible}
             type={modalType}
-            message={
-              modalType === "success"
-                ? "회원가입이 완료되었습니다!"
-                : "회원가입에 실패했습니다. 다시 시도해주세요."
-            }
+            title={modalType === "success" ? "성공" : "실패"}
+            message={modalMessage}
             onClose={handleModalClose}
           />
         </SafeAreaView>
@@ -735,11 +754,11 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space_between",
     alignItems: "center",
     paddingBottom: 20,
     paddingHorizontal: 20,
-  },
+  } as any, // RN 타입 경고 회피용
   backButton: { padding: 5 },
   backArrow: { color: COLORS.text, fontWeight: "bold" },
   placeholder: { width: 30 },

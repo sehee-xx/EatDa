@@ -1,5 +1,5 @@
-// MenuSelectStep.tsx
-import React, { useState, useEffect } from "react";
+// src/screens/Store/Menu/MenuSelectStep.tsx
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FlatList,
   TouchableOpacity,
@@ -9,10 +9,10 @@ import {
   View,
   useWindowDimensions,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getStoreMenus } from "./services/api";
+import ResultModal from "../../../components/ResultModal";
 
 interface MenuData {
   id: number;
@@ -42,18 +42,43 @@ export default function MenuSelectStep({
   const { width } = useWindowDimensions();
   const [menuData, setMenuData] = useState<MenuData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+
+  // ResultModal (에러/안내)
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "failure">("failure");
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+  const openModal = useCallback(
+    (type: "success" | "failure", title: string, message: string) => {
+      setModalType(type);
+      setModalTitle(title);
+      setModalMessage(message);
+      setModalVisible(true);
+    },
+    []
+  );
+  const handleModalClose = () => setModalVisible(false);
+
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
         setLoading(true);
-        setError("");
 
-        const menus = await getStoreMenus(storeId, accessToken);
-        console.log("[MenuSelectStep] 받은 메뉴 데이터:", menus);
+        const sid = typeof storeId === "string" ? Number(storeId) : storeId;
+        if (!Number.isFinite(sid) || !accessToken) {
+          setMenuData([]);
+          openModal(
+            "failure",
+            "오류",
+            "가게 정보 또는 인증 정보를 확인할 수 없습니다."
+          );
+          return;
+        }
 
-        // ⭐ 메뉴 ID를 1부터 시작하도록 변환 (undefined나 0 처리)
-        const adjustedMenus = menus.map((menu, index) => ({
+        const menus = await getStoreMenus(sid, accessToken);
+
+        // id 없을 경우 카드 키 안정성 보장을 위해 fallback
+        const adjusted = menus.map((menu, index) => ({
           ...menu,
           id:
             menu.id === undefined || menu.id === null || menu.id === 0
@@ -61,37 +86,43 @@ export default function MenuSelectStep({
               : menu.id,
         }));
 
-        console.log("[MenuSelectStep] 조정된 메뉴 데이터:", adjustedMenus);
-        setMenuData(adjustedMenus);
+        setMenuData(adjusted);
       } catch (error: any) {
-        console.error("메뉴 데이터 가져오기 실패:", error);
-        setError(error.message || "메뉴를 불러오는데 실패했습니다.");
-        Alert.alert(
+        console.error("[MENU][SELECT] fetch error:", error);
+        openModal(
+          "failure",
           "오류",
-          "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요."
+          error?.message || "메뉴를 불러오는데 실패했습니다. 다시 시도해주세요."
         );
       } finally {
         setLoading(false);
       }
     };
 
-    if (storeId && accessToken) {
-      fetchMenuData();
-    }
-  }, [storeId, accessToken]);
+    if (storeId && accessToken) fetchMenuData();
+  }, [storeId, accessToken, openModal]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
         <ActivityIndicator size="large" color="#FF69B4" />
-        <Text style={{ marginTop: 10 }}>메뉴를 불러오는 중...</Text>
+        <Text style={{ marginTop: 10, color: "#333" }}>
+          메뉴를 불러오는 중...
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* 뒤로가기 버튼 */}
+      {/* 뒤로가기 */}
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
         <Ionicons name="chevron-back" size={width * 0.06} color="#1A1A1A" />
       </TouchableOpacity>
@@ -105,9 +136,15 @@ export default function MenuSelectStep({
 
       <FlatList
         data={menuData}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) => `${storeId}-${item.id}`} // ✅ id 기반으로 안정적 키
+        extraData={selected}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ paddingVertical: 60, alignItems: "center" }}>
+            <Text style={{ color: "#666" }}>등록된 메뉴가 없습니다.</Text>
+          </View>
+        }
         renderItem={({ item }) => {
           const isSel = selected.includes(item.id);
           return (
@@ -119,16 +156,22 @@ export default function MenuSelectStep({
               <Image
                 source={{
                   uri:
-                    item.imageUrl ??
-                    "https://via.placeholder.com/80?text=No+Img",
+                    item.imageUrl && item.imageUrl.length > 0
+                      ? item.imageUrl
+                      : "https://via.placeholder.com/80?text=No+Img",
                 }}
                 style={styles.menuImage}
+                resizeMode="cover"
               />
               <View style={styles.menuText}>
-                <Text style={styles.menuName}>{item.name}</Text>
-                <Text style={styles.menuDesc} numberOfLines={2}>
-                  {item.description}
+                <Text style={styles.menuName} numberOfLines={1}>
+                  {item.name}
                 </Text>
+                {!!item.description && (
+                  <Text style={styles.menuDesc} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                )}
               </View>
               <View
                 style={[styles.checkWrap, isSel && styles.checkWrapSelected]}
@@ -140,7 +183,7 @@ export default function MenuSelectStep({
         }}
       />
 
-      {/* 확인 버튼 */}
+      {/* 하단 확인 버튼 */}
       <View style={styles.absoluteBottom}>
         <TouchableOpacity
           style={[styles.button, !selected.length && styles.buttonDisabled]}
@@ -151,6 +194,15 @@ export default function MenuSelectStep({
           <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 공통 ResultModal */}
+      <ResultModal
+        visible={modalVisible}
+        type={modalType}
+        title={modalTitle}
+        message={modalMessage}
+        onClose={handleModalClose}
+      />
     </View>
   );
 }
@@ -198,7 +250,13 @@ const styles = StyleSheet.create({
     shadowColor: "#FF69B4",
     shadowOpacity: 0.15,
   },
-  menuImage: { width: 64, height: 64, borderRadius: 12, marginRight: 16 },
+  menuImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    marginRight: 16,
+    backgroundColor: "#F5F5F5",
+  },
   menuText: { flex: 1, paddingRight: 12 },
   menuName: {
     fontSize: 16,

@@ -1,6 +1,5 @@
-// WriteStep.tsx
-// WriteStep.tsx - 간소화 버전
-import React, { useState, useEffect } from "react";
+// WriteStep.tsx - 간소화 버전 (Android KAV 적용)
+import React, { useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -10,6 +9,8 @@ import {
   TextInput,
   StyleSheet,
   useWindowDimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
@@ -20,19 +21,19 @@ interface WriteProps {
   aiDone: boolean;
   text: string;
   onChange: (t: string) => void;
-  onNext: () => void; // ⭐ 상위 컴포넌트에서 API 호출 및 ResultModal 처리
+  onNext: () => void; // 상위에서 API/ResultModal 처리
   onBack: () => void;
   onClose: () => void;
   generatedAssetUrl?: string | null;
   generatedAssetType?: string | null;
-  
-  // 기타 props (검증 목적)
+
+  // 기타 props (호환성 유지용)
   reviewId?: number | null;
   reviewAssetId?: number | null;
   accessToken?: string;
   selectedMenuIds?: number[];
   storeId?: number;
-  onReviewComplete?: (reviewId: number) => void; // 사용하지 않지만 호환성 유지
+  onReviewComplete?: (reviewId: number) => void;
 }
 
 export default function WriteStep({
@@ -40,7 +41,7 @@ export default function WriteStep({
   aiDone,
   text,
   onChange,
-  onNext, // ⭐ 상위 컴포넌트의 API 호출 함수
+  onNext,
   onBack,
   onClose,
   generatedAssetUrl,
@@ -48,139 +49,136 @@ export default function WriteStep({
 }: WriteProps) {
   const { width } = useWindowDimensions();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // ⭐ 미리보기 모달 상태
+
+  // 미리보기 모달
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  
-  // ⭐ 게시 확인 모달 상태
+  // 게시 확인 모달
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  // AI 생성 완료 & 텍스트 리뷰 30자 이상 체크
   const canComplete = aiDone && text.trim().length >= 30 && !isSubmitting;
 
   const handleComplete = () => {
-    if (text.trim().length < 30) {
-      return;
-    }
-    
-    if (canComplete) {
-      setShowConfirmModal(true);
-    }
+    if (text.trim().length < 30) return;
+    if (canComplete) setShowConfirmModal(true);
   };
 
-  const handleModalCancel = () => {
-    setShowPreviewModal(false);
-  };
+  const handleModalCancel = () => setShowPreviewModal(false);
 
-  // ⭐ 게시 확인 모달 핸들러
   const handleConfirmModalConfirm = async () => {
     setShowConfirmModal(false);
     setIsSubmitting(true);
-    
     try {
-      // ⭐ 상위 컴포넌트의 onNext 함수 호출 (API 호출 및 ResultModal 처리)
-      await onNext();
-    } catch (error: any) {
-      console.error("[WriteStep] 리뷰 등록 실패:", error);
-      // 에러는 상위 컴포넌트에서 ResultModal로 처리
+      await onNext(); // 상위에서 ResultModal 처리
+    } catch (e) {
+      console.error("[WriteStep] 리뷰 등록 실패:", e);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleConfirmModalCancel = () => {
-    setShowConfirmModal(false);
-  };
+  const handleConfirmModalCancel = () => setShowConfirmModal(false);
 
-  // API 타입을 모달용 타입으로 변환
-  const getContentTypeForModal = (): "IMAGE" | "SHORTS_RAY_2" | "SHORTS_GEN_4" | null => {
-    if (!generatedAssetType) {
-      return null;
-    }
-    
-    if (["IMAGE", "SHORTS_RAY_2", "SHORTS_GEN_4"].includes(generatedAssetType)) {
+  // API 타입 → 모달용 타입
+  const getContentTypeForModal = ():
+    | "IMAGE"
+    | "SHORTS_RAY_2"
+    | "SHORTS_GEN_4"
+    | null => {
+    if (!generatedAssetType) return null;
+    if (["IMAGE", "SHORTS_RAY_2", "SHORTS_GEN_4"].includes(generatedAssetType))
       return generatedAssetType as "IMAGE" | "SHORTS_RAY_2" | "SHORTS_GEN_4";
-    }
-    
     return null;
   };
 
   const contentType = getContentTypeForModal();
-  const isVideo = contentType === "SHORTS_RAY_2" || contentType === "SHORTS_GEN_4";
+  const isVideo =
+    contentType === "SHORTS_RAY_2" || contentType === "SHORTS_GEN_4";
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={width * 0.06} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>리뷰 작성</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={width * 0.06} color="#333" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* AI 생성 상태 섹션 */}
-        <View style={styles.aiSection}>
-          <Text style={styles.sectionTitle}>
-            {isVideo ? "AI 쇼츠 생성" : "AI 이미지 생성"}
-          </Text>
-
-          {isGenerating && (
-            <View style={styles.loadingContainer}>
-              <LottieView
-                source={require("../../../../assets/AI-loading.json")}
-                autoPlay
-                loop
-                style={styles.lottie}
-                duration={5000}
-              />
-              <Text style={styles.loadingText}>
-                {isVideo ? "AI 쇼츠를 생성중입니다..." : "AI 이미지를 생성중입니다..."}
-              </Text>
-              <Text style={styles.loadingSubText}>
-                {isVideo ? "쇼츠 생성에는 2~5분 정도 소요됩니다" : "이미지 생성에는 1~3분 정도 소요됩니다"}
-              </Text>
-            </View>
-          )}
-
-          {aiDone && (
-            <View style={styles.aiCompleteContainer}>
-              <View style={styles.aiCompleteIcon}>
-                <Text style={styles.checkIcon}>✓</Text>
-              </View>
-              <Text style={styles.aiCompleteText}>
-                {isVideo ? "AI 쇼츠 생성이 완료되었습니다!" : "AI 이미지 생성이 완료되었습니다!"}
-              </Text>
-              <Text style={styles.aiCompleteSubText}>
-                생성된 결과를 확인하고 텍스트 리뷰를 작성해주세요
-              </Text>
-              {generatedAssetUrl && (
-                <TouchableOpacity 
-                  style={styles.previewButton}
-                  onPress={() => setShowPreviewModal(true)}
-                >
-                  <Text style={styles.previewButtonText}>
-                    {isVideo ? "쇼츠 미리보기" : "이미지 미리보기"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+      {/* Android에서만 KAV 동작하도록 설정 (iOS 미사용) */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "android" ? "height" : undefined}
+        keyboardVerticalOffset={0}
+      >
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={width * 0.06} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.title}>리뷰 작성</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={width * 0.06} color="#333" />
+          </TouchableOpacity>
         </View>
 
-        {/* 텍스트 리뷰 작성 섹션 */}
-        <View style={styles.textSection}>
-          <Text style={styles.sectionTitle}>텍스트 리뷰 작성</Text>
-          <Text style={styles.sectionSubtitle}>
-            최소 30자 이상 작성해주세요
-          </Text>
-          <TextInput
-            style={styles.textInput}
-            multiline
-            placeholder={`가게 음식에 대한 리뷰를 자유롭게 작성해주세요!
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* AI 생성 상태 */}
+          <View style={styles.aiSection}>
+            <Text style={styles.sectionTitle}>
+              {isVideo ? "AI 쇼츠 생성" : "AI 이미지 생성"}
+            </Text>
+
+            {isGenerating && (
+              <View style={styles.loadingContainer}>
+                <LottieView
+                  source={require("../../../../assets/AI-loading.json")}
+                  autoPlay
+                  loop
+                  style={styles.lottie}
+                  duration={5000}
+                />
+                <Text style={styles.loadingText}>
+                  {isVideo
+                    ? "AI 쇼츠를 생성중입니다..."
+                    : "AI 이미지를 생성중입니다..."}
+                </Text>
+                <Text style={styles.loadingSubText}>
+                  {isVideo
+                    ? "쇼츠 생성에는 2~5분 정도 소요됩니다"
+                    : "이미지 생성에는 1~3분 정도 소요됩니다"}
+                </Text>
+              </View>
+            )}
+
+            {aiDone && (
+              <View style={styles.aiCompleteContainer}>
+                <View style={styles.aiCompleteIcon}>
+                  <Text style={styles.checkIcon}>✓</Text>
+                </View>
+                <Text style={styles.aiCompleteText}>
+                  {isVideo
+                    ? "AI 쇼츠 생성이 완료되었습니다!"
+                    : "AI 이미지 생성이 완료되었습니다!"}
+                </Text>
+                <Text style={styles.aiCompleteSubText}>
+                  생성된 결과를 확인하고 텍스트 리뷰를 작성해주세요
+                </Text>
+                {generatedAssetUrl && (
+                  <TouchableOpacity
+                    style={styles.previewButton}
+                    onPress={() => setShowPreviewModal(true)}
+                  >
+                    <Text style={styles.previewButtonText}>
+                      {isVideo ? "쇼츠 미리보기" : "이미지 미리보기"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* 텍스트 리뷰 */}
+          <View style={styles.textSection}>
+            <Text style={styles.sectionTitle}>텍스트 리뷰 작성</Text>
+            <Text style={styles.sectionSubtitle}>
+              최소 30자 이상 작성해주세요
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              placeholder={`가게 음식에 대한 리뷰를 자유롭게 작성해주세요!
 
 예시:
 - 음식의 맛, 양, 가격에 대한 솔직한 평가
@@ -188,84 +186,99 @@ export default function WriteStep({
 - 다른 고객들에게 도움이 될 정보
 
 최소 30자 이상 작성해야 리뷰를 등록할 수 있습니다.`}
-            placeholderTextColor="#999999"
-            textAlignVertical="top"
-            value={text}
-            onChangeText={onChange}
-            maxLength={500}
-            editable={!isSubmitting}
-          />
+              placeholderTextColor="#999999"
+              textAlignVertical="top"
+              value={text}
+              onChangeText={onChange}
+              maxLength={500}
+              editable={!isSubmitting}
+            />
 
-          <View style={styles.textCounter}>
-            <Text style={[
-              styles.counterText,
-              text.length < 30 && styles.counterTextWarning
-            ]}>
-              {text.length}/500 {text.length < 30 ? `(${30 - text.length}자 더 필요)` : ''}
-            </Text>
+            <View style={styles.textCounter}>
+              <Text
+                style={[
+                  styles.counterText,
+                  text.length < 30 && styles.counterTextWarning,
+                ]}
+              >
+                {text.length}/500{" "}
+                {text.length < 30 ? `(${30 - text.length}자 더 필요)` : ""}
+              </Text>
+            </View>
           </View>
+        </ScrollView>
+
+        {/* 하단 완료 버튼 (KAV 내부에 두어 키보드 위로 올라오게) */}
+        <View style={styles.bottom}>
+          <TouchableOpacity
+            style={[
+              styles.completeButton,
+              !canComplete && styles.completeButtonDisabled,
+            ]}
+            onPress={handleComplete}
+            disabled={!canComplete}
+            activeOpacity={canComplete ? 0.7 : 1}
+          >
+            <Text style={styles.completeButtonText}>
+              {isSubmitting
+                ? "리뷰 등록 중..."
+                : !aiDone
+                ? isVideo
+                  ? "AI 쇼츠 생성 중..."
+                  : "AI 이미지 생성 중..."
+                : text.length < 30
+                ? `텍스트 리뷰 ${30 - text.length}자 더 입력해주세요`
+                : "리뷰 등록하기"}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
 
-      {/* 하단 완료 버튼 */}
-      <View style={styles.bottom}>
-        <TouchableOpacity
-          style={[
-            styles.completeButton,
-            !canComplete && styles.completeButtonDisabled,
-          ]}
-          onPress={handleComplete}
-          disabled={!canComplete}
-          activeOpacity={canComplete ? 0.7 : 1}
-        >
-          <Text style={styles.completeButtonText}>
-            {isSubmitting
-              ? "리뷰 등록 중..."
-              : !aiDone
-              ? isVideo ? "AI 쇼츠 생성 중..." : "AI 이미지 생성 중..."
-              : text.length < 30
-              ? `텍스트 리뷰 ${30 - text.length}자 더 입력해주세요`
-              : "리뷰 등록하기"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* 미리보기 모달 */}
+        <AICompleteModal
+          visible={showPreviewModal}
+          onClose={handleModalCancel}
+          generatedContent={generatedAssetUrl}
+          contentType={contentType}
+          title={
+            contentType === "SHORTS_RAY_2"
+              ? "예쁜 쇼츠 미리보기"
+              : contentType === "SHORTS_GEN_4"
+              ? "빠른 쇼츠 미리보기"
+              : "AI 이미지 미리보기"
+          }
+          subtitle="생성된 결과를 확인해보세요."
+          confirmButtonText="확인"
+          cancelButtonText=""
+          onConfirm={handleModalCancel}
+          onCancel={handleModalCancel}
+        />
 
-      {/* 미리보기 모달 */}
-      <AICompleteModal
-        visible={showPreviewModal}
-        onClose={handleModalCancel}
-        generatedContent={generatedAssetUrl}
-        contentType={contentType}
-        title={contentType === "SHORTS_RAY_2" ? "예쁜 쇼츠 미리보기" : contentType === "SHORTS_GEN_4" ? "빠른 쇼츠 미리보기" : "AI 이미지 미리보기"}
-        subtitle="생성된 결과를 확인해보세요."
-        confirmButtonText="확인"
-        cancelButtonText=""
-        onConfirm={handleModalCancel}
-        onCancel={handleModalCancel}
-      />
-
-      {/* 게시 확인 모달 */}
-      <AICompleteModal
-        visible={showConfirmModal}
-        onClose={handleConfirmModalCancel}
-        generatedContent={generatedAssetUrl}
-        contentType={contentType}
-        title={contentType === "SHORTS_RAY_2" ? "예쁜 쇼츠 생성 완료!" : contentType === "SHORTS_GEN_4" ? "빠른 쇼츠 생성 완료!" : "AI 이미지 생성 완료!"}
-        subtitle="생성된 리뷰를 게시하시겠습니까?"
-        confirmButtonText="게시하기"
-        cancelButtonText="취소"
-        onConfirm={handleConfirmModalConfirm}
-        onCancel={handleConfirmModalCancel}
-      />
+        {/* 게시 확인 모달 */}
+        <AICompleteModal
+          visible={showConfirmModal}
+          onClose={handleConfirmModalCancel}
+          generatedContent={generatedAssetUrl}
+          contentType={contentType}
+          title={
+            contentType === "SHORTS_RAY_2"
+              ? "예쁜 쇼츠 생성 완료!"
+              : contentType === "SHORTS_GEN_4"
+              ? "빠른 쇼츠 생성 완료!"
+              : "AI 이미지 생성 완료!"
+          }
+          subtitle="생성된 리뷰를 게시하시겠습니까?"
+          confirmButtonText="게시하기"
+          cancelButtonText="취소"
+          onConfirm={handleConfirmModalConfirm}
+          onCancel={handleConfirmModalCancel}
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -283,21 +296,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
+  title: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
   closeButton: {
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
-  content: {
-    flex: 1,
-    backgroundColor: "#F7F8F9",
-  },
+  content: { flex: 1, backgroundColor: "#F7F8F9" },
   aiSection: {
     backgroundColor: "#FFFFFF",
     marginBottom: 12,
@@ -310,34 +316,17 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 10,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: "#666666",
-    marginBottom: 20,
-  },
-  loadingContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  lottie: {
-    width: 200,
-    height: 200,
-    marginBottom: 16,
-  },
+  sectionSubtitle: { fontSize: 14, color: "#666666", marginBottom: 20 },
+  loadingContainer: { alignItems: "center", paddingVertical: 20 },
+  lottie: { width: 200, height: 200, marginBottom: 16 },
   loadingText: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
     marginBottom: 4,
   },
-  loadingSubText: {
-    fontSize: 14,
-    color: "#666666",
-  },
-  aiCompleteContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-  },
+  loadingSubText: { fontSize: 14, color: "#666666" },
+  aiCompleteContainer: { alignItems: "center", paddingVertical: 20 },
   aiCompleteIcon: {
     width: 60,
     height: 60,
@@ -347,11 +336,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  checkIcon: {
-    fontSize: 24,
-    color: "#FF69B4",
-    fontWeight: "bold",
-  },
+  checkIcon: { fontSize: 24, color: "#FF69B4", fontWeight: "bold" },
   aiCompleteText: {
     fontSize: 16,
     fontWeight: "600",
@@ -370,11 +355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
   },
-  previewButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  previewButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
   textSection: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
@@ -393,18 +374,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlignVertical: "top",
   },
-  textCounter: {
-    alignItems: "flex-end",
-    marginTop: 8,
-  },
-  counterText: {
-    fontSize: 12,
-    color: "#999999",
-  },
-  counterTextWarning: {
-    color: "#FF6B6B",
-    fontWeight: "600",
-  },
+  textCounter: { alignItems: "flex-end", marginTop: 8 },
+  counterText: { fontSize: 12, color: "#999999" },
+  counterTextWarning: { color: "#FF6B6B", fontWeight: "600" },
   bottom: {
     position: "absolute",
     bottom: 0,
@@ -432,9 +404,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  completeButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  completeButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 });

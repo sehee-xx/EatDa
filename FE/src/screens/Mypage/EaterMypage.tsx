@@ -1,4 +1,4 @@
-import React, { useState , useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
 import { SPACING } from "../../constants/theme";
 import StatsCard from "../../components/StatsCard";
@@ -30,7 +30,8 @@ export default function EaterMypage({
   const [showDetail, setShowDetail] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("myReviews");
 
-  // Eater 전용 데이터 개수 계산 (TabKey 순서로 정리)
+  // --- 상태 추가 ---
+  const [nickname, setNickname] = useState("정보 로딩중..."); // 닉네임 상태 추가
   const [reviewCount, setReviewCount] = useState(0);
   const [scrapCount, setScrapCount] = useState(0);
   const [menuPosterCount, setMenuPosterCount] = useState(0);
@@ -46,6 +47,9 @@ export default function EaterMypage({
         console.log("[USER-STATS][UI] fetch:start");
         const stats = await getMyUserStats();
         if (!mounted) return;
+
+        // --- 상태 업데이트 수정 ---
+        setNickname(stats.nickname || "사용자"); // 닉네임 설정
         setReviewCount(Number(stats.reviewCount || 0));
         setScrapCount(Number(stats.scrapCount || 0));
         setMenuPosterCount(Number(stats.menuPosterCount || 0));
@@ -54,6 +58,7 @@ export default function EaterMypage({
         if (!mounted) return;
         console.error("[USER-STATS][UI] fetch:error", e);
         setStatsError(e?.message || "요약 정보를 불러오지 못했습니다.");
+        setNickname("정보 로딩 실패"); // 에러 발생 시 닉네임 처리
       } finally {
         if (!mounted) return;
         setStatsLoading(false);
@@ -101,7 +106,8 @@ export default function EaterMypage({
           <Image source={backgroundImage} style={styles.backgroundImage} />
 
           <View style={styles.profileContent}>
-            <MypageProfile userRole="eater" nickname="Sei" />
+            {/* --- MypageProfile 수정 --- */}
+            <MypageProfile userRole="eater" nickname={nickname} />
           </View>
 
           {/* 통계 카드들 - 타입으로 라벨 결정 */}

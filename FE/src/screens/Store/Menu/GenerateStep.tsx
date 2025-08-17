@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/screens/Store/Menu/GenerateStep.tsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ScrollView,
   View,
@@ -7,23 +8,36 @@ import {
   TextInput,
   StyleSheet,
   useWindowDimensions,
-  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ImageUploader from "../../../components/ImageUploader";
 import { requestMenuPosterAsset } from "./services/api";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { normalizeImageForUpload } from "../../../utils/normalizeImage";
+import ResultModal from "../../../components/ResultModal";
 
 interface GenPropsFromRoute {
   storeId: number;
   selectedMenuIds: number[];
+  storeName: string;
 }
+
+type ResultState = {
+  visible: boolean;
+  type: "success" | "failure";
+  title?: string;
+  message: string;
+  onClose?: () => void;
+};
 
 export default function GenerateStep() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { storeId, selectedMenuIds } = (route?.params ||
+  const { storeId, selectedMenuIds, storeName } = (route?.params ||
     {}) as GenPropsFromRoute;
 
   const { width } = useWindowDimensions();
@@ -36,33 +50,87 @@ export default function GenerateStep() {
   ]);
   const [loading, setLoading] = useState(false);
 
+  // 키보드 열림 감지 (Android)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
-    const newImages: (string | null)[] = [null, null, null];
-    uploadedImages.forEach((img, index) => {
-      if (index < 3) newImages[index] = img;
+    if (Platform.OS !== "android") return;
+    const showSub = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardOpen(true)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardOpen(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // ResultModal 상태
+  const [result, setResult] = useState<ResultState>({
+    visible: false,
+    type: "failure",
+    title: undefined,
+    message: "",
+  });
+
+  const showFailure = (message: string, title?: string) => {
+    setResult({
+      visible: true,
+      type: "failure",
+      title,
+      message,
+      onClose: () => setResult((p) => ({ ...p, visible: false })),
     });
-    setLocalImages(newImages);
+  };
+
+  const showSuccess = (
+    message: string,
+    title?: string,
+    onClose?: () => void
+  ) => {
+    setResult({
+      visible: true,
+      type: "success",
+      title,
+      message,
+      onClose:
+        onClose ??
+        (() => {
+          setResult((p) => ({ ...p, visible: false }));
+        }),
+    });
+  };
+
+  useEffect(() => {
+    const next: (string | null)[] = [null, null, null];
+    uploadedImages.forEach((img, i) => {
+      if (i < 3) next[i] = img;
+    });
+    setLocalImages(next);
   }, [uploadedImages]);
 
   const handleAddImage = (index: number, imageUrl: string) => {
-    const newImages = [...localImages];
-    newImages[index] = imageUrl;
-    setLocalImages(newImages);
-    setUploadedImages((prev) => {
-      const copy = [...prev];
-      return [...copy, imageUrl];
-    });
+    if (loading) return;
+    const next = [...localImages];
+    next[index] = imageUrl;
+    setLocalImages(next);
+    setUploadedImages((prev) => [...prev, imageUrl]);
   };
 
   const handleRemoveImage = (index: number) => {
-    const newImages = [...localImages];
-    newImages[index] = null;
-    setLocalImages(newImages);
+    if (loading) return;
+    const next = [...localImages];
+    next[index] = null;
+    setLocalImages(next);
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const hasImages = localImages.some((img) => img !== null);
-  const isDisabled = !hasImages || !prompt.trim();
+  const hasImages = useMemo(
+    () => localImages.some((img) => img !== null),
+    [localImages]
+  );
+  const isDisabled = !hasImages || !prompt.trim() || loading;
 
   const handleConfirm = async () => {
     if (
@@ -70,7 +138,7 @@ export default function GenerateStep() {
       !Array.isArray(selectedMenuIds) ||
       selectedMenuIds.length === 0
     ) {
-      Alert.alert("오류", "가게/메뉴 선택 정보가 없습니다.");
+      showFailure("가게/메뉴 선택 정보가 없습니다.", "요청 실패");
       return;
     }
     if (isDisabled) return;
@@ -88,7 +156,7 @@ export default function GenerateStep() {
       );
 
       if (!files.length) {
-        Alert.alert("오류", "최소 1장의 이미지를 첨부해주세요.");
+        showFailure("최소 1장의 이미지를 첨부해주세요.", "요청 실패");
         return;
       }
 
@@ -115,10 +183,8 @@ export default function GenerateStep() {
       const res: any = await requestMenuPosterAsset(formData, {
         filesForLog: files,
       });
-
       console.log("[GenerateStep] FULL RESPONSE", JSON.stringify(res, null, 2));
 
-      // ★ 핵심: 생성 응답에서 assetId(=menuPosterAssetId 추론값)를 우선 확보
       const assetId: number | undefined =
         res?.menuPosterAssetId ??
         res?.assetId ??
@@ -127,26 +193,28 @@ export default function GenerateStep() {
         res?.raw?.data?.menuPosterId;
 
       if (typeof assetId !== "number") {
-        Alert.alert("오류", "assetId를 찾지 못했습니다.");
+        showFailure("assetId를 찾지 못했습니다.", "응답 파싱 실패");
         return;
       }
 
-      // 실제 menuPosterId가 별도로 온다면 같이 전달(없으면 undefined 그대로)
       const posterId: number | undefined =
         res?.menuPosterId ??
         res?.raw?.data?.realMenuPosterId ??
         res?.raw?.data?.menuPosterIdReal;
 
-      navigation.navigate("MenuPosterWriteStep", {
-        assetId,
-        menuPosterId: posterId,
+      showSuccess("메뉴판 생성 요청이 접수되었습니다.", "요청 완료", () => {
+        setResult((p) => ({ ...p, visible: false }));
+        navigation.navigate("MenuPosterWriteStep", {
+          assetId,
+          menuPosterId: posterId,
+          storeName,
+          storeId,
+        });
       });
     } catch (err: any) {
       console.error("[GenerateStep] Asset Request Error:", err);
-      Alert.alert(
-        "오류",
-        err.message || "메뉴판 생성 요청 중 문제가 발생했습니다."
-      );
+      const msg = err?.message || "메뉴판 생성 요청 중 문제가 발생했습니다.";
+      showFailure(msg, "요청 실패");
     } finally {
       setLoading(false);
     }
@@ -165,15 +233,33 @@ Best 5 메뉴판에 선정되면 특별한 혜택이 주어집니다-!
 모두가 쾌적한 메뉴판 생성 문화를 경험할 수 있도록 배려해 주세요`;
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      enabled={Platform.OS === "android"}
+      behavior="height"
+    >
+      {/* 뒤로가기 */}
       <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
+        onPress={loading ? undefined : () => navigation.goBack()}
+        style={[styles.backButton, loading && styles.backButtonDisabled]}
+        disabled={loading}
       >
-        <Ionicons name="chevron-back" size={width * 0.06} color="#1A1A1A" />
+        <Ionicons
+          name="chevron-back"
+          size={width * 0.06}
+          color={loading ? "#999" : "#1A1A1A"}
+        />
       </TouchableOpacity>
 
-      <ScrollView style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingBottom: keyboardOpen ? 24 : 140, // 키보드 열리면 여백 축소
+        }}
+        keyboardDismissMode="on-drag"
+        onScrollBeginDrag={() => Keyboard.dismiss()}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>메뉴판 생성</Text>
           <Text style={styles.subtitle}>
@@ -189,6 +275,7 @@ Best 5 메뉴판에 선정되면 특별한 혜택이 주어집니다-!
             onRemoveImage={handleRemoveImage}
             maxImages={3}
             accentColor="#FF69B4"
+            disabled={loading}
           />
         </View>
 
@@ -197,37 +284,69 @@ Best 5 메뉴판에 선정되면 특별한 혜택이 주어집니다-!
             생성할 메뉴판의 내용을 구체적으로 작성해주세요
           </Text>
           <TextInput
-            style={styles.promptInput}
+            style={[styles.promptInput, loading && styles.promptInputDisabled]}
             multiline
             placeholder={placeholderText}
             placeholderTextColor="#999999"
             textAlignVertical="top"
             value={prompt}
-            onChangeText={setPrompt}
-            scrollEnabled={true}
+            onChangeText={loading ? undefined : setPrompt}
+            scrollEnabled
             numberOfLines={10}
+            editable={!loading}
+            returnKeyType="done"
+            blurOnSubmit
+            onSubmitEditing={Keyboard.dismiss}
           />
         </View>
       </ScrollView>
 
-      <View style={styles.bottom}>
+      {/* 하단 버튼: 키보드 열리면 absolute 해제 */}
+      <View
+        style={[
+          styles.bottom,
+          keyboardOpen ? { position: "relative", paddingBottom: 16 } : null,
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.button, isDisabled && styles.buttonDisabled]}
-          onPress={handleConfirm}
+          style={[
+            styles.button,
+            (isDisabled || loading) && styles.buttonDisabled,
+          ]}
+          onPress={isDisabled ? () => {} : handleConfirm}
           disabled={isDisabled || loading}
           activeOpacity={isDisabled ? 1 : 0.7}
         >
-          <Text style={styles.buttonText}>
-            {loading ? "요청 중..." : "확인"}
-          </Text>
+          {loading ? (
+            <View style={styles.loadingButtonContent}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                요청 중...
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.buttonText}>확인</Text>
+          )}
         </TouchableOpacity>
       </View>
-    </>
+
+      {/* 결과 모달 */}
+      <ResultModal
+        visible={result.visible}
+        type={result.type}
+        title={result.title}
+        message={result.message}
+        onClose={
+          result.onClose || (() => setResult((p) => ({ ...p, visible: false })))
+        }
+      />
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   backButton: { position: "absolute", top: 40, left: 16, zIndex: 10 },
+  backButtonDisabled: { opacity: 0.5 },
   scroll: { flex: 1, backgroundColor: "#F7F8F9" },
   header: {
     paddingTop: 60,
@@ -273,6 +392,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlignVertical: "top",
   },
+  promptInputDisabled: { backgroundColor: "#F5F5F5", color: "#999" },
   bottom: {
     position: "absolute",
     bottom: 0,
@@ -301,4 +421,5 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  loadingButtonContent: { flexDirection: "row", alignItems: "center" },
 });

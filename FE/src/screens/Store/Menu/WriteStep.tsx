@@ -1,3 +1,4 @@
+// src/screens/Store/Menu/WriteStep.tsx
 import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
@@ -9,8 +10,10 @@ import {
   StyleSheet,
   useWindowDimensions,
   Image,
-  Alert,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -20,13 +23,24 @@ import {
   finalizeMenuPoster,
   waitForAssetIdByMenuPoster,
 } from "./services/api";
+import CompleteModal from "./CompleteModal";
+import ResultModal from "../../../components/ResultModal";
 
 const LOADING_JSON = require("../../../../assets/AI-loading.json");
 
 type RouteParams = {
-  menuPosterId?: number;
+  menuPosterId?: number; // 없으면 assetId를 대체키로 사용
   assetId?: number;
   storeName?: string;
+  storeId?: number;
+};
+
+type ResultState = {
+  visible: boolean;
+  type: "success" | "failure";
+  title?: string;
+  message: string;
+  onClose?: () => void;
 };
 
 export default function WriteStep() {
@@ -36,6 +50,7 @@ export default function WriteStep() {
     menuPosterId,
     assetId: assetIdFromRoute,
     storeName,
+    storeId, // ✅ 가게 페이지로 이동용
   } = (route?.params || {}) as RouteParams;
 
   const { width } = useWindowDimensions();
@@ -52,6 +67,46 @@ export default function WriteStep() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // ✅ finalize 후 전송 모달 제어
+  const [modalVisible, setModalVisible] = useState(false);
+  const [finalizedPosterId, setFinalizedPosterId] = useState<number | null>(
+    null
+  );
+
+  // ✅ ResultModal 상태 (Alert 대체)
+  const [result, setResult] = useState<ResultState>({
+    visible: false,
+    type: "failure",
+    title: undefined,
+    message: "",
+  });
+  const showFailure = (message: string, title?: string) => {
+    setResult({
+      visible: true,
+      type: "failure",
+      title,
+      message,
+      onClose: () => setResult((p) => ({ ...p, visible: false })),
+    });
+  };
+
+  // ✅ KAV: Android에서 키보드 열림 감지 → 하단 버튼 가림 방지
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const showSub = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardOpen(true)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardOpen(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // 1) assetId 없으면 menuPosterId로 조회해서 확보
   useEffect(() => {
     let cancelled = false;
 
@@ -89,6 +144,7 @@ export default function WriteStep() {
     };
   }, [menuPosterId, assetId]);
 
+  // 2) assetId 준비되면 결과 폴링
   useEffect(() => {
     const id = assetId;
     if (id == null) return;
@@ -139,22 +195,23 @@ export default function WriteStep() {
 
   const canComplete = aiDone && text.trim().length >= 30 && !!generatedImageUrl;
 
+  // 3) 작성 완료 → finalize만 수행하고, 성공 시 전송 모달 오픈
   const handleComplete = async () => {
     if (!canComplete || typeof assetId !== "number") {
       if (!aiDone || !generatedImageUrl) {
-        Alert.alert("대기", "이미지 준비가 아직 완료되지 않았습니다.");
+        showFailure("이미지 준비가 아직 완료되지 않았습니다.", "대기");
       } else {
-        Alert.alert("안내", "설명을 30자 이상 작성해주세요.");
+        showFailure("설명을 30자 이상 작성해주세요.", "안내");
       }
       return;
     }
 
-    // 핵심: menuPosterId가 없으면 assetId를 menuPosterId로 사용
+    // menuPosterId가 없으면 assetId를 대체키로 사용(백에서 동일 키 운용 가정)
     const posterIdForFinalize =
       typeof menuPosterId === "number" ? menuPosterId : assetId;
 
     if (typeof posterIdForFinalize !== "number") {
-      Alert.alert("오류", "menuPosterId를 확인할 수 없습니다.");
+      showFailure("menuPosterId를 확인할 수 없습니다.", "오류");
       return;
     }
 
@@ -162,22 +219,23 @@ export default function WriteStep() {
       setSaving(true);
       console.log("[WriteStep][FINALIZE] request", {
         menuPosterId: posterIdForFinalize,
-        assetId,
         descLen: text.trim().length,
       });
 
       await finalizeMenuPoster({
-        menuPosterId: posterIdForFinalize, // ← fallback 적용됨
+        menuPosterId: posterIdForFinalize,
         description: text.trim(),
         type: "IMAGE",
       });
 
       console.log("[WriteStep][FINALIZE] success");
-      Alert.alert("완료", "메뉴판이 저장되었습니다.");
-      navigation.goBack();
+
+      // ✅ 성공 시 모달 오픈 & posterId 저장
+      setFinalizedPosterId(posterIdForFinalize);
+      setModalVisible(true);
     } catch (e: any) {
       console.log("[WriteStep][FINALIZE] error", e?.message || String(e));
-      Alert.alert("오류", e?.message || "최종 저장에 실패했습니다.");
+      showFailure(e?.message || "최종 저장에 실패했습니다.", "오류");
     } finally {
       setSaving(false);
     }
@@ -188,121 +246,192 @@ export default function WriteStep() {
       menuPosterId,
       storeName,
       assetId: assetIdFromRoute,
+      storeId,
     });
   };
 
+  // 모달 닫기 시: 네비게이션 없이 모달만 닫기 (중복 pop 방지)
+  const handleModalClose = () => {
+    setModalVisible(false);
+  };
+
+  // 모달에서 전송 성공 시: 가게 페이지로 이동
+  const handleModalSent = () => {
+    setModalVisible(false);
+    if (typeof storeId === "number") {
+      navigation.navigate("StoreScreen", {
+        storeId,
+        storeName,
+      });
+    } else {
+      navigation.goBack();
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={width * 0.06} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{storeName || "햄찌네 피자"}</Text>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.closeButton}
-        >
-          <Ionicons name="close" size={width * 0.06} color="#333" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.aiSection}>
-          <Text style={styles.sectionTitle}>AI 포스터 생성</Text>
-
-          {!!errorMsg && (
-            <View style={{ alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ color: "#D00", marginBottom: 10 }}>
-                {errorMsg}
-              </Text>
-              <TouchableOpacity onPress={handleRetry} style={styles.retryBtn}>
-                <Text style={styles.retryText}>다시 시도</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {isGenerating && !errorMsg && (
-            <View style={styles.loadingContainer}>
-              <LottieView
-                source={LOADING_JSON}
-                autoPlay
-                loop
-                style={styles.lottie}
-              />
-              <Text style={styles.loadingText}>
-                {typeof assetId === "number"
-                  ? "AI 포스터를 생성중입니다..."
-                  : "요청 접수 완료, 대기 중..."}
-              </Text>
-              <Text style={styles.loadingSubText}>
-                약간의 시간이 소요됩니다
-              </Text>
-            </View>
-          )}
-
-          {aiDone && generatedImageUrl && (
-            <View style={styles.aiCompleteContainer}>
-              <Image
-                source={{ uri: generatedImageUrl }}
-                style={styles.generatedImage}
-              />
-              <Text style={styles.aiCompleteText}>
-                AI 포스터 생성이 완료되었습니다!
-              </Text>
-              <Text style={styles.aiCompleteSubText}>
-                아래에 메뉴판 설명을 작성해주세요
-              </Text>
-            </View>
-          )}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      enabled={Platform.OS === "android"}
+      behavior="height"
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={width * 0.06} color="#333" />
+          </TouchableOpacity>
+          {/* 하드코딩 제거: 실제 라우트에서 받은 가게명 표시 */}
+          <Text style={styles.title}>{storeName ?? ""}</Text>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.closeButton}
+          >
+            <Ionicons name="close" size={width * 0.06} color="#333" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.textSection}>
-          <Text style={styles.sectionTitle}>메뉴판 설명 작성</Text>
-          <TextInput
-            style={styles.textInput}
-            multiline
-            placeholder={`메뉴판에 대한 설명을 자유롭게 작성해주세요 (30자 이상)`}
-            placeholderTextColor="#999999"
-            textAlignVertical="top"
-            value={text}
-            onChangeText={setText}
-            maxLength={500}
-          />
-          <View style={styles.textCounter}>
-            <Text style={styles.counterText}>{text.trim().length}/500</Text>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: keyboardOpen ? 24 : 120 }}
+          keyboardDismissMode="on-drag"
+          onScrollBeginDrag={() => Keyboard.dismiss()}
+        >
+          <View style={styles.aiSection}>
+            <Text style={styles.sectionTitle}>AI 포스터 생성</Text>
+
+            {!!errorMsg && (
+              <View style={{ alignItems: "center", paddingVertical: 16 }}>
+                <Text style={{ color: "#D00", marginBottom: 10 }}>
+                  {errorMsg}
+                </Text>
+                <TouchableOpacity onPress={handleRetry} style={styles.retryBtn}>
+                  <Text style={styles.retryText}>다시 시도</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isGenerating && !errorMsg && (
+              <View style={styles.loadingContainer}>
+                <LottieView
+                  source={LOADING_JSON}
+                  autoPlay
+                  loop
+                  style={styles.lottie}
+                />
+                <Text style={styles.loadingText}>
+                  {typeof assetId === "number"
+                    ? "AI 포스터를 생성중입니다..."
+                    : "요청 접수 완료, 대기 중..."}
+                </Text>
+                <Text style={styles.loadingSubText}>
+                  약간의 시간이 소요됩니다
+                </Text>
+              </View>
+            )}
+
+            {aiDone && generatedImageUrl && (
+              <View style={styles.aiCompleteContainer}>
+                <Image
+                  source={{ uri: generatedImageUrl }}
+                  style={styles.generatedImage}
+                  onError={(e) =>
+                    console.log("Generated image load error:", e.nativeEvent)
+                  }
+                />
+                <Text style={styles.aiCompleteText}>
+                  AI 포스터 생성이 완료되었습니다!
+                </Text>
+                <Text style={styles.aiCompleteSubText}>
+                  아래에 메뉴판 설명을 작성해주세요
+                </Text>
+              </View>
+            )}
           </View>
-        </View>
-      </ScrollView>
 
-      <View style={styles.bottom}>
-        <TouchableOpacity
+          <View style={styles.textSection}>
+            <Text style={styles.sectionTitle}>메뉴판 설명 작성</Text>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              placeholder={`메뉴판에 대한 설명을 자유롭게 작성해주세요 (30자 이상)`}
+              placeholderTextColor="#999999"
+              textAlignVertical="top"
+              value={text}
+              onChangeText={setText}
+              maxLength={500}
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+              editable={!saving}
+            />
+            <View style={styles.textCounter}>
+              <Text style={styles.counterText}>{text.trim().length}/500</Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View
           style={[
-            styles.completeButton,
-            (!canComplete || saving) && styles.completeButtonDisabled,
+            styles.bottom,
+            keyboardOpen ? { position: "relative", paddingBottom: 16 } : null,
           ]}
-          onPress={handleComplete}
-          disabled={!canComplete || saving}
-          activeOpacity={canComplete && !saving ? 0.7 : 1}
         >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.completeButtonText}>
-              {!aiDone
-                ? typeof assetId === "number"
-                  ? "AI 포스터 생성 중..."
-                  : "대기 중..."
-                : text.trim().length < 30
-                ? "설명을 30자 이상 작성해주세요"
-                : "작성 완료"}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <TouchableOpacity
+            style={[
+              styles.completeButton,
+              (!canComplete || saving) && styles.completeButtonDisabled,
+            ]}
+            onPress={handleComplete}
+            disabled={!canComplete || saving}
+            activeOpacity={canComplete && !saving ? 0.7 : 1}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.completeButtonText}>
+                {!aiDone
+                  ? typeof assetId === "number"
+                    ? "AI 포스터 생성 중..."
+                    : "대기 중..."
+                  : text.trim().length < 30
+                  ? "설명을 30자 이상 작성해주세요"
+                  : "작성 완료"}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* ✅ 전송 여부 묻는 모달 */}
+        <CompleteModal
+          visible={modalVisible}
+          onClose={handleModalClose}
+          generatedContent={generatedImageUrl ?? undefined}
+          menuInfo={storeName}
+          contentType="image"
+          menuPosterId={
+            finalizedPosterId ??
+            (typeof menuPosterId === "number" ? menuPosterId : assetId ?? 0)
+          }
+          onSent={handleModalSent}
+        />
+
+        {/* ✅ ResultModal (Alert 대체) */}
+        <ResultModal
+          visible={result.visible}
+          type={result.type}
+          title={result.title}
+          message={result.message}
+          onClose={
+            result.onClose ||
+            (() => setResult((p) => ({ ...p, visible: false })))
+          }
+        />
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

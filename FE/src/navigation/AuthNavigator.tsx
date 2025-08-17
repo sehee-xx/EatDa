@@ -47,7 +47,12 @@ export type AuthStackParamList = {
   StoreClusteringScreen: undefined;
   StoreClustering: undefined;
   ActiveEventScreen: undefined;
-  EventMakingScreen: undefined;
+  EventMakingScreen:
+    | {
+        storeName?: string;
+        storeId?: number;
+      }
+    | undefined;
 
   MapScreen: { onClose?: () => void };
 
@@ -75,16 +80,18 @@ export type AuthStackParamList = {
   GenerateStep: {
     storeId: number;
     selectedMenuIds: number[];
+    storeName: string;
   };
   MenuSelectStep: undefined;
   OCRStep: undefined;
-  ReviewWriteScreen: undefined;
+  ReviewWriteScreen: { storeId: number; storeName?: string; address?: string };
 
   // ✅ 여기 수정: assetId는 필수, menuPosterId와 storeName은 선택
   MenuPosterWriteStep: {
     assetId: number;
     menuPosterId?: number;
     storeName?: string;
+    storeId?: number;
   };
 };
 
