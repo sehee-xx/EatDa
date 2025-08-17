@@ -126,7 +126,8 @@ def _load_enhancer():
 
     def _enhance(idea: str, **kwargs) -> Dict[str, Any]:
         # Simple pass-through enhancement using LLM only
-        text = asyncio.run(_gpt.gpt_service.enhance_prompt_for_luma(idea))
+        # _gpt는 services 패키지에서 export된 인스턴스이므로 바로 호출
+        text = asyncio.run(_gpt.enhance_prompt_for_luma(idea))
         return {"prompt": text, "score": _Score(), "history": []}
 
     return _enhance, _Policy, _Score
