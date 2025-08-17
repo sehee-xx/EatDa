@@ -75,6 +75,7 @@ export type AuthStackParamList = {
   GenerateStep: {
     storeId: number;
     selectedMenuIds: number[];
+    storeName: string;
   };
   MenuSelectStep: undefined;
   OCRStep: undefined;
@@ -85,6 +86,7 @@ export type AuthStackParamList = {
     assetId: number;
     menuPosterId?: number;
     storeName?: string;
+    storeId?: number;
   };
 };
 
