@@ -10,11 +10,13 @@
 
 - **고령 자영업자의 증가**: 고령층 창업이 증가하면서 디지털 활용에 대한 격차가 더욱 뚜렷해지고 있음
 
-  ![image.png](attachment:f4e55c2d-dd94-4634-abdd-027ba3065238:image.png)
+  <img src="https://i.imgur.com/xNqZexN.png" width="40%">
+
 
 - **마케팅 실패로 인한 폐업**: 폐업 원인 중 개인이 대응 가능한 영역에서는 마케팅 실패가 가장 높은 비중을 차지
 
-  ![image.png](attachment:7fabcb05-6c06-4594-8ebd-e6a7a5a7afb8:24e5408e-c61a-4ba5-b8dc-8617eb4963b8.png)
+  <img src="https://i.imgur.com/G6nJkVe.png" width="60%">
+
 
 - **높은 홍보 비용과 유지보수 부담**: 광고, 콘텐츠 제작, 웹사이트 관리 등에 드는 비용이 크고 지속적인 유지가 어려움
 - **전문 인력 확보의 어려움**: 디자이너나 마케팅 전문가를 고용하기엔 인력과 비용 모두 부담
@@ -309,38 +311,19 @@ OCR 기반 영수증 인증, 특히 한국어 영수증 데이터 처리에 있�
 
 # 3. 아키텍처
 
-![시스템_아키텍처_v0.1.4.png](attachment:fccb6963-c000-4881-86db-29d7cf3931b5:시스템_아키텍처_v0.1.4.png)
+<img src="https://i.imgur.com/twJ0i4L.png" width="80%">
 
 <details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">3.1. Blue Green Deployment</summary>
 
-![blue_green1v0.0.2.png](attachment:5b7d9d4c-6428-4ef9-aa9f-ebe4f9af5d09:blue_green1v0.0.2.png)
+<img src="https://i.imgur.com/4GXNlA0.png" width="60%">
 
 설명 필요
 
 </details>
 
-<details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">3.2. Redis Streams</summary>
+<details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">3.2. Redis Cache</summary>
 
-![redis_stream4.png](attachment:50d909e9-f068-4ddd-a7fd-441e24c3a6e0:redis_stream4.png)
-
-핵심 기능인 **AI 기반 콘텐츠 자동 생성**은 처리 시간이 상대적으로 길기 때문에, **비동기 처리 구조**가 필수적입니다. 이에 따라 다음과 같은 설계를 적용했습니다:
-
-- **비동기 메시징 처리**를 위해 `Redis Streams`를 채택
-    - 메시지 순서 보장, 실패 시 재처리, DLQ(Dead Letter Queue) 처리 등 **운영 안정성 확보에 유리**
-- **적용 대상 콘텐츠**
-    - 리뷰 에셋 생성
-    - 메뉴 포스터 생성
-    - 이벤트 배너/에셋 생성
-- **사용하는 메시지 키**
-    - `review.asset.generate`
-    - `menu.poster.generate`
-    - `event.asset.generate`
-
-</details>
-
-<details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">3.3. Redis Cache</summary>
-
-![redis_cache1.png](attachment:7d12c590-798c-4c08-97c6-139142744014:redis_cache1.png)
+<img src="https://i.imgur.com/sRzly1P.png" width="60%">
 
 ### 캐싱 전략: 멀티 레벨 캐시 구조
 
@@ -364,17 +347,36 @@ OCR 기반 영수증 인증, 특히 한국어 영수증 데이터 처리에 있�
 
 </details>
 
+<details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">3.3. Redis Streams</summary>
+
+<img src="https://i.imgur.com/p2QYqIW.png" width="60%">
+
+핵심 기능인 **AI 기반 콘텐츠 자동 생성**은 처리 시간이 상대적으로 길기 때문에, **비동기 처리 구조**가 필수적입니다. 이에 따라 다음과 같은 설계를 적용했습니다:
+
+- **비동기 메시징 처리**를 위해 `Redis Streams`를 채택
+    - 메시지 순서 보장, 실패 시 재처리, DLQ(Dead Letter Queue) 처리 등 **운영 안정성 확보에 유리**
+- **적용 대상 콘텐츠**
+    - 리뷰 에셋 생성
+    - 메뉴 포스터 생성
+    - 이벤트 배너/에셋 생성
+- **사용하는 메시지 키**
+    - `review.asset.generate`
+    - `menu.poster.generate`
+    - `event.asset.generate`
+
+</details>
+
 ---
 
 # 4. ERD
 
-![EatDa (15).png](attachment:535ade79-4ef5-42ad-9c60-76c22e00fc05:EatDa_(15).png)
+<img src="https://i.imgur.com/zJspPYs.png" width="50%">
 
 <details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">4.1. DDL(MySql)</summary>
 
 ## 4.1. DDL(MySql)
 
-```sql
+``` sql
 -- 사용자 테이블: 로컬 및 소셜 로그인 사용자 정보 저장
 CREATE TABLE user (
   id BIGINT AUTO_INCREMENT PRIMARY KEY, -- 사용자 고유 ID
@@ -623,51 +625,68 @@ CREATE TABLE asset_source (
 
 <details><summary style="font-size: 1.2em; font-weight: bold; margin: 0.83em 0;">5.1.1 리뷰</summary>
 
+- #### 리뷰 asset 생성 요청(React Native --> Spring)
+    <img src="https://i.imgur.com/NY5y1jC.png" width="60%">
+
+- #### 리뷰 asset 생성 요청(Spring --> Redis Streams)
+    <img src="https://i.imgur.com/LhkcKmd.png" width="60%">
+
+- #### 리뷰 asset 콜백(Fast API --> Spring)
+    <img src="https://i.imgur.com/rsB0bfm.png" width="60%">
+
+- #### 리뷰 asset 결과 조회(React Native --> Spring, Polling)
+    <img src="https://i.imgur.com/fGJZW8p.png" width="60%">
+- 
+- #### 리뷰 최종 등록
+    <img src="https://i.imgur.com/m5fgiZq.png" width="60%">
+
+- #### PENDING, FAIL 객체 삭제
+  <img src="https://i.imgur.com/7cYkVl4.png" width="60%">
+
 </details>
 
 <details><summary style="font-size: 1.2em; font-weight: bold; margin: 0.83em 0;">5.1.2. 거리 피드 조회</summary>
 
-![image.png](attachment:cdc33803-5d5e-4985-8555-6b3b4d1ecbf9:image.png)
+- #### 사용자가 거리에 따른 피드를 조회를 시작
+    <img src="https://i.imgur.com/djLcmAT.png" width="60%">
 
-- 사용자가 거리에 따른 피드를 조회를 시작
+- #### L1 캐시에 사용자 근처의 POI와 해당 거리의 가게 정보가 있으면 바로 조회
+    <img src="https://i.imgur.com/zfZ8YbS.png" width="60%">
 
-![image.png](attachment:a954c940-6909-452d-a558-2f832d3459bf:image.png)
+- #### L1 캐시에서 못 찾으면, L2 캐시에서 POI와 해당 거리의 가게 정보 조회
+    <img src="https://i.imgur.com/6B1ypE1.png" width="60%">
 
-- L1 캐시에 사용자 근처의 POI와 해당 거리의 가게 정보가 있으면 바로 조회
 
-![image.png](attachment:ed36ecdb-1661-47e6-9d45-d485a0b42690:image.png)
+- #### L2 캐시에 POI와 해당 거리의 가게 정보가 있으면 조회
+    <img src="https://i.imgur.com/KOwKHvT.png" width="60%">
 
-- L1 캐시에서 못 찾으면, L2 캐시에서 POI와 해당 거리의 가게 정보 조회
+- #### 해당 POI가 Hotspot이면 L1 캐시로 승격
+    <img src="https://i.imgur.com/3jUy22R.png" width="60%">
 
-![image.png](attachment:627f34af-79ce-4f65-8d62-ea558b924047:image.png)
+- #### 조회한 정보 반환
+    <img src="https://i.imgur.com/GpvN17Z.png" width="60%">
 
-- L2 캐시에 POI와 해당 거리의 가게 정보가 있으면 조회
+---
 
-![image.png](attachment:1a47666d-fa31-4849-84b0-7f6025fd8b51:image.png)
+### **Redis에서도 조회를 못했다면?**
 
-- 해당 POI가 Hotspot이면 L1 캐시로 승격
+- #### 미스 카운트 증가
+    <img src="https://i.imgur.com/cauOIIT.png" width="60%">
 
-![image.png](attachment:016578c8-ced6-4c64-bb46-2e309026b6c6:image.png)
+- #### Mysql의 store 정보를 조회
+    <img src="https://i.imgur.com/bFJj9uj.png" width="60%">
 
-- 조회한 정보 반환
+- #### H3 필터링 후 거리 직접 계산
+    <img src="https://i.imgur.com/iXx1OPH.png" width="60%">
 
-**Redis에서도 조회를 못했다면?**
+- #### redis 업데이트
+    <img src="https://i.imgur.com/gkh8yHu.png" width="60%">
 
-![image.png](attachment:3b497293-f9c0-4cb0-a74b-470a1b531cee:image.png)
+- #### 핫스팟 체크
+    <img src="https://i.imgur.com/mVmQwCa.png" width="60%">
 
-![redis_cache9.png](attachment:d96ddf6a-ed4c-4d4b-a45d-975ff0e85eee:redis_cache9.png)
-
-![redis_cache10.png](attachment:b8e0938a-855b-4e79-9a18-e85d0433f2ab:redis_cache10.png)
-
-- Mysql의 store 정보를 조회해 직접 거리 계산
-
-![image.png](attachment:48a97d21-90bb-4c9f-a1a0-2e12147b0ca1:image.png)
-
-![image.png](attachment:cf413feb-2733-47e5-a8b8-dce7d3381e63:image.png)
-
-![image.png](attachment:6d6e0314-e0ed-483a-bc3b-3b6d404ec0a5:image.png)
-
-- Redis에 해당 정보를 업데이트하고 클라이언트에 정보 반환
+- #### 클라이언트에게 정보 반환
+    <img src="https://i.imgur.com/WSZV0BR.png" width="60%">
 
 </details>
 
@@ -700,11 +719,11 @@ CREATE TABLE asset_source (
     - H3를 기반으로 [300m, 500m, 700m, 1000m, 2000m]에 대응하는 해상도를 설정해 1차 필터링
     - H3의 장점
 
-      ![image.png](attachment:3589b7ce-8dcc-4d09-81f3-b892eb979c72:image.png)
+      <img src="https://i.imgur.com/kRiV6u0.png" width="50%">
 
         - H3는 육각형 cell을 사용하는데 이는 삼각형, 사각형보다 대각선 이웃 거리가 균일
 
-      ![image.png](attachment:9baf1bc5-f85d-408d-8f8b-7b8065a8f571:image.png)
+            <img src="https://i.imgur.com/IRGBF7i.png" width="20%">
 
         - 가게가 육각형의 모서리나 꼭짓점 근처에 위치할 경우를 처리하기 위해 한 겹 더 많은 셀을 포함해야 하는데, 이때 삼각형이나 사각형보다 더 적은 수의 셀만 사용하면 됨
 2. 핫스팟과 캐시 상태 도입
@@ -773,9 +792,70 @@ CREATE TABLE asset_source (
 
 <details><summary><strong>Redis Streams 도입</strong></summary>
 
+- #### 서버 내부의 비동기 처리
+    <img src="https://i.imgur.com/aF3zlzm.png" width="60%">
+  
+    - 핵심 기능인 AI 생성은 처리 시간이 길어 비동기가 필수였습니다.
+    - 하지만 서버 간 직접 비동기로만 처리하면 
+    - 서버 다운 시 요청 손실, 트래픽 급증 시 과부하, 장애 전파 위험이 있어 
+    - 내부 비동기만으로는 확장성과 안정성에 한계가 있습니다.
+  
+- #### 메시지 큐
+    
+    <img src="https://i.imgur.com/ksFkwv3.png" width="60%">
+    
+    - 그래서 메시지 큐를 도입해 Producer/Consumer를 분리했습니다.
+    - 메시지는 큐에 안전하게 적재되고, 실패 시 재시도, 백프레셔, 느슨한 결합으로 전체 안정성이 높아졌습니다.
+
+
+- #### 왜 Redis Streams인가
+    
+    <img src="https://i.imgur.com/1Ma1BcW.png" width="60%">
+
+    - 후보는 RabbitMQ / Redis Queue / Redis Streams 가 있었습니다. 
+    - 단일 EC2라 별도 브로커가 필요한 RabbitMQ는 제외했고, Redis Queue는 재처리·순서·DLQ 기본 제공이 없어 운영 부담이 큽니다. 
+    - 그래서 저희는 재처리·순서·DLQ를 표준으로 지원하는 Redis Streams를 채택해 생성 파이프라인을 비동기화했습니다.
+
+- #### 시스템 아키텍처 내 Redis Stremas
+
+    <img src="https://i.imgur.com/p2QYqIW.png" width="60%">
+
+    - 대상은 리뷰, 메뉴포스터, 이벤트 에셋이며, 키는 각각 
+    - review.asset.generate, menu.poster.generate, event.asset.generate 입니다.
+
+- #### review.asset.generate
+    
+    <img src="https://i.imgur.com/KwH5Ihf.png" width="60%">
+
+    - 그 중 가장 대표 기능인 리뷰 생성 흐름을 보면, 
+    - Spring이 review.asset.generate에 메시지를 발행하고, 
+    - FastAPI가 Consumer Group으로 이를 소비합니다.
+    - 소비 성공 시 ACK, 실패 시 정책에 따라 재시도 또는 DLQ(Dead Letter Queue) 로 분기합니다.
+
+- #### MAXLEN
+    
+    <img src="https://i.imgur.com/I8Ad2cI.png" width="60%">
+
+    - 레디스 내 최대 메시지 개수를 2000개로 설정하여, 만약 이를 초과하면 trim(삭제)합니다.
+
+- #### TTL & maxRetryCount
+
+    <img src="https://i.imgur.com/dXeD5P9.png" width="60%">
+
+    - 각 메시지에는 expireAt(TTL)이 들어가며, 리뷰 생성은 5분입니다. 
+    - 처리 중 실패하면 최대 3회 재시도 후 DLQ로 보냅니다.
+
+- #### Spring Batch
+
+    <img src="https://i.imgur.com/dXeD5P9.png" width="60%">
+
+    - 스프링 배치가 20분마다 cleanerJob을 실행합니다. 
+    - TTL이 만료됐거나 유효성 에러, 각종 시스템 에러로 인해 실패한 메시지들을 지워줍니다.
+
+
 </details>
 
-<details><summary><strong>로깅</strong></summary>
+<details><summary><strong>로그 적용 일대기</strong></summary>
 
 </details>
 
