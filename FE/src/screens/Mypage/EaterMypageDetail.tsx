@@ -1,4 +1,3 @@
-// src/screens/Mypage/EaterMypage.tsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -32,6 +31,10 @@ import {
 } from "./services/api";
 
 const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
+
+// ✅ 썸네일 안전 placeholder (그리드에서 비디오 썸네일 보장)
+const PLACEHOLDER_THUMB =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 
 interface EaterMypageProps {
   userRole: "eater";
@@ -91,6 +94,11 @@ export default function EaterMypage({
           return;
         }
         const mapped = mapMyReviewsToReviewItems(list) as ReviewItem[];
+        console.log("[MYREVIEWS][UI] mapped for grid =", {
+          in: list.length,
+          out: mapped.length,
+          sample: mapped[0],
+        });
         setMyReviews(mapped);
       })
       .catch((err) => {
@@ -120,12 +128,18 @@ export default function EaterMypage({
         }
         const mapped: ReviewItem[] = list
           .map((r, idx): ReviewItem | null => {
-            const uri = r.shortsUrl || r.imageUrl || "";
-            if (!uri) return null;
+            const isVideo = !!r.shortsUrl;
+            const img = r.imageUrl || null;
+            const vid = r.shortsUrl || null;
+            if (!img && !vid) return null;
             return {
-              id: `${uri}#${idx}`,
-              type: r.shortsUrl ? "video" : "image",
-              uri,
+              id: `${(vid || img)!}#${idx}`,
+              type: isVideo ? "video" : "image",
+              uri: isVideo ? (vid as string) : (img as string),
+              // ✅ 비디오는 썸네일 보장 (thumbnailUrl > imageUrl > placeholder)
+              thumbnail: isVideo
+                ? r.thumbnailUrl || img || PLACEHOLDER_THUMB
+                : img || PLACEHOLDER_THUMB,
               title: r.storeName || "스크랩 리뷰",
               description: r.description ?? "",
             };

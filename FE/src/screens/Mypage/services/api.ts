@@ -1,3 +1,4 @@
+// src/screens/Mypage/services/api.ts
 import { getTokens } from "../../Login/services/tokenStorage";
 import { normalizePosterUrl } from "../../../utils/normalizeImage";
 
@@ -5,6 +6,10 @@ const BASE_HOST = "https://i13a609.p.ssafy.io";
 const BASE_PREFIX = "/test";
 const BASE_API_URL = `${BASE_HOST}${BASE_PREFIX}/api`;
 const BASE_AI_URL = `${BASE_HOST}/ai/api`;
+
+// ✅ HTTP 플레이스홀더(확실히 보이는 이미지, 외부 CDN)
+const PLACEHOLDER_THUMB =
+  "https://dummyimage.com/600x600/eeeeee/aaaaaa.png&text=%20";
 
 export interface ApiEnvelope<T> {
   code: string;
@@ -27,11 +32,26 @@ function buildQuery(params?: Record<string, string | number | undefined>) {
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
+/**
+ * ✅ 미디어 URL 정규화
+ * - data: 스킴 그대로 통과(그리드에서 최종 필터)
+ * - http(s): 그대로 통과
+ * - /로 시작하는 상대경로: BASE_HOST 붙이기
+ * - 그 외 상대경로: BASE_HOST + "/" + path
+ */
+function normalizeMediaUrl(s: string): string {
+  if (!s) return "";
+  if (s.startsWith("data:")) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith("/")) return `${BASE_HOST}${s}`;
+  return `${BASE_HOST}/${s}`;
+}
+
 /* =========================
  *  Eater 마이페이지 상단 정보
  * ========================= */
 export interface UserStats {
-  nickname: string; // nickname 속성 추가
+  nickname: string;
   reviewCount: number;
   scrapCount: number;
   menuPosterCount: number;
@@ -40,7 +60,7 @@ export interface UserStats {
 function extractUserStatsFromAny(json: any): UserStats {
   const data = json?.data ?? json;
   return {
-    nickname: String(data?.nickname ?? "사용자"), // nickname 추출 로직 추가
+    nickname: String(data?.nickname ?? "사용자"),
     reviewCount: Number(data?.reviewCount ?? data?.countReview ?? 0),
     scrapCount: Number(data?.scrapCount ?? data?.countScrapReview ?? 0),
     menuPosterCount: Number(data?.menuPosterCount ?? data?.countMenuPost ?? 0),
@@ -104,8 +124,8 @@ export async function getMyUserStats(params?: {
  *  Maker 마이페이지 상단 정보
  * ========================= */
 export interface MakerStats {
-  storeId : number;
-  storeName: string; // storeName 속성 추가
+  storeId: number;
+  storeName: string;
   reviewCount: number; // = countReceivedReviews
   eventCount: number; // = countEvents
   menuPosterCount: number; // = countMenuPosters
@@ -115,7 +135,7 @@ function extractMakerStatsStrict(json: any): MakerStats {
   const d = json?.data ?? json ?? {};
   return {
     storeId: Number(d?.storeId ?? 0),
-    storeName: String(d?.storeName ?? "가게 이름 없음"), // storeName 추출 로직 추가
+    storeName: String(d?.storeName ?? "가게 이름 없음"),
     reviewCount: Number(d?.countReceivedReviews ?? 0),
     eventCount: Number(d?.countEvents ?? 0),
     menuPosterCount: Number(d?.countMenuPosters ?? 0),
@@ -268,17 +288,25 @@ export function mapReviewsToGridItems(
 ): ReviewGridItem[] {
   return list
     .map((r, idx) => {
-      const uri = r.shortsUrl || r.imageUrl || "";
+      const rawUri = r.shortsUrl || r.imageUrl || "";
+      const uri = normalizeMediaUrl(rawUri);
       if (!uri) return null;
+      const isVideo = !!r.shortsUrl;
+
+      const normalizedThumb = normalizeMediaUrl(r.thumbnailUrl || "");
+      const normalizedImage = normalizeMediaUrl(r.imageUrl || "");
+
       return {
         id: `${uri}#${idx}`,
-        type: r.shortsUrl ? "video" : "image",
+        type: isVideo ? "video" : "image",
         uri,
         title: titleFallback,
         description: r.description ?? "",
         likes: 0,
         views: 0,
-        thumbnail: r.thumbnailUrl ?? null,
+        thumbnail: isVideo
+          ? normalizedThumb || normalizedImage || PLACEHOLDER_THUMB
+          : normalizedImage || PLACEHOLDER_THUMB,
       };
     })
     .filter(Boolean) as ReviewGridItem[];
@@ -366,15 +394,26 @@ export function mapScrapsToGridItems(
 ): ReviewGridItem[] {
   return list
     .map((r, idx) => {
-      const uri = r.shortsUrl || r.imageUrl || "";
+      const rawImg = r.imageUrl || "";
+      const rawVid = r.shortsUrl || "";
+      const img = normalizeMediaUrl(rawImg);
+      const vid = normalizeMediaUrl(rawVid);
+      const isVideo = !!r.shortsUrl;
+
+      const uri = isVideo ? vid : img;
       if (!uri) return null;
+
+      const normalizedThumb = normalizeMediaUrl(r.thumbnailUrl || "");
+
       return {
         id: `${uri}#${idx}`,
-        type: r.shortsUrl ? "video" : "image",
+        type: isVideo ? "video" : "image",
         uri,
         title: r.storeName || titleFallback,
         description: r.description ?? "",
-        thumbnail: r.thumbnailUrl ?? null,
+        thumbnail: isVideo
+          ? normalizedThumb || img || PLACEHOLDER_THUMB
+          : img || PLACEHOLDER_THUMB,
       };
     })
     .filter(Boolean) as ReviewGridItem[];
@@ -390,6 +429,7 @@ export interface MyReviewApi {
   menuNames: string[];
   imageUrl: string | null;
   shortsUrl: string | null;
+  thumbnailUrl: string | null;
   createdAt: string;
 }
 
@@ -411,6 +451,7 @@ function extractMyReviewsFromAny(json: any): MyReviewApi[] {
     menuNames: Array.isArray(r?.menuNames) ? r.menuNames : [],
     imageUrl: r?.imageUrl ?? null,
     shortsUrl: r?.shortsUrl ?? null,
+    thumbnailUrl: r?.thumbnailUrl ?? null,
     createdAt: r?.createdAt ?? "",
   }));
 }
@@ -477,12 +518,14 @@ export async function getMyReviews(params?: {
   return items;
 }
 
+// ✅ thumbnail 필드만 추가 (타입 변경)
 export type ReviewItemForGrid = {
   id: string;
   type: "image" | "video";
   uri: string;
   title: string;
   description: string;
+  thumbnail?: string;
 };
 
 export function mapMyReviewsToReviewItems(
@@ -492,15 +535,19 @@ export function mapMyReviewsToReviewItems(
     .map((r) => {
       const uri = r.shortsUrl || r.imageUrl || "";
       if (!uri) return null;
+      const isVideo = !!r.shortsUrl;
       const menus = r.menuNames?.length
         ? ` · 메뉴: ${r.menuNames.join(", ")}`
         : "";
       return {
         id: String(r.reviewId),
-        type: r.shortsUrl ? "video" : "image",
+        type: isVideo ? "video" : "image",
         uri,
         title: r.storeName || "내 리뷰",
         description: `${r.description || ""}${menus}`,
+        thumbnail: isVideo
+          ? r.thumbnailUrl || r.imageUrl || PLACEHOLDER_THUMB
+          : r.imageUrl || PLACEHOLDER_THUMB,
       };
     })
     .filter(Boolean) as ReviewItemForGrid[];
@@ -588,7 +635,7 @@ export function mapMenuPostersToGridItems(
     uri: p.imageUrl,
     title: titleFallback,
     description: "",
-    thumbnail: null,
+    thumbnail: p.imageUrl || PLACEHOLDER_THUMB,
   }));
 }
 
@@ -689,7 +736,8 @@ export function mapReceivedPostersToGridItems(
 ) {
   return posters
     .map((p): ReviewGridItem | null => {
-      const src = p.imageUrl ?? p.path ?? null;
+      const srcRaw = p.imageUrl ?? p.path ?? null;
+      const src = normalizeMediaUrl(srcRaw || "");
       if (!src) return null;
 
       const type: "image" | "video" =
@@ -701,15 +749,16 @@ export function mapReceivedPostersToGridItems(
         uri: src,
         title: titleFallback,
         description: "",
-        thumbnail: src, // 썸네일 없으면 본 이미지로
+        thumbnail: src,
       };
       return item;
     })
     .filter((x): x is ReviewGridItem => x !== null);
 }
 
-
-// 리뷰 삭제(Eater 본인이 작성한 자신의 리뷰를 삭제)
+/* =========================
+ *  리뷰 삭제(Eater 본인이 작성한 자신의 리뷰를 삭제)
+ * ========================= */
 
 export type DeleteReviewResult = ApiEnvelope<null>;
 
@@ -734,7 +783,6 @@ export async function deleteMyReview(
 
   const url = `${BASE_API_URL}/reviews/${encodeURIComponent(String(reviewId))}`;
 
-  // ── 요청 로그
   console.log(`[REVIEW-DEL][REQ] DELETE ${url}`);
   console.log(
     `[REVIEW-DEL][REQ] Authorization: Bearer ****(len=${accessToken.length})`
@@ -753,17 +801,12 @@ export async function deleteMyReview(
 
   let json: any = null;
   try {
-    // 204인 경우 본문이 없으므로 JSON 파싱에서 에러가 날 수 있음
     if (raw && raw.trim().length > 0) {
       json = JSON.parse(raw);
     }
-  } catch {
-    // JSON 아님 → 아래 공통 에러 처리로 진행
-  }
+  } catch {}
 
-  // ── 상태별 처리
   if (!res.ok) {
-    // 명세 매핑: 401/403/404
     if (status === 401) {
       throw new Error("로그인이 필요합니다.");
     }
@@ -774,7 +817,6 @@ export async function deleteMyReview(
       throw new Error("해당 리뷰를 찾을 수 없습니다.");
     }
 
-    // 기타 서버 오류
     const msg =
       (json && (json.message || json.error)) ||
       (raw && raw.trim().length > 0 ? raw : `HTTP ${status}`);
@@ -784,32 +826,27 @@ export async function deleteMyReview(
 
   const elapsed = Date.now() - started;
 
-  // 정상 케이스
-  // 1) 사양대로 200 + ApiEnvelope<null> 본문
   if (status === 200 && json) {
     console.log(`[REVIEW-DEL][RES] ${status} in ${elapsed}ms`);
     return json as DeleteReviewResult;
   }
 
-  // 2) 혹시 204(No Content)로 내려오는 백엔드도 호환
-  //    클라이언트에서 명세 형태로 결과를 합성해서 리턴
   if (status === 204) {
     console.log(`[REVIEW-DEL][RES] ${status} in ${elapsed}ms (no content)`);
     return {
       code: "REVIEW_DELETED",
       message: "리뷰가 성공적으로 삭제되었습니다.",
-      status: 200, // 명세의 성공 status를 따름
+      status: 200,
       data: null,
       timestamp: new Date().toISOString(),
     };
   }
 
-  // 그 외 2xx지만 예상치 못한 형태
   console.warn("[REVIEW-DEL][WARN] Unexpected success shape", { status, raw });
   return {
     code: "REVIEW_DELETED",
     message: "리뷰가 성공적으로 삭제되었습니다.",
-    status: status,
+    status,
     data: null,
     timestamp: new Date().toISOString(),
   };
