@@ -1,5 +1,4 @@
 // src/screens/Store/StoreReviewScreen.tsx
-
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Text,
@@ -17,12 +16,24 @@ import {
 import { Video, ResizeMode } from "expo-av";
 import GridComponent, { ReviewItem } from "../../components/GridComponent";
 import CloseBtn from "../../../assets/closeBtn.svg";
-import NoDataScreen from "../../components/NoDataScreen";
 import ResultModal from "../../components/ResultModal";
 
 // API
 import { getStoreReviews } from "./Review/services/api";
 import { getTokens } from "../Login/services/tokenStorage";
+
+// ✅ 테마/아이콘 (StoreEventScreen 과 동일 스타일)
+import { COLORS, SPACING } from "../../constants/theme";
+const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
+
+const EmptyState = ({ message, icon }: { message: string; icon?: any }) => (
+  <View style={styles.emptyContent}>
+    {icon && (
+      <Image source={icon} style={styles.emptyIcon} resizeMode="contain" />
+    )}
+    <Text style={styles.emptyText}>{message}</Text>
+  </View>
+);
 
 interface StoreReviewScreenProps {
   storeId: number; // ← 가게페이지에서 넘겨줄 것
@@ -81,7 +92,6 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const handleOpenDetail = (item: ReviewItem) => {
     setSelectedItem(item);
-    // 현재 index 동기화 (비디오 재생 제어 정확도 ↑)
     const idx = items.findIndex((i) => i.id === item.id);
     if (idx >= 0) setCurrentIndex(idx);
 
@@ -104,16 +114,12 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
 
       const raw = await getStoreReviews(storeId, accessToken);
 
-      // API → Grid/상세뷰에서 쓰는 ReviewItem으로 매핑
-      // ※ 영상이면 thumbnailUrl이 있을 수 있으니 그리드 로딩 품질 위해 채워줌
       const mapped: ReviewItem[] = raw
         .map((r: any, idx: number) => {
           const isVideo = !!r?.shortsUrl && typeof r.shortsUrl === "string";
           const mediaUri: string | undefined = isVideo
             ? r.shortsUrl
             : r.imageUrl;
-
-          // uri가 하나도 없으면 렌더링 불가하므로 스킵
           if (
             !mediaUri ||
             typeof mediaUri !== "string" ||
@@ -122,7 +128,6 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
             return null;
 
           const idBase = r?.id != null ? String(r.id) : `${storeId}-${idx}`;
-
           const thumbnail: string | undefined = isVideo
             ? typeof r?.thumbnailUrl === "string"
               ? r.thumbnailUrl
@@ -135,7 +140,7 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
             id: idBase,
             type: isVideo ? "video" : "image",
             uri: mediaUri,
-            thumbnail, // GridComponent가 우선 사용
+            thumbnail,
             title: isVideo ? "쇼츠 리뷰" : "사진 리뷰",
             description:
               typeof r?.description === "string" ? r.description : "",
@@ -160,12 +165,13 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
     fetchReviews();
   }, [fetchReviews]);
 
-  const isEmpty = fetchedOnce && (!items || items.length === 0);
+  const isEmpty = fetchedOnce && items.length === 0;
 
+  // 초기 로딩 상태
   if (loading && !fetchedOnce) {
     return (
       <>
-        <NoDataScreen />
+        <EmptyState message="리뷰를 불러오는 중..." icon={EmptyIcon} />
         <ResultModal
           visible={modalVisible}
           type={modalType}
@@ -176,28 +182,32 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
     );
   }
 
-  return isEmpty ? (
-    <>
-      <NoDataScreen />
-      <ResultModal
-        visible={modalVisible}
-        type={modalType}
-        message={modalMessage}
-        onClose={() => setModalVisible(false)}
-      />
-    </>
-  ) : (
+  // 빈 상태
+  if (isEmpty) {
+    return (
+      <>
+        <EmptyState message="아직 등록된 리뷰가 없습니다." icon={EmptyIcon} />
+        <ResultModal
+          visible={modalVisible}
+          type={modalType}
+          message={modalMessage}
+          onClose={() => setModalVisible(false)}
+        />
+      </>
+    );
+  }
+
+  // 컨텐츠
+  return (
     <View style={{ flex: 1 }}>
       {selectedItem ? (
         <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
-          {/* 상세보기 */}
           <FlatList
             ref={flatListRef}
             data={items}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
               <View style={{ height: screenHeight }}>
-                {/* 이미지 리뷰 */}
                 {item.type === "image" ? (
                   <Image
                     source={{ uri: item.uri }}
@@ -205,7 +215,6 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
                     resizeMode="cover"
                   />
                 ) : (
-                  /* 비디오 리뷰 */
                   <Video
                     ref={(ref) => {
                       vdoRefs.current[index] = ref;
@@ -218,13 +227,14 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
                     isMuted
                   />
                 )}
-                {/* 닫기 버튼 */}
+
                 <TouchableOpacity
                   style={styles.closeBtn}
                   onPress={() => setSelectedItem(null)}
                 >
                   <CloseBtn />
                 </TouchableOpacity>
+
                 <View style={[styles.textOverlay, { bottom: height * 0.33 }]}>
                   <Text style={styles.titleText}>#{item.title}</Text>
                   <Text style={styles.descText}>{item.description}</Text>
@@ -252,7 +262,6 @@ export default function StoreReviewScreen({ storeId }: StoreReviewScreenProps) {
           />
         </Animated.View>
       ) : (
-        // 전체 보기 (그리드)
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
@@ -309,5 +318,21 @@ const styles = StyleSheet.create({
   descText: {
     color: "#fff",
     fontSize: 13,
+  },
+  emptyContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: SPACING.xl * 4,
+  },
+  emptyIcon: {
+    width: "20%",
+    aspectRatio: 1,
+    marginBottom: SPACING.lg,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.textColors.secondary,
+    textAlign: "center",
   },
 });
