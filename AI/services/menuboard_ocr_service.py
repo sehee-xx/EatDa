@@ -10,7 +10,10 @@ import uuid
 from dotenv import load_dotenv
 import os
 from typing import List, Tuple, Optional
-from models.menuboard_ocr_models import ClovaOCRRequest, ClovaImageSpec, ExtractedMenu
+try:
+	from AI.models.menuboard_ocr_models import ClovaOCRRequest, ClovaImageSpec, ExtractedMenu
+except ModuleNotFoundError:
+	from models.menuboard_ocr_models import ClovaOCRRequest, ClovaImageSpec, ExtractedMenu
 
 
 load_dotenv()
