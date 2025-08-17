@@ -5,7 +5,6 @@ import StatsCard from "../../components/StatsCard";
 import ActivityCard from "../../components/ActivityCard";
 import CategoryCard from "../../components/CategoryCard";
 import MypageProfile from "../../components/MypageProfile";
-import { reviewData } from "../../data/reviewData";
 import EaterMypageDetail from "./EaterMypageDetail";
 const eater_background = require("../../../assets/eater_background.png");
 
@@ -140,23 +139,6 @@ export default function EaterMypage({
             title="내가 만든 메뉴판"
             count={menuPosterCount}
             onPress={() => handleCategoryPress("myMenuBoard")}
-          />
-        </View>
-
-        {/* 최근 활동 섹션 - userRole에 따라 다른 텍스트 */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>최근 활동</Text>
-
-          <ActivityCard
-            icon={ReviewIcon}
-            text="리뷰 등록이 완료되었습니다"
-            time="2시간 전"
-          />
-
-          <ActivityCard
-            icon={MenuIcon}
-            text="내가 만든 메뉴판이 고정되었습니다"
-            time="3시간 전"
           />
         </View>
       </ScrollView>

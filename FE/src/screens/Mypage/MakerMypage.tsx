@@ -121,20 +121,6 @@ export default function MakerMyPage({
             onPress={() => handleCategoryPress("receivedMenuBoard")}
           />
         </View>
-
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>최근 활동</Text>
-          <ActivityCard
-            icon={ReviewIcon}
-            text="가게 리뷰가 등록되었습니다"
-            time="2시간 전"
-          />
-          <ActivityCard
-            icon={MenuIcon}
-            text="받은 메뉴판이 업데이트되었습니다"
-            time="3시간 전"
-          />
-        </View>
       </ScrollView>
     </View>
   );
