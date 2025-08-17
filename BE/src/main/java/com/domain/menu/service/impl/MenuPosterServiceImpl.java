@@ -4,10 +4,8 @@ import com.domain.menu.dto.redis.MenuPosterAssetGenerateMessage;
 import com.domain.menu.dto.request.AdoptMenuPostersRequest;
 import com.domain.menu.dto.request.MenuPosterAssetCreateRequest;
 import com.domain.menu.dto.request.MenuPosterFinalizeRequest;
-import com.domain.menu.dto.response.AdoptMenuPostersResponse;
-import com.domain.menu.dto.response.AdoptedMenuPosterResponse;
-import com.domain.menu.dto.response.MenuPosterAssetRequestResponse;
-import com.domain.menu.dto.response.MenuPosterFinalizeResponse;
+import com.domain.menu.dto.request.ReleaseMenuPosterRequest;
+import com.domain.menu.dto.response.*;
 import com.domain.menu.entity.AdoptedMenuPoster;
 import com.domain.menu.entity.Menu;
 import com.domain.menu.entity.MenuPoster;
@@ -185,6 +183,33 @@ public class MenuPosterServiceImpl implements MenuPosterService {
                 ).toList();
         adoptedMenuPosterRepository.saveAll(newAdopted);
         return AdoptMenuPostersResponse.of(request.storeId(), request.menuPosterIds());
+    }
+
+    @Override
+    public ReleaseMenuPosterResponse releaseMenuPosters(ReleaseMenuPosterRequest request, String makerEmail) {
+        User maker = validateMater(makerEmail);
+        Store store = validateStore(request.storeId());
+
+        menuValidator.validateStoreOwnership(maker, store);
+
+        MenuPoster menuPoster = menuPosterRepository.findByIdAndDeletedFalse(request.menuPosterId())
+                .orElseThrow(() -> new ApiException(ErrorCode.MENU_POSTER_NOT_FOUND));
+
+        if (!menuPoster.getStore().getId().equals(store.getId())) {
+            throw new ApiException(ErrorCode.MENU_NOT_BELONG_TO_STORE);
+        }
+
+        AdoptedMenuPoster adoptedMenuPoster = adoptedMenuPosterRepository
+                .findByStoreIdAndMenuPosterIdAndDeletedFalse(store.getId(), menuPoster.getId())
+                .orElseThrow(() -> new ApiException(ErrorCode.MENU_POSTER_NOT_FOUND));
+
+        adoptedMenuPoster.delete();
+        adoptedMenuPosterRepository.save(adoptedMenuPoster);
+
+        return new ReleaseMenuPosterResponse(
+                store.getId(),
+                menuPoster.getId()
+        );
     }
 
     @Override
