@@ -3,6 +3,17 @@ GPT 서비스
 GPT를 사용한 프롬프트 개선을 담당합니다.
 """
 
+import os
+import sys
+
+# 경로 안전장치: /app(루트) 또는 /app/AI 모두 PYTHONPATH에 주입
+_CUR = os.path.abspath(os.path.dirname(__file__))
+_ROOT_FLAT = os.path.abspath(os.path.join(_CUR, ".."))           # /app
+_ROOT_REPO = os.path.abspath(os.path.join(_CUR, "..", ".."))     # /app/AI
+for p in (_ROOT_FLAT, _ROOT_REPO):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 try:
     from AI.clients.gms_api.gpt import (
         generate_luma_prompt,
