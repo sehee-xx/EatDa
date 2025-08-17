@@ -42,7 +42,7 @@ public class MultiLevelCacheService {
         String key = generateKey(poiId, distance);
 
         List<StoreDistanceResult> l1Result = l1Cache.getIfPresent(key);
-        if (Objects.nonNull(l1Result)) {
+        if (Objects.nonNull(l1Result) && !l1Result.isEmpty()) {
             log.info("L1 cache hit for {}", key);
             cacheMetricsService.recordHit(poiId, false);
             return l1Result;
@@ -51,7 +51,7 @@ public class MultiLevelCacheService {
         if (l2Cache.hasCache(poiId, distance)) {
             List<StoreDistanceResult> l2Result = l2Cache.getCache(poiId, distance);
 
-            if (Objects.nonNull(l2Result)) {
+            if (Objects.nonNull(l2Result) && !l2Result.isEmpty()) {
                 if (accessTrackingService.isHotspot(poiId)) {
                     l1Cache.put(key, l2Result);
                     log.info("L2 cache hit for HOTSPOT {}, promoted to L1", key);
