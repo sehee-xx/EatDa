@@ -55,8 +55,34 @@ except ModuleNotFoundError:
     try:
         from clients.gms_api.luma_prompt_enhancer import enhance, EnhancerPolicy, Score
     except ModuleNotFoundError:
-        # lowercase 'ai' package name (some builds place code under /app/ai)
-        from ai.clients.gms_api.luma_prompt_enhancer import enhance, EnhancerPolicy, Score  # type: ignore
+        try:
+            # lowercase 'ai' package name (some builds place code under /app/ai)
+            from ai.clients.gms_api.luma_prompt_enhancer import enhance, EnhancerPolicy, Score  # type: ignore
+        except ModuleNotFoundError:
+            # 최후의 폴백: 파일 경로에서 직접 로드
+            import importlib.util as _ilu
+            _cands = [
+                os.path.join(_ROOT_FLAT, "clients", "gms_api", "luma_prompt_enhancer.py"),
+                os.path.join(_ROOT_AI,   "clients", "gms_api", "luma_prompt_enhancer.py"),
+                os.path.join(_ROOT_ai,   "clients", "gms_api", "luma_prompt_enhancer.py"),
+            ]
+            _loaded = False
+            for _p in _cands:
+                try:
+                    if os.path.exists(_p):
+                        _spec = _ilu.spec_from_file_location("_enh_mod", _p)
+                        if _spec and _spec.loader:
+                            _mod = _ilu.module_from_spec(_spec)
+                            _spec.loader.exec_module(_mod)  # type: ignore[attr-defined]
+                            enhance = _mod.enhance
+                            EnhancerPolicy = _mod.EnhancerPolicy
+                            Score = _mod.Score
+                            _loaded = True
+                            break
+                except Exception:
+                    continue
+            if not _loaded:
+                raise
 
 
 load_dotenv()
