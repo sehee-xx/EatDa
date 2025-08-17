@@ -94,6 +94,9 @@ def _load_enhancer():
 
 load_dotenv()
 
+# Bind enhancer symbols at module scope so inner functions can reference them
+enhance, EnhancerPolicy, Score = _load_enhancer()
+
 
 class ReviewGenerateConsumer:
     def __init__(self) -> None:
