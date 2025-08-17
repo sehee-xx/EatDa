@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AdoptedMenuPosterRepository extends JpaRepository<AdoptedMenuPoster, Long> {
     List<AdoptedMenuPoster> findByStoreIdAndDeletedFalse(Long storeId);
@@ -17,4 +18,6 @@ public interface AdoptedMenuPosterRepository extends JpaRepository<AdoptedMenuPo
         ORDER BY amp.adoptedAt DESC
         """)
     List<AdoptedMenuPoster> findByStoreIdOrderByAdoptedAtDesc(@Param("storeId") Long storeId);
+
+    Optional<AdoptedMenuPoster> findByStoreIdAndMenuPosterIdAndDeletedFalse(Long storeId, Long menuPosterId);
 }
