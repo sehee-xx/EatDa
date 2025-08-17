@@ -3,8 +3,11 @@ FastAPI 애플리케이션 진입점
 AI API 서버의 메인 실행 파일입니다.
 """
 import os, sys
-ROOT = os.path.abspath(os.path.dirname(__file__))
+ROOT = os.path.abspath(os.path.dirname(__file__))   # /app
 if ROOT not in sys.path: sys.path.insert(0, ROOT)
+AI_ROOT = os.path.join(ROOT, "AI")                  # /app/AI
+if os.path.isdir(AI_ROOT) and AI_ROOT not in sys.path:
+    sys.path.insert(0, AI_ROOT)
 
 import os
 from fastapi import FastAPI
