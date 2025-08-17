@@ -619,9 +619,11 @@ CREATE TABLE asset_source (
 
 <details><summary style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">5.1. 핵심 기능</summary>
 
-### 5.1.1. 리뷰
+<details><summary style="font-size: 1.2em; font-weight: bold; margin: 0.83em 0;">5.1.1 리뷰</summary>
 
-### 5.1.2. 거리 피드 조회
+</details>
+
+<details><summary style="font-size: 1.2em; font-weight: bold; margin: 0.83em 0;">5.1.2. 거리 피드 조회</summary>
 
 ![image.png](attachment:cdc33803-5d5e-4985-8555-6b3b4d1ecbf9:image.png)
 
@@ -664,6 +666,8 @@ CREATE TABLE asset_source (
 ![image.png](attachment:6d6e0314-e0ed-483a-bc3b-3b6d404ec0a5:image.png)
 
 - Redis에 해당 정보를 업데이트하고 클라이언트에 정보 반환
+
+</details>
 
 </details>
 
