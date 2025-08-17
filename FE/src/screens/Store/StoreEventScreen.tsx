@@ -1,10 +1,21 @@
 // src/screens/Store/StoreEventScreen.tsx
 import React, { useEffect, useCallback, useState } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, Text, FlatList, StyleSheet, Image } from "react-native";
 import GridComponent, { eventItem } from "../../components/GridComponent";
 import DetailEventScreen from "./DetailEventScreen";
 import NoDataScreen from "../../components/NoDataScreen";
+import { COLORS, SPACING } from "../../constants/theme";
 import { getMyEvents, getStoreEvents } from "../EventMaking/services/api";
+const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
+
+const EmptyState = ({ message, icon }: { message: string; icon?: any }) => (
+  <View style={styles.emptyContent}>
+    {icon && (
+      <Image source={icon} style={styles.emptyIcon} resizeMode="contain" />
+    )}
+    <Text style={styles.emptyText}>{message}</Text>
+  </View>
+);
 
 type ApiItem = {
   eventId: number;
@@ -40,7 +51,10 @@ type Props = {
   canDelete?: boolean;
 };
 
-export default function StoreEventScreen({ storeId, canDelete = false }: Props) {
+export default function StoreEventScreen({
+  storeId,
+  canDelete = false,
+}: Props) {
   const [containerWidth, setContainerWidth] = useState(0);
   const [items, setItems] = useState<eventItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,7 +98,11 @@ export default function StoreEventScreen({ storeId, canDelete = false }: Props) 
   const isEmpty = !loading && items.length === 0;
   const tile = Math.floor(containerWidth / 3);
 
-  if (isEmpty) return <NoDataScreen />;
+  if (isEmpty) {
+    return (
+      <EmptyState message="진행중인 이벤트가 없습니다." icon={EmptyIcon} />
+    );
+  }
 
   if (selectedIndex !== null) {
     return (
@@ -96,8 +114,8 @@ export default function StoreEventScreen({ storeId, canDelete = false }: Props) 
           setItems((prev) => prev.filter((it) => it.id !== deletedId));
           setSelectedIndex(null);
         }}
-        canDelete={canDelete}    // ✅ 내 가게일 때만 삭제 노출
-        storeId={storeId}        
+        canDelete={canDelete} // ✅ 내 가게일 때만 삭제 노출
+        storeId={storeId}
       />
     );
   }
@@ -136,3 +154,23 @@ export default function StoreEventScreen({ storeId, canDelete = false }: Props) 
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  emptyContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: SPACING.xl * 4,
+  
+  },
+  emptyIcon: {
+    width: "20%",
+    aspectRatio: 1,
+    marginBottom: SPACING.lg,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.textColors.secondary,
+    textAlign: "center",
+  },
+});
