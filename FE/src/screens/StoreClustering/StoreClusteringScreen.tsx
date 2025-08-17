@@ -74,8 +74,9 @@ const INITIAL_REGION = {
 };
 
 const KAKAO_API_KEY =
-  Constants.expoConfig?.extra?.kakaoApiKey ||
-  "8e8f365a52aa8fbcee64e49c01552c71";
+  Constants.manifest?.extra?.kakaoApiKey ??
+  Constants.expoConfig?.extra?.kakaoApiKey ??
+  "";
 
 export default function StoreClusteringScreen() {
   const navigation = useNavigation<NavigationProp>();
