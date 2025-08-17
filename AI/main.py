@@ -2,6 +2,10 @@
 FastAPI 애플리케이션 진입점
 AI API 서버의 메인 실행 파일입니다.
 """
+import os, sys
+ROOT = os.path.abspath(os.path.dirname(__file__))
+if ROOT not in sys.path: sys.path.insert(0, ROOT)
+
 import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
