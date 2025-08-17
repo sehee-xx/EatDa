@@ -1,3 +1,4 @@
+// src/screens/Mypage/MakerMypageDetail.tsx
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
@@ -31,6 +32,7 @@ import {
 } from "./services/api";
 
 import { adoptMenuPosters } from "../Store/Menu/services/api";
+import ResultModal from "../../components/ResultModal";
 
 const EmptyIcon = require("../../../assets/blue-box-with-red-button-that-says-x-it 1.png");
 
@@ -55,6 +57,15 @@ const EmptyState = ({ message, icon }: { message: string; icon?: any }) => (
     <Text style={styles.emptyText}>{message}</Text>
   </View>
 );
+
+// ✅ 공통 ResultModal 상태
+type ResultState = {
+  visible: boolean;
+  type: "success" | "failure";
+  title?: string;
+  message: string;
+  onAfterClose?: () => void;
+};
 
 export default function MakerMypageDetail({
   userRole,
@@ -100,6 +111,25 @@ export default function MakerMypageDetail({
   const scaleAnimRef = useRef(new Animated.Value(1));
   const scaleAnim = scaleAnimRef.current;
 
+  // ✅ ResultModal 상태 & 헬퍼
+  const [result, setResult] = useState<ResultState>({
+    visible: false,
+    type: "success",
+    message: "",
+  });
+  const openResult = (next: Omit<ResultState, "visible">) =>
+    setResult({ visible: true, ...next });
+  const closeResult = () => {
+    const after = result.onAfterClose;
+    setResult({
+      visible: false,
+      type: "success",
+      message: "",
+      onAfterClose: undefined,
+    });
+    if (after) after();
+  };
+
   // 현재 인덱스에 맞춰 비디오 재생/일시정지
   useEffect(() => {
     Object.keys(vdoRefs.current).forEach((key) => {
@@ -116,7 +146,6 @@ export default function MakerMypageDetail({
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
         const idx = viewableItems[0].index as number;
         setCurrentIndex(idx);
-        // 받은 메뉴판 상세일 때는 현재 보이는 아이템을 selectedItem에도 반영해 두면 디버깅이 편함
         if (detailSource === "receivedMenuBoard") {
           const cur = detailList[idx];
           if (cur) setSelectedItem(cur);
@@ -127,7 +156,6 @@ export default function MakerMypageDetail({
   );
 
   // ---- 데이터 로딩 ----
-  // 내 가게 리뷰
   useEffect(() => {
     if (activeTab !== "storeReviews") return;
 
@@ -158,7 +186,6 @@ export default function MakerMypageDetail({
       .finally(() => setLoadingReviews(false));
   }, [activeTab]);
 
-  // 내 가게 이벤트
   useEffect(() => {
     if (activeTab !== "storeEvents") return;
 
@@ -201,7 +228,6 @@ export default function MakerMypageDetail({
       .finally(() => setLoadingEvents(false));
   }, [activeTab]);
 
-  // 받은 메뉴판
   useEffect(() => {
     if (activeTab !== "receivedMenuBoard") return;
 
@@ -236,7 +262,6 @@ export default function MakerMypageDetail({
         ? receivedPosters
         : reviewsData;
 
-    // 현재 아이템의 인덱스를 계산해서 currentIndex 초기화 ★
     const idx = Math.max(
       0,
       list.findIndex((i) => i.id === item.id)
@@ -244,53 +269,79 @@ export default function MakerMypageDetail({
     setDetailList(list);
     setSelectedItem(item);
     setDetailSource(source);
-    setCurrentIndex(idx); // ★ 중요: 처음 들어왔을 때도 현재 인덱스 맞춰둠
+    setCurrentIndex(idx);
     setHeaderVisible?.(false);
 
     scaleAnim.setValue(0.8);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
-  // 채택하기 (현재 화면에 보이는 아이템 기준) ★
+  // ✅ 실제 채택 실행 (성공/실패는 ResultModal)
+  const doAdopt = async (posterId: number) => {
+    try {
+      setAdopting(true);
+      await adoptMenuPosters({
+        storeId: Number(storeId),
+        menuPosterIds: [posterId],
+      });
+      openResult({
+        type: "success",
+        title: "완료",
+        message: "메뉴판을 채택했습니다.",
+      });
+    } catch (e: any) {
+      openResult({
+        type: "failure",
+        title: "오류",
+        message: e?.message || "채택에 실패했습니다.",
+      });
+    } finally {
+      setAdopting(false);
+    }
+  };
+
+  // ✅ 채택하기: Alert로 확인 받고, 실행 결과는 ResultModal
   const handleAdopt = () => {
     if (detailSource !== "receivedMenuBoard") return;
 
     const current = detailList[currentIndex] || selectedItem;
-    if (!current) return;
+    if (!current) {
+      openResult({
+        type: "failure",
+        title: "오류",
+        message: "선택된 메뉴판 정보를 찾을 수 없습니다.",
+      });
+      return;
+    }
 
     if (!storeId || !Number.isFinite(storeId)) {
-      Alert.alert("오류", "가게 정보(storeId)를 불러오지 못했습니다.");
+      openResult({
+        type: "failure",
+        title: "오류",
+        message: "가게 정보(storeId)를 불러오지 못했습니다.",
+      });
       return;
     }
 
     const posterId = Number(current.id);
     if (!Number.isFinite(posterId)) {
-      Alert.alert("오류", "유효하지 않은 메뉴판 ID 입니다.");
+      openResult({
+        type: "failure",
+        title: "오류",
+        message: "유효하지 않은 메뉴판 ID 입니다.",
+      });
       return;
     }
 
     Alert.alert(
       "채택하기",
-      "이 메뉴판으로 교체 채택됩니다. 기존 채택 목록은 덮어씁니다. 진행할까요?",
+      "이 메뉴판으로 교체 채택됩니다. 기존 채택 목록은 덮어씁니다.\n진행할까요?",
       [
         { text: "취소", style: "cancel" },
         {
           text: "채택",
           style: "destructive",
-          onPress: async () => {
-            try {
-              setAdopting(true);
-              await adoptMenuPosters({ storeId, menuPosterIds: [posterId] });
-              Alert.alert("완료", "메뉴판을 채택했습니다.");
-            } catch (e: any) {
-              Alert.alert("오류", e?.message || "채택에 실패했습니다.");
-            } finally {
-              setAdopting(false);
-            }
-          },
+          onPress: () => doAdopt(posterId),
         },
       ]
     );
@@ -473,6 +524,15 @@ export default function MakerMypageDetail({
           </View>
         </ScrollView>
       )}
+
+      {/* ✅ 결과 모달 (성공/실패 통합) */}
+      <ResultModal
+        visible={result.visible}
+        type={result.type}
+        title={result.title}
+        message={result.message}
+        onClose={closeResult}
+      />
     </View>
   );
 }
