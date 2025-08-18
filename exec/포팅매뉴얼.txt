@@ -1,0 +1,9 @@
+사용 JVM, 웹서버, WAS 제품 종류/버전
+- JVM: OpenJDK 21
+- Framework: Spring Boot 3.5.x
+- 빌드 도구: Gradle 8.x
+
+배포 시 특이사항
+- Docker 기반 배포
+- GitLab CI/CD Runner → EC2 배포
+- Blue-Green 무중단 배포 적용 (nginx로 트래픽 전환)
