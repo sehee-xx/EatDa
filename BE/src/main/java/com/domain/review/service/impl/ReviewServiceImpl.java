@@ -472,7 +472,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .storeName(review.getStore().getName())
                 .description(review.getDescription())
                 .distance(storeDistanceMap.get(review.getStore().getId()))
-                .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
+                .menuNames(extractMenuNames(review))
                 .build();
     }
 
@@ -488,7 +488,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .description(review.getDescription())
                 .imageUrl(review.getReviewAsset().getImageUrl())
                 .shortsUrl(review.getReviewAsset().getShortsUrl())
-                .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
+                .menuNames(extractMenuNames(review))
                 .build();
     }
 
@@ -502,9 +502,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .reviewId(review.getId())
                 .storeName(review.getStore().getName())
                 .description(review.getDescription())
-                .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
+                .menuNames(extractMenuNames(review))
                 .imageUrl(review.getReviewAsset().getImageUrl())
                 .shortsUrl(review.getReviewAsset().getShortsUrl())
+                .thumbnailUrl(review.getReviewAsset().getThumbnailPath())
                 .createdAt(review.getCreatedAt())
                 .build();
     }
@@ -541,11 +542,30 @@ public class ReviewServiceImpl implements ReviewService {
                         .type(reviewAsset.getType().name())
                         .imageUrl(reviewAsset.getImageUrl())
                         .shortsUrl(reviewAsset.getShortsUrl())
+                        .thumbnailUrl(reviewAsset.getThumbnailPath())
                         .build())
                 .scrapCount(scrapCount)
                 .isScrapped(isScrapped)
-                .menuNames(List.of()) // TODO: 메뉴 연결 시 수정
+                .menuNames(extractMenuNames(review))
                 .build();
+    }
+
+    /**
+     * 리뷰에 연결된 메뉴 이름 리스트 추출
+     * - Review -> ReviewMenu -> Menu.name 경로로 안전하게 매핑
+     * - null 안전 처리 및 중복 제거
+     */
+    private List<String> extractMenuNames(Review review) {
+        if (review == null || review.getReviewMenus() == null) {
+            return List.of();
+        }
+        return review.getReviewMenus().stream()
+                .map(ReviewMenu::getMenu)
+                .filter(Objects::nonNull)
+                .map(Menu::getName)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     /**

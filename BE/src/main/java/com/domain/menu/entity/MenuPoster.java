@@ -11,6 +11,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -36,6 +39,9 @@ public class MenuPoster extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    @OneToMany(mappedBy = "menuPoster", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MenuPosterMenu> menuPosterMenus = new ArrayList<>();
 
     @Builder
     public MenuPoster(final User user, final Store store, String description, boolean isSent, Status status) {
