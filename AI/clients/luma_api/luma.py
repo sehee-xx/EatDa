@@ -44,7 +44,7 @@ async def run_luma():
         "prompt": detailed_luma_prompt,
         "model": "ray-2",
         "aspect_ratio": "9:16",
-        "duration": "9s",
+        "duration": "5s",
         "keyframes": {
             "frame0": {
                 "type": "image",

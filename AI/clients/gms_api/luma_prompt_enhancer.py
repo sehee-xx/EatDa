@@ -30,7 +30,7 @@ class EnhancerPolicy:
 # ------------------ Controls Defaults ------------------
 
 DEFAULT_CONTROLS = {
-	"duration": 10.0,
+	"duration": 5.0,
 	"aspect_ratio": "16:9",
 	"motion_intensity": "medium",
 }
