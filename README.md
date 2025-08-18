@@ -867,8 +867,8 @@ CREATE TABLE asset_source (
 ## AI
 
 <details><summary><strong>Fine tuning</strong></summary>
-### 목적
 
+### 목적
 - 한국어 텍스트 학습을 위해 **multimodal diffusion Transformer 아키텍처 기반 SD3 모델**에 LoRA 파인튜닝 진행.
 
 ### 문제와 해결
@@ -897,8 +897,8 @@ CREATE TABLE asset_source (
 </details>
 
 <details><summary><strong>Prompt engineering</strong></summary>
-### 방향 전환
 
+### 방향 전환
 - 숏츠 영상 생성의 품질 병목이 입력단(프롬프트)에 있다고 판단 → **프롬프트 엔지니어링**으로 초점 이동.
 
 ### 1차 파이프라인
