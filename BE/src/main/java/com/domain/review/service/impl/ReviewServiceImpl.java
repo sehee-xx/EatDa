@@ -48,6 +48,8 @@ import com.global.exception.ApiException;
 import com.global.filestorage.FileStorageService;
 import com.global.filestorage.FileUrlResolver;
 import com.global.utils.AssetValidator;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -91,6 +93,8 @@ public class ReviewServiceImpl implements ReviewService {
     private final FileStorageProperties fileStorageProperties;
     private final FileUrlResolver fileUrlResolver;
 
+    private final MeterRegistry meterRegistry;
+
     // @formatter:off
     /**
      * 리뷰 에셋 생성 요청 처리
@@ -103,22 +107,29 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public ReviewAssetRequestResponse requestReviewAsset(final ReviewAssetCreateRequest request,
                                                          final String eaterEmail) {
-        User eater = findEaterByEmail(eaterEmail);
-        Store store = storeRepository.findById(request.storeId())
-                .orElseThrow(() -> new ApiException(STORE_NOT_FOUND));
-        ReviewValidator.validateCreateRequest(request);
-        AssetValidator.validateImages(request.image());
-        Review review = createPendingReview(store, eater);
-        ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
 
-        // 타입에 따라 WebP 변환 여부 결정
-        boolean convertToWebp = shouldConvertToWebp(request.type());
-        // 변환 여부를 넘겨서 업로드
-        List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
-                false);
-        publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls); // Redis 메시지 발행
+        return Timer.builder("review_asset_request_duration_seconds")
+                .description("리뷰 에셋 생성 요청 처리 시간")
+                .register(meterRegistry)
+                .record(() -> {
+                    User eater = findEaterByEmail(eaterEmail);
+                    Store store = storeRepository.findById(request.storeId())
+                            .orElseThrow(() -> new ApiException(STORE_NOT_FOUND));
+                    ReviewValidator.validateCreateRequest(request);
+                    AssetValidator.validateImages(request.image());
+                    Review review = createPendingReview(store, eater);
+                    ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
 
-        return reviewMapper.toRequestResponse(review, reviewAsset);
+                    // 타입에 따라 WebP 변환 여부 결정
+                    boolean convertToWebp = shouldConvertToWebp(request.type());
+                    // 변환 여부를 넘겨서 업로드
+                    List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
+                            false);
+                    publishReviewAssetMessage(reviewAsset, eater.getId(), request, store,
+                            uploadedImageUrls); // Redis 메시지 발행
+
+                    return reviewMapper.toRequestResponse(review, reviewAsset);
+                });
     }
 
     /**
