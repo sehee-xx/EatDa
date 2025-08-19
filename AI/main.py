@@ -45,7 +45,12 @@ async def lifespan(app: FastAPI):
     tasks = [
         asyncio.create_task(EventImageConsumer().run_forever(), name="event-image"),
         asyncio.create_task(MenuboardGenerateConsumer().run_forever(), name="menuboard-generate"),
-        asyncio.create_task(ReviewGenerateConsumer().run_forever(), name="review-generate"),
+        
+        # mock 테스트를 위해 추가
+        asyncio.create_task(MockReviewGenerateConsumer().run_forever(), name="mock-review-generate"),
+        
+        # mock 테스트를 위해 임시 주석
+        # asyncio.create_task(ReviewGenerateConsumer().run_forever(), name="review-generate"),
     ]
     app.state.consumer_tasks = tasks
     logger.info("✅ AI Server started and ready")
