@@ -99,6 +99,11 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+# === Prometheus metrics 정의 (main.py에 추가) ===
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 # 서버 실행 (개발용)
 if __name__ == "__main__":
     import uvicorn

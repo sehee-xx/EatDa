@@ -174,10 +174,4 @@ class MockReviewGenerateConsumer:
 async def main() -> None:
     consumer = MockReviewGenerateConsumer()
     await consumer.run_forever()
-
-
-if __name__ == "__main__":
-    consumer = MockReviewGenerateConsumer()
-    loop = asyncio.get_event_loop()
-    loop.create_task(consumer.run_forever())
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
