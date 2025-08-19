@@ -20,7 +20,7 @@ reload-infra:
   script:
     - cp -r $CI_PROJECT_DIR/INFRA/* /srv/
     # - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.yml down
-    - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.test.yml up -d test-blue
+    - docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.test.yml up -d
   rules:
     - when: manual
   allow_failure: true
