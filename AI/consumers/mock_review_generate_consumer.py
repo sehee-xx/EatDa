@@ -22,6 +22,7 @@ from models.review_generate_models import GenerateRequest
 from services.review_generate_callback import review_generate_callback
 
 # === Prometheus metrics ===
+from consumers.mock_review_generate_consumer import MockReviewGenerateConsumer
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import FastAPI
 from fastapi.responses import Response
