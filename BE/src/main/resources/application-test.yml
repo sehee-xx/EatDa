@@ -16,6 +16,13 @@ spring:
   aop:
     proxy-target-class: true
 
+logging:
+  level:
+    root: INFO
+    com.zaxxer.hikari: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: DEBUG
+
 filestorage: # 파일 저장소 설정
   base-dir: /root/eatda
   host-base-dir: /home/ubuntu/eatda/test
