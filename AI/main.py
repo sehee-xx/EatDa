@@ -26,6 +26,7 @@ from consumers.menuboard_generate_consumer import MenuboardGenerateConsumer
 from consumers.review_generate_consumer import ReviewGenerateConsumer
 
 # prometheus
+from consumers.mock_review_generate_consumer import MockReviewGenerateConsumer
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 
