@@ -148,7 +148,10 @@ class ReviewGenerateConsumer:
         self._last_fail_log_ts: float = 0.0
         self._fail_log_interval_sec: float = 60.0  # 실패 지속 시 로그 최소 간격
         self.redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
-        self.group: str = os.getenv("REDIS_GROUP", "ai-consumers")
+        
+        # Mock 실행을 위해 주석 처리 
+        # self.group: str = os.getenv("REDIS_GROUP", "ai-consumers")
+        
         default_consumer = f"ai-{socket.gethostname()}-{os.getpid()}"
         self.consumer_id: str = os.getenv("REDIS_CONSUMER_ID", default_consumer)
         self.stream_key: str = os.getenv("REVIEW_ASSET_STREAM_KEY", "review.asset.generate")
