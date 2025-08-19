@@ -58,6 +58,12 @@ services:
     restart: always
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-ha609", "-pa609"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7.2
@@ -70,6 +76,11 @@ services:
     restart: always
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:latest
