@@ -20,6 +20,7 @@ public class ReviewAssetRedisPublisher {
 
     public void publish(ReviewAssetGenerateMessage message) {
         try {
+            log.info("리뷰 에셋 Redis 메시지 발행: {}", message.reviewAssetId());
             redisStreamWriter.publish(streamKey, message);
             metrics.incrementSuccess();
         } catch (Exception e) {

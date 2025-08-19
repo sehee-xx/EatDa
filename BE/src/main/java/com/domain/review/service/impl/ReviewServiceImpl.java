@@ -125,6 +125,7 @@ public class ReviewServiceImpl implements ReviewService {
                     // 변환 여부를 넘겨서 업로드
                     List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
                             false);
+                    log.info("Uploaded images: {}", uploadedImageUrls);
                     publishReviewAssetMessage(reviewAsset, eater.getId(), request, store,
                             uploadedImageUrls); // Redis 메시지 발행
 
