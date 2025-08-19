@@ -140,8 +140,8 @@ BE:deploy-slot-based:
       else
         export ENV=test
       fi
-      export NEXT_SLOT=blue
-      export PREV_SLOT=green
+      export NEXT_SLOT=green
+      export PREV_SLOT=blue
       docker compose -f $CI_PROJECT_DIR/INFRA/docker/docker-compose.${ENV}.yml up -d ${ENV}-${NEXT_SLOT}
       docker exec ${ENV}-nginx cp /srv/nginx/${ENV}/default-${NEXT_SLOT}.conf /etc/nginx/conf.d/default.conf
       if ! $CI_PROJECT_DIR/INFRA/scripts/check-slot-health.sh $ENV $NEXT_SLOT; then
