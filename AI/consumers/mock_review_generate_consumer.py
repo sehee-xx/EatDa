@@ -82,8 +82,24 @@ class MockReviewGenerateConsumer:
     @staticmethod
     def _deserialize_fields(fields: Dict[str, str]) -> Dict[str, Any]:
         if "payload" in fields:
-            return json.loads(fields["payload"])
-        return dict(fields)
+            data = json.loads(fields["payload"])
+        else:
+            data = dict(fields)
+
+        # menu, referenceImages가 문자열로 들어오면 JSON decode 시도
+        if isinstance(data.get("menu"), str):
+            try:
+                data["menu"] = json.loads(data["menu"])
+            except Exception:
+                pass
+
+        if isinstance(data.get("referenceImages"), str):
+            try:
+                data["referenceImages"] = json.loads(data["referenceImages"])
+            except Exception:
+                pass
+
+        return data
 
     @classmethod
     def parse_message(cls, fields: Dict[str, str]) -> GenerateRequest:
