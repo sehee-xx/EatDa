@@ -4,6 +4,7 @@ Mock Redis Stream Consumer (리뷰 자산 생성 시뮬레이션)
 - AI 모델 호출 대신 90초 대기 (asyncio.sleep)
 - 성공/실패 랜덤 발생
 - 결과는 Spring Callback API로 전달
+- Prometheus 지표 노출 (/metrics)
 """
 
 import asyncio
@@ -14,20 +15,60 @@ import random
 import logging
 import time
 from typing import Any, Dict
+from datetime import datetime
 
 from redis import asyncio as redis
 from models.review_generate_models import GenerateRequest
 from services.review_generate_callback import review_generate_callback
+
+# === Prometheus metrics ===
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from fastapi import FastAPI
+from fastapi.responses import Response
+
+# 처리 건수
+MESSAGES_PROCESSED = Counter(
+    "consumer_messages_processed_total",
+    "총 처리된 메시지 수",
+    ["stream"]
+)
+
+# 실패 건수
+MESSAGES_FAILED = Counter(
+    "consumer_messages_failed_total",
+    "처리 실패한 메시지 수",
+    ["stream"]
+)
+
+# DLQ 건수
+MESSAGES_DLQ = Counter(
+    "consumer_messages_dlq_total",
+    "DLQ로 보낸 메시지 수",
+    ["stream"]
+)
+
+# 처리 지연
+MESSAGE_LATENCY = Histogram(
+    "consumer_message_latency_seconds",
+    "메시지 처리 지연 시간 (초)",
+    ["stream"],
+    buckets=[1, 5, 10, 30, 60, 90, 120, 180]
+)
+
+# === FastAPI 앱 & metrics endpoint ===
+app = FastAPI()
+
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 class MockReviewGenerateConsumer:
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
-        
-        # self.group: str = os.getenv("REDIS_GROUP", "mock-ai-consumers")
-        
-        # Mock 테스트를 위해 consumer group에 등록
+
+        # Redis Consumer Group
         self.group: str = os.getenv("REDIS_GROUP", "ai-consumers")
 
         default_consumer = f"mock-ai-{socket.gethostname()}-{os.getpid()}"
@@ -58,11 +99,13 @@ class MockReviewGenerateConsumer:
         return GenerateRequest.model_validate(data)
 
     async def handle_message(self, message_id: str, fields: Dict[str, str]) -> None:
+        start_time = time.time()
+
         try:
             req = self.parse_message(fields)
             self.logger.info(f"[MockConsumer] 메시지 수신: id={message_id}, reviewAssetId={req.reviewAssetId}")
 
-            # --- 가짜 AI 처리 (90초 대기) ---
+            # --- AI 처리 시뮬레이션 (90초 대기) ---
             await asyncio.sleep(90)
 
             # 성공/실패 9:1 확률
@@ -81,6 +124,12 @@ class MockReviewGenerateConsumer:
 
             # 메시지 ACK
             await self.client.xack(self.stream_key, self.group, message_id)
+
+            # 지표 기록
+            elapsed = time.time() - start_time
+            MESSAGES_PROCESSED.labels(stream=self.stream_key).inc()
+            MESSAGE_LATENCY.labels(stream=self.stream_key).observe(elapsed)
+
             self.logger.info(f"[MockConsumer] 메시지 처리 완료: id={message_id}, result={result}, url={url}")
 
         except Exception as e:
@@ -88,6 +137,10 @@ class MockReviewGenerateConsumer:
             await self.client.xack(self.stream_key, self.group, message_id)
             payload = json.dumps({"error": str(e), "fields": fields})
             await self.client.xadd(self.dead_stream, {"payload": payload})
+
+            # 지표 기록
+            MESSAGES_FAILED.labels(stream=self.stream_key).inc()
+            MESSAGES_DLQ.labels(stream=self.dead_stream).inc()
 
     async def run_forever(self) -> None:
         self.logger.info(f"[MockConsumer] 시작: url={self.redis_url}, group={self.group}, consumer={self.consumer_id}, stream={self.stream_key}")
@@ -109,7 +162,7 @@ class MockReviewGenerateConsumer:
 
                 for _, messages in result:
                     for message_id, fields in messages:
-                        # 메시지를 병렬로 처리 (대기 중에도 다른 메시지 처리 가능)
+                        # 메시지를 병렬로 처리
                         asyncio.create_task(self.handle_message(message_id, fields))
 
             except Exception as loop_err:
@@ -117,6 +170,7 @@ class MockReviewGenerateConsumer:
                 await asyncio.sleep(2)
 
 
+# === 엔트리포인트 ===
 async def main() -> None:
     consumer = MockReviewGenerateConsumer()
     await consumer.run_forever()
