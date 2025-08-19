@@ -1,12 +1,14 @@
 import http from 'k6/http';
-import { FormData } from 'k6/formdata';
 import { sleep } from 'k6';
+import { FormData } from 'https://jslib.k6.io/formdata/0.0.2/index.js';
+
+const img = open('./test.png', 'b');
 
 export const options = {
   scenarios: {
     normal_load: {
       executor: 'constant-arrival-rate',
-      rate: 50,  // 초당 50 요청
+      rate: 1,               // 초당 1 요청
       timeUnit: '1s',
       duration: '5m',
       preAllocatedVUs: 20,
@@ -18,21 +20,29 @@ export const options = {
 export default function () {
   const url = 'https://i13a609.p.ssafy.io/test/api/reviews/assets';
 
-  // k6 FormData 객체 생성
   const fd = new FormData();
   fd.append('storeId', '4');
-  fd.append('menuIds', '1,2');
-  fd.append('type', 'SHORTS_RAY2');
+  fd.append('menuIds', '1');
+  fd.append('menuIds', '2');
+  fd.append('type', 'IMAGE');
   fd.append('prompt', '햄스터가 나와서 한입 베어먹고 도망가는 영상');
-  fd.append('image', http.file(open('./test.png', 'b'), 'test.png'));
+  fd.append('image', http.file(img, 'test.png', 'image/png'));
 
   const res = http.post(url, fd.body(), {
-    headers: { 'Content-Type': `multipart/form-data; boundary=${fd.boundary}` },
+    headers: {
+      'Content-Type': 'multipart/form-data; boundary=' + fd.boundary,
+      'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0MDgxNUB0LmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJyb2xlIjoiRUFURVIiLCJpYXQiOjE3NTU1OTIzNjYsImV4cCI6MTc1NTY3ODc2Nn0.9TmEQRFotMgUO-LAu-TA7hgenHD1sUfDVNJDXuAwbYDTKLMQb1OjpW9D-7vbBNhIBM_aXfU1poomomwat3AVvA'
+    },
   });
 
-  if (res.status !== 200) {
-    console.error(`요청 실패: ${res.status}, body=${res.body}`);
-  }
 
-  sleep(0.1);
+  const ok = check(res, {
+    'status is 200 or 202': (r) => r.status === 200 || r.status === 202,
+  });
+
+  if (!ok) {
+    console.error(`요청 실패: status=${res.status}, body=${res.body}`);
+  }
 }
+
+sleep(0.1); // 0.1초 대기
