@@ -28,28 +28,28 @@ from fastapi.responses import Response
 
 # 처리 건수
 MESSAGES_PROCESSED = Counter(
-    "consumer_messages_processed_total",
+    "review_consumer_messages_processed_total",
     "총 처리된 메시지 수",
     ["stream"]
 )
 
 # 실패 건수
 MESSAGES_FAILED = Counter(
-    "consumer_messages_failed_total",
+    "review_consumer_messages_failed_total",
     "처리 실패한 메시지 수",
     ["stream"]
 )
 
 # DLQ 건수
 MESSAGES_DLQ = Counter(
-    "consumer_messages_dlq_total",
+    "review_consumer_messages_dlq_total",
     "DLQ로 보낸 메시지 수",
     ["stream"]
 )
 
 # 처리 지연
 MESSAGE_LATENCY = Histogram(
-    "consumer_message_latency_seconds",
+    "review_consumer_message_latency_seconds",
     "메시지 처리 지연 시간 (초)",
     ["stream"],
     buckets=[1, 5, 10, 30, 60, 90, 120, 180]
