@@ -55,14 +55,6 @@ MESSAGE_LATENCY = Histogram(
     buckets=[1, 5, 10, 30, 60, 90, 120, 180]
 )
 
-# === FastAPI 앱 & metrics endpoint ===
-app = FastAPI()
-
-@app.get("/metrics")
-async def metrics():
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
-
 class MockReviewGenerateConsumer:
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)

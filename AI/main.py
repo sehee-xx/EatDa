@@ -25,6 +25,10 @@ from consumers.event_image_consumer import EventImageConsumer
 from consumers.menuboard_generate_consumer import MenuboardGenerateConsumer
 from consumers.review_generate_consumer import ReviewGenerateConsumer
 
+# prometheus
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
+
 # 환경 변수 로드
 load_dotenv()
 
