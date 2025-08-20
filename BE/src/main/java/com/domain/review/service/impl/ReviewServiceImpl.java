@@ -112,23 +112,58 @@ public class ReviewServiceImpl implements ReviewService {
                 .description("리뷰 에셋 생성 요청 처리 시간")
                 .register(meterRegistry)
                 .record(() -> {
+                    // === 1. 유저 조회 ===
+                    Timer.Sample eaterSample = Timer.start(meterRegistry);
                     User eater = findEaterByEmail(eaterEmail);
+                    eaterSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "find_eater")
+                            .register(meterRegistry));
+
+                    // === 2. 가게 조회 ===
+                    Timer.Sample storeSample = Timer.start(meterRegistry);
                     Store store = storeRepository.findById(request.storeId())
                             .orElseThrow(() -> new ApiException(STORE_NOT_FOUND));
+                    storeSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "find_store")
+                            .register(meterRegistry));
+
+                    // === 3. 검증 ===
+                    Timer.Sample validateSample = Timer.start(meterRegistry);
                     ReviewValidator.validateCreateRequest(request);
                     AssetValidator.validateImages(request.image());
+                    validateSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "validate")
+                            .register(meterRegistry));
+
+                    // === 4. 리뷰/리뷰에셋 생성 ===
+                    Timer.Sample createSample = Timer.start(meterRegistry);
                     Review review = createPendingReview(store, eater);
                     ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
+                    createSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "create_entities")
+                            .register(meterRegistry));
 
-                    // 타입에 따라 WebP 변환 여부 결정
+                    // === 5. 이미지 업로드 ===
+                    Timer.Sample uploadSample = Timer.start(meterRegistry);
                     boolean convertToWebp = shouldConvertToWebp(request.type());
-                    // 변환 여부를 넘겨서 업로드
-                    List<String> uploadedImageUrls = uploadImages(request.image(), IMAGE_BASE_PATH + eater.getEmail(),
-                            false);
+                    List<String> uploadedImageUrls = uploadImages(
+                            request.image(),
+                            IMAGE_BASE_PATH + eater.getEmail(),
+                            convertToWebp
+                    );
                     log.info("Uploaded images: {}", uploadedImageUrls);
-                    publishReviewAssetMessage(reviewAsset, eater.getId(), request, store,
-                            uploadedImageUrls); // Redis 메시지 발행
+                    uploadSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "upload_images")
+                            .register(meterRegistry));
 
+                    // === 6. Redis 메시지 발행 ===
+                    Timer.Sample publishSample = Timer.start(meterRegistry);
+                    publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
+                    publishSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "publish_message")
+                            .register(meterRegistry));
+
+                    // === 최종 Response 매핑 ===
                     return reviewMapper.toRequestResponse(review, reviewAsset);
                 });
     }
