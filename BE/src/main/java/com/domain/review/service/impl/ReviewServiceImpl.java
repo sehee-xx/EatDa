@@ -57,6 +57,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +95,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewThumbnailService reviewThumbnailService;
     private final FileStorageProperties fileStorageProperties;
     private final FileUrlResolver fileUrlResolver;
+    private final ExecutorService executor = Executors.newFixedThreadPool(10); // 적절한 크기의 스레드 풀
 
     private final MeterRegistry meterRegistry;
 
@@ -603,13 +607,15 @@ public class ReviewServiceImpl implements ReviewService {
      */
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
-        return images.stream()
-                .map(file -> fileStorageService.storeImage(
-                        file,
-                        relativeBase,
-                        file.getOriginalFilename(),
-                        convertToWebp
+        List<CompletableFuture<String>> futures = images.stream()
+                .map(file -> CompletableFuture.supplyAsync(() ->
+                                fileStorageService.storeImage(file, relativeBase, file.getOriginalFilename(), convertToWebp),
+                        executor // 커스텀 스레드 풀 지정
                 ))
+                .toList();
+
+        return futures.stream()
+                .map(CompletableFuture::join)
                 .toList();
     }
 
