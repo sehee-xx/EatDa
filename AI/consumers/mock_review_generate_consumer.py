@@ -120,7 +120,7 @@ class MockReviewGenerateConsumer:
             if random.random() < 0.1:
                 result, url = "FAIL", None
             else:
-                result, url = "SUCCESS", f"https://i13a609.p.ssafy.io/eatda/test/data/videos/data/5d3b43b01f90488cbd4602e2d3661314.mp4"
+                result, url = "SUCCESS", f"https://i.imgur.com/VrTNlTl.png"
 
             # Callback 전송
             await review_generate_callback.send_callback_to_spring({
