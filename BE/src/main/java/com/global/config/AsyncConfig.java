@@ -30,9 +30,9 @@ public class AsyncConfig implements AsyncConfigurer {
     @Bean(name = "imageUploadExecutor")
     public ExecutorService imageUploadExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(40);
+        executor.setQueueCapacity(200);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setThreadNamePrefix("ImageUpload-");
         executor.initialize();
