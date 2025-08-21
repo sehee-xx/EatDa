@@ -57,12 +57,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -95,9 +92,6 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewThumbnailService reviewThumbnailService;
     private final FileStorageProperties fileStorageProperties;
     private final FileUrlResolver fileUrlResolver;
-
-    @Qualifier("imageUploadExecutor")
-    private final ExecutorService executor;
 
     private final MeterRegistry meterRegistry;
 
@@ -149,29 +143,25 @@ public class ReviewServiceImpl implements ReviewService {
                             .tag("step", "create_entities")
                             .register(meterRegistry));
 
-                    // === 5. 비동기 이미지 업로드 시작 ===
-                    // CompletableFuture로 전체 업로드 과정을 묶어 백그라운드에서 실행
-                    // 메인 스레드는 이 작업을 시작만 하고 바로 응답을 반환
-                    CompletableFuture.runAsync(() -> {
-                        // Start a new timer for the background task
-                        Timer.Sample uploadSample = Timer.start(meterRegistry);
-                        try {
-                            boolean convertToWebp = shouldConvertToWebp(request.type());
-                            List<String> uploadedImageUrls = uploadImages(
-                                    request.image(),
-                                    IMAGE_BASE_PATH + eater.getEmail(),
-                                    convertToWebp
-                            );
-                            log.info("Uploaded images: {}", uploadedImageUrls);
+                    // === 5. 이미지 업로드 ===
+                    Timer.Sample uploadSample = Timer.start(meterRegistry);
+                    boolean convertToWebp = shouldConvertToWebp(request.type());
+                    List<String> uploadedImageUrls = uploadImages(
+                            request.image(),
+                            IMAGE_BASE_PATH + eater.getEmail(),
+                            convertToWebp
+                    );
+                    log.info("Uploaded images: {}", uploadedImageUrls);
+                    uploadSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "upload_images")
+                            .register(meterRegistry));
 
-                            // === 6. 이미지 업로드 완료 후 Redis 메시지 발행 ===
-                            publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
-                        } finally {
-                            uploadSample.stop(Timer.builder("review_asset_step_duration_seconds")
-                                    .tag("step", "background_upload_publish")
-                                    .register(meterRegistry));
-                        }
-                    }, executor); // 커스텀 스레드 풀을 사용하여 실행
+                    // === 6. Redis 메시지 발행 ===
+                    Timer.Sample publishSample = Timer.start(meterRegistry);
+                    publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
+                    publishSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                            .tag("step", "publish_message")
+                            .register(meterRegistry));
 
                     // === 최종 Response 매핑 ===
                     return reviewMapper.toRequestResponse(review, reviewAsset);
@@ -613,15 +603,13 @@ public class ReviewServiceImpl implements ReviewService {
      */
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
-        List<CompletableFuture<String>> futures = images.stream()
-                .map(file -> CompletableFuture.supplyAsync(() ->
-                                fileStorageService.storeImage(file, relativeBase, file.getOriginalFilename(), convertToWebp),
-                        executor // 커스텀 스레드 풀 지정
+        return images.stream()
+                .map(file -> fileStorageService.storeImage(
+                        file,
+                        relativeBase,
+                        file.getOriginalFilename(),
+                        convertToWebp
                 ))
-                .toList();
-
-        return futures.stream()
-                .map(CompletableFuture::join)
                 .toList();
     }
 
