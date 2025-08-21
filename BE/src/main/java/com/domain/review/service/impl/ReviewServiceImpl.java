@@ -59,10 +59,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -95,7 +95,9 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewThumbnailService reviewThumbnailService;
     private final FileStorageProperties fileStorageProperties;
     private final FileUrlResolver fileUrlResolver;
-    private final ExecutorService executor = Executors.newFixedThreadPool(4); // 적절한 크기의 스레드 풀
+
+    @Qualifier("imageUploadExecutor")
+    private final ExecutorService executor;
 
     private final MeterRegistry meterRegistry;
 
