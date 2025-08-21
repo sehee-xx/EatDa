@@ -13,6 +13,8 @@ import com.global.config.FileStorageProperties.Video;
 import com.global.constants.ErrorCode;
 import com.global.exception.GlobalException;
 import com.global.utils.ImageOptimizationUtils;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -288,7 +290,7 @@ public class LocalFileStorageService implements FileStorageService {
         String extension = resolveExtensionFromMimeType(mimeType);
         Path fullPath = generateFullPath(imageRoot, relativePath, extension);
 
-        Files.copy(inputStream, fullPath);
+        writeOptimizedImageToDisk(inputStream, fullPath);
         boolean exists = Files.exists(fullPath);
         log.info("File exists after write: {}", exists);
         return fullPath.toString();
@@ -477,6 +479,23 @@ public class LocalFileStorageService implements FileStorageService {
                             "Exceeded max bytes: " + maxBytes);
                 }
                 out.write(buf, 0, n);
+            }
+        }
+    }
+
+    private void writeOptimizedImageToDisk(final InputStream inputStream, final Path fullPath)
+            throws IOException {
+        // 버퍼링된 스트림을 사용하여 디스크 쓰기 최적화
+        try (
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+                BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(Files.newOutputStream(fullPath))
+        ) {
+            byte[] buffer = new byte[8192]; // 8KB 버퍼 생성
+            int bytesRead;
+            // 입력 스트림에서 데이터를 읽어 버퍼에 담고,
+            // 이를 출력 스트림으로 쓰는 과정을 반복
+            while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                bufferedOutputStream.write(buffer, 0, bytesRead);
             }
         }
     }
