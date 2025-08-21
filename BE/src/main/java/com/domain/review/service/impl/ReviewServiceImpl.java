@@ -151,16 +151,30 @@ public class ReviewServiceImpl implements ReviewService {
 
                     // === 5. 비동기 이미지 업로드 & Redis 메시지 발행 ===
                     CompletableFuture.supplyAsync(() -> {
-                        boolean convertToWebp = shouldConvertToWebp(request.type());
-                        return uploadImages(
-                                request.image(),
-                                IMAGE_BASE_PATH + eater.getEmail(),
-                                convertToWebp
-                        );
+                        Timer.Sample uploadSample = Timer.start(meterRegistry);
+                        try {
+                            boolean convertToWebp = shouldConvertToWebp(request.type());
+                            return uploadImages(
+                                    request.image(),
+                                    IMAGE_BASE_PATH + eater.getEmail(),
+                                    convertToWebp
+                            );
+                        } finally {
+                            uploadSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                                    .tag("step", "background_upload") // 이미지 업로드 시간
+                                    .register(meterRegistry));
+                        }
                     }, executor).thenAcceptAsync(uploadedImageUrls -> {
-                        // 이미지 업로드 완료 후 Redis 메시지 발행
-                        publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
-                        log.info("Uploaded images and published message for asset: {}", reviewAsset.getId());
+                        Timer.Sample publishSample = Timer.start(meterRegistry);
+                        try {
+                            // 이미지 업로드 완료 후 Redis 메시지 발행
+                            publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
+                            log.info("Uploaded images and published message for asset: {}", reviewAsset.getId());
+                        } finally {
+                            publishSample.stop(Timer.builder("review_asset_step_duration_seconds")
+                                    .tag("step", "publish_redis_message") // Redis 메시지 발행 시간
+                                    .register(meterRegistry));
+                        }
                     }, executor).exceptionally(ex -> {
                         log.error("비동기 이미지 업로드 또는 Redis 메시지 발행 실패", ex);
                         return null;
