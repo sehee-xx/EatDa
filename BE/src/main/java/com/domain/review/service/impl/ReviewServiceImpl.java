@@ -95,7 +95,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewThumbnailService reviewThumbnailService;
     private final FileStorageProperties fileStorageProperties;
     private final FileUrlResolver fileUrlResolver;
-    private final ExecutorService executor = Executors.newFixedThreadPool(10); // 적절한 크기의 스레드 풀
+    private final ExecutorService executor = Executors.newFixedThreadPool(4); // 적절한 크기의 스레드 풀
 
     private final MeterRegistry meterRegistry;
 
