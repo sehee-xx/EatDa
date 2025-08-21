@@ -149,30 +149,20 @@ public class ReviewServiceImpl implements ReviewService {
                             .tag("step", "create_entities")
                             .register(meterRegistry));
 
-                    // === 5. 비동기 이미지 업로드 시작 ===
-                    // CompletableFuture로 전체 업로드 과정을 묶어 백그라운드에서 실행
-                    // 메인 스레드는 이 작업을 시작만 하고 바로 응답을 반환
-                    CompletableFuture.runAsync(() -> {
-                        // Start a new timer for the background task
-                        Timer.Sample uploadSample = Timer.start(meterRegistry);
-                        try {
-                            boolean convertToWebp = shouldConvertToWebp(request.type());
-                            List<String> uploadedImageUrls = uploadImages(
-                                    request.image(),
-                                    IMAGE_BASE_PATH + eater.getEmail(),
-                                    convertToWebp
-                            );
-                            log.info("Uploaded images: {}", uploadedImageUrls);
-
-                            // === 6. 이미지 업로드 완료 후 Redis 메시지 발행 ===
-                            publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
-                        } finally {
-                            uploadSample.stop(Timer.builder("review_asset_step_duration_seconds")
-                                    .tag("step", "background_upload_publish")
-                                    .register(meterRegistry));
-                        }
+                    // === 5. 비동기 이미지 업로드 & Redis 메시지 발행 ===
+                    CompletableFuture.supplyAsync(() -> {
+                        boolean convertToWebp = shouldConvertToWebp(request.type());
+                        return uploadImages(
+                                request.image(),
+                                IMAGE_BASE_PATH + eater.getEmail(),
+                                convertToWebp
+                        );
+                    }, executor).thenAcceptAsync(uploadedImageUrls -> {
+                        // 이미지 업로드 완료 후 Redis 메시지 발행
+                        publishReviewAssetMessage(reviewAsset, eater.getId(), request, store, uploadedImageUrls);
+                        log.info("Uploaded images and published message for asset: {}", reviewAsset.getId());
                     }, executor).exceptionally(ex -> {
-                        log.error("비동기 이미지 업로드 실패", ex);
+                        log.error("비동기 이미지 업로드 또는 Redis 메시지 발행 실패", ex);
                         return null;
                     });
 
@@ -611,9 +601,9 @@ public class ReviewServiceImpl implements ReviewService {
         return reviewAssetRepository.save(asset);
     }
 
-    /**
-     * 이미지 파일들을 로컬에 업로드하고 URL 반환
-     */
+    // uploadImages 메서드를 비동기적으로 변경할 필요가 없습니다.
+    // 기존의 동기식 uploadImages 메서드를 사용하면 됩니다.
+    // 이 메서드는 모든 이미지가 업로드될 때까지 기다렸다가 List<String>를 반환합니다.
     private List<String> uploadImages(final List<MultipartFile> images, final String relativeBase,
                                       final boolean convertToWebp) {
         List<CompletableFuture<String>> futures = images.stream()
@@ -623,11 +613,14 @@ public class ReviewServiceImpl implements ReviewService {
                 ))
                 .toList();
 
+        // 이 부분에서 join을 사용하여 모든 비동기 작업이 완료될 때까지 기다립니다.
+        // 하지만 이 코드는 메인 스레드(HTTP 요청 스레드)가 아닌
+        // CompletableFuture.supplyAsync()에 의해 시작된 별도의 스레드에서 실행되므로
+        // 메인 스레드를 블로킹하지 않습니다.
         return futures.stream()
                 .map(CompletableFuture::join)
                 .toList();
     }
-
 
     private void updateAssetUrlIfSuccess(final ReviewAssetCallbackRequest request,
                                          final Status status,
