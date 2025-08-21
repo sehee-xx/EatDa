@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { sleep } from 'k6';
+import { sleep, check } from 'k6';
 import { FormData } from 'https://jslib.k6.io/formdata/0.0.2/index.js';
 
 const img = open('./test.png', 'b');
@@ -8,7 +8,7 @@ export const options = {
   scenarios: {
     normal_load: {
       executor: 'constant-arrival-rate',
-      rate: 1,               // 초당 1 요청
+      rate: 3,               // 초당 3 요청
       timeUnit: '1s',
       duration: '5m',
       preAllocatedVUs: 20,
@@ -31,7 +31,7 @@ export default function () {
   const res = http.post(url, fd.body(), {
     headers: {
       'Content-Type': 'multipart/form-data; boundary=' + fd.boundary,
-      'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0MDgxNUB0LmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJyb2xlIjoiRUFURVIiLCJpYXQiOjE3NTU1OTIzNjYsImV4cCI6MTc1NTY3ODc2Nn0.9TmEQRFotMgUO-LAu-TA7hgenHD1sUfDVNJDXuAwbYDTKLMQb1OjpW9D-7vbBNhIBM_aXfU1poomomwat3AVvA'
+      'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0MDgxNUB0LmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJyb2xlIjoiRUFURVIiLCJpYXQiOjE3NTU3NTE3NDYsImV4cCI6MTc1NTgzODE0Nn0.Ir9VfYGp8qmR-qAmB9H3EYg4y60mN_aubxEtkqGD2vLdNA12A-K__6OzkGbRecDYJJhk27KMW3k6SV7lQa8biQ'
     },
   });
 
