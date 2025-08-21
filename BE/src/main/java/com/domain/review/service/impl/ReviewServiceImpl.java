@@ -171,7 +171,10 @@ public class ReviewServiceImpl implements ReviewService {
                                     .tag("step", "background_upload_publish")
                                     .register(meterRegistry));
                         }
-                    }, executor); // 커스텀 스레드 풀을 사용하여 실행
+                    }, executor).exceptionally(ex -> {
+                        log.error("비동기 이미지 업로드 실패", ex);
+                        return null;
+                    });
 
                     // === 최종 Response 매핑 ===
                     return reviewMapper.toRequestResponse(review, reviewAsset);
