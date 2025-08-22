@@ -143,18 +143,8 @@ public class ReviewServiceImpl implements ReviewService {
 
                     // === 4. 리뷰/리뷰에셋 생성 ===
                     Timer.Sample createSample = Timer.start(meterRegistry);
-//                    Review review = createPendingReview(store, eater);
-//                    ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
-                    // 4-1. Review 엔티티 생성 (아직 DB에 저장 안 함)
-                    Review review = reviewMapper.toPendingReview(store, eater);
-
-                    // 4-2. ReviewAsset 엔티티 생성 (아직 DB에 저장 안 함)
-                    ReviewAsset reviewAsset = reviewMapper.toPendingReviewAsset(review, request);
-
-                    // 4-3. 한 번의 saveAll()로 두 엔티티를 저장 (효율적)
-                    reviewRepository.save(review);
-                    reviewAssetRepository.save(reviewAsset);
-                    // JPA는 이 두 save() 호출을 하나의 트랜잭션으로 묶어 효율적으로 처리할 가능성이 높습니다.
+                    Review review = createPendingReview(store, eater);
+                    ReviewAsset reviewAsset = createPendingReviewAsset(review, request);
 
                     createSample.stop(Timer.builder("review_asset_step_duration_seconds")
                             .tag("step", "create_entities")
