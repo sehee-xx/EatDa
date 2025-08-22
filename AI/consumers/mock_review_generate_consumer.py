@@ -113,8 +113,8 @@ class MockReviewGenerateConsumer:
             req = self.parse_message(fields)
             self.logger.info(f"[MockConsumer] 메시지 수신: id={message_id}, reviewAssetId={req.reviewAssetId}")
 
-            # --- AI 처리 시뮬레이션 (10초 대기) ---
-            await asyncio.sleep(10)
+            # --- AI 처리 시뮬레이션 (90초 대기) ---
+            await asyncio.sleep(90)
 
             # 성공/실패 9:1 확률
             if random.random() < 0.1:
