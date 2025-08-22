@@ -622,7 +622,8 @@ public class ReviewServiceImpl implements ReviewService {
                                       final boolean convertToWebp) {
         List<CompletableFuture<String>> futures = images.stream()
                 .map(file -> CompletableFuture.supplyAsync(() ->
-                                fileStorageService.storeImage(file, relativeBase, file.getOriginalFilename(), convertToWebp),
+//                                fileStorageService.storeImage(file, relativeBase, file.getOriginalFilename(), convertToWebp),
+                                fileStorageService.storeImage(file, relativeBase, file.getOriginalFilename()),
                         executor // 커스텀 스레드 풀 지정
                 ))
                 .toList();
