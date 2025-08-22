@@ -8,8 +8,8 @@ export const options = {
     scenarios: {
         normal_load: {
             executor: 'constant-arrival-rate',
-            rate: 1,               // 2초당 1 요청
-            timeUnit: '2s',
+            rate: 1,               // 3초당 1 요청
+            timeUnit: '3s',
             duration: '1m',
             preAllocatedVUs: 20,
             maxVUs: 50,
@@ -32,7 +32,8 @@ export default function () {
         headers: {
             'Content-Type': 'multipart/form-data; boundary=' + fd.boundary,
             'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxQHQuY29tIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJFQVRFUiIsImlhdCI6MTc1NTgyNjE5OSwiZXhwIjoxNzU1OTEyNTk5fQ.Rz-3sIb1e10ANIc2fmevpZQtt396PWNwFc-JiN9DcxQ-d8liKijEGXAsj2IgGD4OuceSVJSgZG1cenUsI5N_ZQ'
-
+		}
+	});
 
     const ok = check(res, {
         'status is 200 or 202': (r) => r.status === 200 || r.status === 202,
