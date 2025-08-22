@@ -8,8 +8,8 @@ export const options = {
     scenarios: {
         normal_load: {
             executor: 'constant-arrival-rate',
-            rate: 1,               // 초당 1 요청
-            timeUnit: '1s',
+            rate: 1,               // 2초당 1 요청
+            timeUnit: '2s',
             duration: '1m',
             preAllocatedVUs: 20,
             maxVUs: 50,
@@ -31,9 +31,7 @@ export default function () {
     const res = http.post(url, fd.body(), {
         headers: {
             'Content-Type': 'multipart/form-data; boundary=' + fd.boundary,
-            'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0MDgxNUB0LmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJyb2xlIjoiRUFURVIiLCJpYXQiOjE3NTU3NTg1OTMsImV4cCI6MTc1NTg0NDk5M30.17B71HmIfYrJpcZU9ash5yEp-qcr8OK6C2DAKlrpZaBhGp1GCzHcQe76dF9qkGKqkQoTuy_-1uMa4KvJF5XHYQ'
-        },
-    });
+            'Authorization': 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxQHQuY29tIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJFQVRFUiIsImlhdCI6MTc1NTgyNjE5OSwiZXhwIjoxNzU1OTEyNTk5fQ.Rz-3sIb1e10ANIc2fmevpZQtt396PWNwFc-JiN9DcxQ-d8liKijEGXAsj2IgGD4OuceSVJSgZG1cenUsI5N_ZQ'
 
 
     const ok = check(res, {
