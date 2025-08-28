@@ -25,6 +25,11 @@ from consumers.event_image_consumer import EventImageConsumer
 from consumers.menuboard_generate_consumer import MenuboardGenerateConsumer
 from consumers.review_generate_consumer import ReviewGenerateConsumer
 
+# prometheus
+from consumers.mock_review_generate_consumer import MockReviewGenerateConsumer
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
+
 # 환경 변수 로드
 load_dotenv()
 
@@ -45,7 +50,12 @@ async def lifespan(app: FastAPI):
     tasks = [
         asyncio.create_task(EventImageConsumer().run_forever(), name="event-image"),
         asyncio.create_task(MenuboardGenerateConsumer().run_forever(), name="menuboard-generate"),
-        asyncio.create_task(ReviewGenerateConsumer().run_forever(), name="review-generate"),
+        
+        # mock 테스트를 위해 추가
+        asyncio.create_task(MockReviewGenerateConsumer().run_forever(), name="mock-review-generate"),
+        
+        # mock 테스트를 위해 임시 주석
+        # asyncio.create_task(ReviewGenerateConsumer().run_forever(), name="review-generate"),
     ]
     app.state.consumer_tasks = tasks
     logger.info("✅ AI Server started and ready")
@@ -98,6 +108,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# === Prometheus metrics 정의 (main.py에 추가) ===
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # 서버 실행 (개발용)
 if __name__ == "__main__":
