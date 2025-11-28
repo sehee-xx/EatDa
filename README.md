@@ -547,7 +547,7 @@
 
 ---
 
-## 💾 ERD
+## ERD
 
 <img src="https://i.imgur.com/zJspPYs.png" width="70%">
 
